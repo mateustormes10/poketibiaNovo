@@ -1,4 +1,5 @@
 import { Entity } from './Entity.js';
+import { GameConstants } from '../../../shared/constants/GameConstants.js';
 
 export class Player extends Entity {
     constructor(data) {
@@ -6,19 +7,19 @@ export class Player extends Entity {
         
         this.dbId = data.dbId; // ID do banco de dados
         this.name = data.name || 'Player';
-        this.level = data.level || 1;
+        this.level = data.level || GameConstants.DEFAULT_PLAYER_LEVEL;
         this.vocation = data.vocation || 0; // 0 = No vocation, 4 = GM
-        this.hp = data.hp || 100;
-        this.maxHp = data.maxHp || 100;
-        this.mp = data.mp || 50;
-        this.maxMp = data.maxMp || 50;
+        this.hp = data.hp || GameConstants.DEFAULT_PLAYER_HP;
+        this.maxHp = data.maxHp || GameConstants.DEFAULT_PLAYER_MAX_HP;
+        this.mp = data.mp || GameConstants.DEFAULT_PLAYER_MP;
+        this.maxMp = data.maxMp || GameConstants.DEFAULT_PLAYER_MAX_MP;
         this.exp = data.exp || 0;
         
-        this.attack = data.attack || 10;
-        this.defense = data.defense || 5;
-        this.attackRange = data.attackRange || 1;
+        this.attack = data.attack || GameConstants.DEFAULT_PLAYER_ATTACK;
+        this.defense = data.defense || GameConstants.DEFAULT_PLAYER_DEFENSE;
+        this.attackRange = data.attackRange || GameConstants.DEFAULT_ATTACK_RANGE;
         this.attackCooldown = 0;
-        this.attackSpeed = data.attackSpeed || 1000; // ms
+        this.attackSpeed = data.attackSpeed || GameConstants.DEFAULT_ATTACK_SPEED; // ms
         
         this.inventory = data.inventory || [];
         this.equipment = data.equipment || {};

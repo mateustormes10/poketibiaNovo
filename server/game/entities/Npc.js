@@ -1,3 +1,5 @@
+import { GameConstants } from '../../../shared/constants/GameConstants.js';
+
 export class Npc {
     constructor(data) {
         this.id = data.id;
@@ -14,8 +16,8 @@ export class Npc {
      * Verifica se um player está próximo do NPC
      */
     isPlayerNear(player) {
-        return Math.abs(player.x - this.x) <= 1 &&
-               Math.abs(player.y - this.y) <= 1 &&
+        return Math.abs(player.x - this.x) <= GameConstants.NPC_INTERACTION_RANGE &&
+               Math.abs(player.y - this.y) <= GameConstants.NPC_INTERACTION_RANGE &&
                player.z === this.z;
     }
 

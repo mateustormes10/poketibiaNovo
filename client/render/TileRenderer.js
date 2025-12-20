@@ -4,8 +4,10 @@ import { TileSet } from './TileSet.js';
  * TileRenderer - Renderiza mapa baseado em matriz de tiles
  * Percorre matriz e desenha tile por tile considerando câmera
  */
+import { GameConstants } from '../../shared/constants/GameConstants.js';
+
 export class TileRenderer {
-    constructor(tileSize = 64) {
+    constructor(tileSize = GameConstants.TILE_SIZE) {
         this.tileSize = tileSize;
         this.tileSet = new TileSet();
         this.debugMode = false;

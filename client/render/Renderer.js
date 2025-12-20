@@ -5,6 +5,7 @@ import { DeathModal } from './UI/DeathModal.js';
 import { ChatBox } from './UI/ChatBox.js';
 import { NpcDialog } from './UI/NpcDialog.js';
 import { UIManager } from './UI/UIManager.js';
+import { GameConstants } from '../../shared/constants/GameConstants.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
@@ -13,7 +14,7 @@ export class Renderer {
         this.camera = camera;
         this.wsClient = wsClient;
         
-        this.tileRenderer = new TileRenderer(64); // 64 tiles
+        this.tileRenderer = new TileRenderer(GameConstants.TILE_SIZE);
         this.spriteRenderer = new SpriteRenderer(this.ctx, camera);
         this.uiManager = new UIManager(this.ctx, canvas);
         this.hud = new HUD(this.ctx, canvas, this.uiManager);

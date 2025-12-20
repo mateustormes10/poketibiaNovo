@@ -36,7 +36,7 @@ export class GameWorld {
         this.inventoryRepository = new InventoryRepository(database);
         
         // Sistemas de otimização
-        this.spatialGrid = new SpatialGrid(64); // 64 tiles por célula
+        this.spatialGrid = new SpatialGrid(GameConstants.SPATIAL_GRID_SIZE);
         this.deltaManager = new DeltaManager();
         this.visionSystem = new VisionSystem(this); // Sistema de visão
         

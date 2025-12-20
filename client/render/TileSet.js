@@ -1,3 +1,5 @@
+import { GameConstants } from '../../shared/constants/GameConstants.js';
+
 /**
  * TileSet - Carrega sprites individuais do Tibia
  */
@@ -6,7 +8,7 @@ export class TileSet {
         this.spriteCache = new Map(); // Cache de sprites carregadas
         this.loadingSprites = new Map(); // Promises de sprites sendo carregadas
         this.spritePath = '/projetos/novo_poketibia/assets/sprites/';
-        this.tileSize = 64;
+        this.tileSize = GameConstants.TILE_SIZE;
         this.failedSprites = new Set(); // Sprites que falharam ao carregar
         
         // Cores de fallback para quando a sprite não existe

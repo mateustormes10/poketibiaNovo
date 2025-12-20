@@ -1,3 +1,5 @@
+import { GameConstants } from '../../../shared/constants/GameConstants.js';
+
 export class HUD {
     constructor(ctx, canvas, uiManager) {
         this.ctx = ctx;
@@ -123,8 +125,8 @@ export class HUD {
         const goldText = `Gold: ${player.goldCoin || 0}`;
         this.ctx.strokeStyle = '#000000';
         this.ctx.lineWidth = 3;
-        this.ctx.strokeText(goldText, marginX, y + 100);
-        this.ctx.fillText(goldText, marginX, y + 100);
+        this.ctx.strokeText(goldText, marginX, y + GameConstants.HUD_GOLD_OFFSET_Y);
+        this.ctx.fillText(goldText, marginX, y + GameConstants.HUD_GOLD_OFFSET_Y);
     }
     
     renderPokemonList(player) {
@@ -355,7 +357,7 @@ export class HUD {
                 if (entity.hp !== undefined && entity.maxHp) {
                     const hpBarX = itemX + 120;
                     const hpBarY = itemY + 20;
-                    const hpBarWidth = 100;
+                    const hpBarWidth = GameConstants.HP_BAR_WIDTH;
                     const hpBarHeight = 10;
                     const hpPercent = entity.hp / entity.maxHp;
                     

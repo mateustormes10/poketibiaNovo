@@ -94,7 +94,7 @@ export class ChatBox {
         this.ctx.strokeRect(x, y, boxWidth, boxHeight);
         
         // Renderiza mensagens (de baixo para cima)
-        const lineHeight = 16;
+        const lineHeight = GameConstants.CHAT_LINE_HEIGHT;
         const messageStartY = y + boxHeight - 50; // Deixa espaço para input
         
         for (let i = this.messages.length - 1; i >= 0; i--) {

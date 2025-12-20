@@ -5,6 +5,7 @@ import { WsClient } from '../network/WsClient.js';
 import { Keyboard } from '../input/Keyboard.js';
 import { Mouse } from '../input/Mouse.js';
 import { Renderer } from '../render/Renderer.js';
+import { GameConstants } from '../../shared/constants/GameConstants.js';
 
 export class Game {
     constructor(canvas, config) {
@@ -45,7 +46,7 @@ export class Game {
         
         // Sistema de atualização periódica do mapa
         this.mapUpdateInterval = null;
-        this.mapUpdateFrequency = 2000; // 2 segundos
+        this.mapUpdateFrequency = GameConstants.MAP_UPDATE_FREQUENCY;
         this.isRequestingMap = false;
     }
     
@@ -90,7 +91,7 @@ export class Game {
         
         this.resizeTimeout = setTimeout(() => {
             this.resizeCanvas();
-        }, 100);
+        }, GameConstants.RESIZE_DEBOUNCE);
     }
     
     async init() {

@@ -1,8 +1,10 @@
+import { GameConstants } from '../../shared/constants/GameConstants.js';
+
 export class SpriteRenderer {
     constructor(ctx, camera) {
         this.ctx = ctx;
         this.camera = camera;
-        this.tileSize = 64;
+        this.tileSize = GameConstants.TILE_SIZE;
         this.sprites = new Map();
     }
     

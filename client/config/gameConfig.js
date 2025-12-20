@@ -1,8 +1,10 @@
+import { GameConstants } from '../../shared/constants/GameConstants.js';
+
 export const gameConfig = {
     camera: {
-        tileSize: 64,
+        tileSize: GameConstants.TILE_SIZE,
         smooth: true,
-        followSpeed: 5
+        followSpeed: GameConstants.CAMERA_FOLLOW_SPEED
     },
     
     server: {
