@@ -8,13 +8,15 @@ export class HUD {
         this.pokemonListBounds = []; // Para detectar cliques
         this.playerInfoBounds = null;
         this.battleViewBounds = null;
+        this.battleViewScrollOffset = 0; // Offset do scroll
+        this.battleViewMaxScroll = 0; // Máximo que pode scrollar
     }
     
-    render(gameState) {
+    render(gameState, wildPokemonManager = null) {
         this.renderPlayerInfo(gameState.localPlayer);
         this.renderPokemonList(gameState.localPlayer);
-        this.renderBattleView(gameState);
-        this.renderDebugInfo(gameState);
+        this.renderBattleView(gameState, wildPokemonManager);
+        this.renderDebugInfo(gameState, wildPokemonManager);
     }
     
     checkPokemonClick(mouseX, mouseY) {
@@ -230,7 +232,28 @@ export class HUD {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
     
-    renderBattleView(gameState) {
+    /**
+     * Método para lidar com scroll do Battle View
+     */
+    handleBattleViewScroll(mouseX, mouseY, deltaY) {
+        if (!this.battleViewBounds) return false;
+        
+        // Verifica se o mouse está sobre o Battle View
+        const { x, y, width, height } = this.battleViewBounds;
+        if (mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height) {
+            // Atualiza offset do scroll
+            this.battleViewScrollOffset += deltaY * 0.5; // Velocidade do scroll
+            
+            // Limita o scroll
+            this.battleViewScrollOffset = Math.max(0, Math.min(this.battleViewScrollOffset, this.battleViewMaxScroll));
+            
+            return true; // Evento consumido
+        }
+        
+        return false;
+    }
+    
+    renderBattleView(gameState, wildPokemonManager = null) {
         if (!gameState.localPlayer) return;
         
         const pos = this.uiManager.getPosition('battleView');
@@ -239,6 +262,7 @@ export class HUD {
         const y = pos.y !== null ? pos.y : 100;
         const itemHeight = 40;
         const maxVisible = 10; // Máximo de entidades visíveis
+        const maxDistance = 15; // Distância máxima em tiles para aparecer no Battle View
         
         // Coleta entidades próximas (exceto o próprio player)
         const nearbyEntities = [];
@@ -246,48 +270,55 @@ export class HUD {
         // Players próximos
         gameState.players.forEach(player => {
             if (player.id !== gameState.localPlayer.id) {
-                const distance = this.getDistance(
-                    gameState.localPlayer.x, gameState.localPlayer.y,
-                    player.x, player.y
-                );
-                nearbyEntities.push({
-                    type: 'Player',
-                    name: player.name,
-                    level: player.level,
-                    hp: player.hp,
-                    maxHp: player.maxHp,
-                    distance: distance.toFixed(1),
-                    x: player.x,
-                    y: player.y
-                });
+                // Usa distância Chebyshev (mesma do sistema de wild Pokémon)
+                const dx = Math.abs(gameState.localPlayer.x - player.x);
+                const dy = Math.abs(gameState.localPlayer.y - player.y);
+                const distance = Math.max(dx, dy);
+                
+                // Só adiciona se estiver dentro do raio E no mesmo andar
+                if (distance <= maxDistance && gameState.localPlayer.z === player.z) {
+                    nearbyEntities.push({
+                        type: 'Player',
+                        name: player.name,
+                        level: player.level,
+                        hp: player.hp,
+                        maxHp: player.maxHp,
+                        distance: distance.toFixed(1),
+                        x: player.x,
+                        y: player.y
+                    });
+                }
             }
         });
         
         // Monsters/Pokémons próximos
         gameState.monsters.forEach(monster => {
-            const distance = this.getDistance(
-                gameState.localPlayer.x, gameState.localPlayer.y,
-                monster.x, monster.y
-            );
-            nearbyEntities.push({
-                type: 'Monster',
-                name: monster.name || 'Monster',
-                level: monster.level || 1,
-                hp: monster.hp,
-                maxHp: monster.maxHp,
-                distance: distance.toFixed(1),
-                x: monster.x,
-                y: monster.y
-            });
+            const dx = Math.abs(gameState.localPlayer.x - monster.x);
+            const dy = Math.abs(gameState.localPlayer.y - monster.y);
+            const distance = Math.max(dx, dy);
+            
+            if (distance <= maxDistance && gameState.localPlayer.z === monster.z) {
+                nearbyEntities.push({
+                    type: 'Monster',
+                    name: monster.name || 'Monster',
+                    level: monster.level || 1,
+                    hp: monster.hp,
+                    maxHp: monster.maxHp,
+                    distance: distance.toFixed(1),
+                    x: monster.x,
+                    y: monster.y
+                });
+            }
         });
         
         // NPCs próximos
         gameState.npcs.forEach(npc => {
-            const distance = this.getDistance(
-                gameState.localPlayer.x, gameState.localPlayer.y,
-                npc.x, npc.y
-            );
-            nearbyEntities.push({
+            const dx = Math.abs(gameState.localPlayer.x - npc.x);
+            const dy = Math.abs(gameState.localPlayer.y - npc.y);
+            const distance = Math.max(dx, dy);
+            
+            if (distance <= maxDistance && gameState.localPlayer.z === npc.z) {
+                nearbyEntities.push({
                 type: 'NPC',
                 name: npc.name || 'NPC',
                 level: npc.level || 1,
@@ -297,15 +328,56 @@ export class HUD {
                 x: npc.x,
                 y: npc.y
             });
+        }
         });
         
-        // Ordena por distância e limita a 10
+        // Wild Pokémon próximos
+        if (wildPokemonManager) {
+            const wildPokemons = wildPokemonManager.getAll();
+            wildPokemons.forEach(wildPokemon => {
+                const dx = Math.abs(gameState.localPlayer.x - wildPokemon.x);
+                const dy = Math.abs(gameState.localPlayer.y - wildPokemon.y);
+                const distance = Math.max(dx, dy);
+                
+                if (distance <= maxDistance && gameState.localPlayer.z === wildPokemon.z) {
+                    nearbyEntities.push({
+                        type: 'Monster',
+                        name: wildPokemon.name,
+                        level: wildPokemon.level,
+                        hp: wildPokemon.hp,
+                        maxHp: wildPokemon.maxHp,
+                        distance: distance.toFixed(1),
+                        x: wildPokemon.x,
+                        y: wildPokemon.y
+                    });
+                }
+            });
+        }
+        
+        // Ordena por distância
         nearbyEntities.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-        const visibleEntities = nearbyEntities.slice(0, maxVisible);
         
-        const totalHeight = Math.max(visibleEntities.length * itemHeight, 100) + 30;
+        // Configurações de scroll
+        const maxVisibleItems = 4; // Máximo de itens visíveis sem scroll
+        const headerHeight = 30; // Altura do cabeçalho
+        const maxViewportHeight = maxVisibleItems * itemHeight; // 4 * 40 = 160px
+        const contentHeight = nearbyEntities.length * itemHeight;
+        const viewportHeight = Math.min(maxViewportHeight, contentHeight);
+        const totalHeight = headerHeight + viewportHeight;
+        const scrollbarWidth = 10;
         
-        // Salva bounds para drag
+        // Calcula scroll máximo
+        this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);
+        
+        // Limita o scroll atual
+        this.battleViewScrollOffset = Math.max(0, Math.min(this.battleViewScrollOffset, this.battleViewMaxScroll));
+        
+        // Calcula quais itens são visíveis
+        const startIndex = Math.floor(this.battleViewScrollOffset / itemHeight);
+        const endIndex = Math.min(nearbyEntities.length, Math.ceil((this.battleViewScrollOffset + viewportHeight) / itemHeight));
+        const visibleEntities = nearbyEntities.slice(startIndex, endIndex);
+        
+        // Salva bounds para drag e scroll
         this.battleViewBounds = { x, y, width, height: totalHeight };
         
         // Borda de edição
@@ -324,14 +396,21 @@ export class HUD {
         this.ctx.fillStyle = '#ff6600';
         this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 20);
         
+        // Área de conteúdo com clipping
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(x, y + headerHeight, width, viewportHeight);
+        this.ctx.clip();
+        
         // Lista de entidades
-        if (visibleEntities.length === 0) {
+        if (nearbyEntities.length === 0) {
             this.ctx.font = 'italic 12px Arial';
             this.ctx.fillStyle = '#666666';
-            this.ctx.fillText('Nenhuma entidade próxima', x + 10, y + 50);
+            this.ctx.fillText('Nenhuma entidade próxima', x + 10, y + headerHeight + 20);
         } else {
             visibleEntities.forEach((entity, index) => {
-                const itemY = y + 30 + (index * itemHeight);
+                const actualIndex = startIndex + index;
+                const itemY = y + headerHeight + (actualIndex * itemHeight) - this.battleViewScrollOffset;
                 const itemX = x + 5;
                 
                 // Background do item
@@ -383,12 +462,40 @@ export class HUD {
                 }
             });
         }
+        
+        this.ctx.restore(); // Restaura o clipping
+        
+        // Desenha scrollbar se necessário
+        if (this.battleViewMaxScroll > 0) {
+            const scrollbarX = x + width - scrollbarWidth - 2;
+            const scrollbarY = y + headerHeight;
+            const scrollbarHeight = viewportHeight;
+            
+            // Background da scrollbar
+            this.ctx.fillStyle = 'rgba(50, 50, 50, 0.5)';
+            this.ctx.fillRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight);
+            
+            // Thumb da scrollbar
+            const thumbHeight = Math.max(20, (viewportHeight / contentHeight) * scrollbarHeight);
+            const thumbY = scrollbarY + (this.battleViewScrollOffset / this.battleViewMaxScroll) * (scrollbarHeight - thumbHeight);
+            
+            this.ctx.fillStyle = 'rgba(150, 150, 150, 0.8)';
+            this.ctx.fillRect(scrollbarX, thumbY, scrollbarWidth, thumbHeight);
+            
+            // Borda do thumb
+            this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(scrollbarX, thumbY, scrollbarWidth, thumbHeight);
+        }
     }
     
-    renderDebugInfo(gameState) {
+    renderDebugInfo(gameState, wildPokemonManager = null) {
         const padding = 10;
         const x = this.canvas.width - 200;
         const y = padding;
+        
+        // Conta wild Pokémon
+        const wildPokemonCount = wildPokemonManager ? wildPokemonManager.getAll().size : 0;
         
         // Background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -399,6 +506,6 @@ export class HUD {
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillText(`Players: ${gameState.players.size}`, x + 10, y + 20);
         this.ctx.fillText(`NPCs: ${gameState.npcs.size}`, x + 10, y + 35);
-        this.ctx.fillText(`Monsters: ${gameState.monsters.size}`, x + 10, y + 50);
+        this.ctx.fillText(`Monsters: ${wildPokemonCount}`, x + 10, y + 50);
     }
 }

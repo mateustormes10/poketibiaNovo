@@ -30,6 +30,7 @@ export class WildPokemonManager {
         // Depois pode carregar do banco de dados
         const spawnData = [
             { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 18, y: 19, z: 3 },
+            { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 16, y: 19, z: 3 },
             { name: 'Pidgey', level: 4, hp: 22, maxHp: 22, x: 20, y: 21, z: 3 },
             { name: 'Caterpie', level: 2, hp: 15, maxHp: 15, x: 17, y: 16, z: 3 },
             { name: 'Weedle', level: 2, hp: 16, maxHp: 16, x: 12, y: 18, z: 3 }

@@ -22,6 +22,7 @@ export class Renderer {
         this.chatBox = new ChatBox(this.ctx, canvas, this.uiManager);
         this.npcDialog = new NpcDialog(this.ctx, canvas, wsClient);
         this.showGrid = false;
+        this.wildPokemonManager = null; // Será definido depois
     }
     
     async init() {
@@ -73,7 +74,7 @@ export class Renderer {
         });
         
         // 3. Renderiza UI (POR ÚLTIMO - sobre tudo)
-        this.hud.render(gameState);
+        this.hud.render(gameState, this.wildPokemonManager);
         
         // 4. Renderiza chat
         this.chatBox.render();

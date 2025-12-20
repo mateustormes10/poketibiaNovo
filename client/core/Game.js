@@ -52,6 +52,9 @@ export class Game {
         this.wildPokemonRenderer = new WildPokemonRenderer();
         console.log('[Game] WildPokemonManager e WildPokemonRenderer criados');
         
+        // Passa wildPokemonManager para o Renderer
+        this.renderer.wildPokemonManager = this.wildPokemonManager;
+        
         // Callback para bloquear movimento quando inventário aberto
         this.inventoryManager.onToggle((isOpen) => {
             this.isInventoryBlocking = isOpen;
@@ -119,6 +122,18 @@ export class Game {
         
         // Listener para redimensionamento com debounce
         window.addEventListener('resize', () => this.handleResize());
+        
+        // Listener para scroll do mouse (Battle View)
+        window.addEventListener('wheel', (e) => {
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+            const deltaY = e.deltaY;
+            
+            // Tenta passar para o HUD (Battle View)
+            if (this.renderer.hud.handleBattleViewScroll(mouseX, mouseY, deltaY)) {
+                e.preventDefault(); // Previne scroll da página se consumido pelo Battle View
+            }
+        }, { passive: false });
         
         // Listener para Ctrl+V (colar no chat)
         window.addEventListener('paste', (e) => {
@@ -498,7 +513,51 @@ export class Game {
             return;
         }
         
-        // Toggle do inventário com tecla I
+        // Controle de chat - Enter para ativar/desativar
+        if (this.keyboard.isKeyPressed('Enter')) {
+            if (this.renderer.chatBox.isInputActive()) {
+                // Envia mensagem
+                const message = this.renderer.chatBox.getInputText();
+                if (message.trim().length > 0) {
+                    this.wsClient.send('chat', {
+                        message: message,
+                        type: 'say'
+                    });
+                }
+                this.renderer.chatBox.deactivateInput();
+            } else {
+                // Ativa input do chat
+                this.renderer.chatBox.activateInput();
+            }
+            return;
+        }
+        
+        // Se chat está ativo, captura teclas para o input e bloqueia outros comandos
+        if (this.renderer.chatBox.isInputActive()) {
+            // ESC cancela
+            if (this.keyboard.isKeyPressed('Escape')) {
+                this.renderer.chatBox.deactivateInput();
+                return;
+            }
+            
+            // Backspace remove caractere
+            if (this.keyboard.isKeyPressed('Backspace')) {
+                this.renderer.chatBox.removeCharFromInput();
+                return;
+            }
+            
+            // Captura letras, números e símbolos para digitar
+            const keys = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%*()_-+=[]{}|;:,.<>?/';
+            for (const char of keys) {
+                if (this.keyboard.isKeyPressed(char)) {
+                    this.renderer.chatBox.addCharToInput(char);
+                    break;
+                }
+            }
+            return; // Bloqueia todos os outros comandos enquanto chat está ativo
+        }
+        
+        // Toggle do inventário com tecla I (só funciona quando chat NÃO está ativo)
         if (this.keyboard.isKeyPressed('i')) {
             this.inventoryManager.toggle();
             console.log('[Game] Inventário toggled');
@@ -520,50 +579,6 @@ export class Game {
             const mode = this.renderer.uiManager.isEditMode() ? 'ATIVADO' : 'DESATIVADO';
             console.log(`[Game] Modo de edição de UI ${mode}`);
             return;
-        }
-        
-        // Controle de chat
-        if (this.keyboard.isKeyPressed('Enter')) {
-            if (this.renderer.chatBox.isInputActive()) {
-                // Envia mensagem
-                const message = this.renderer.chatBox.getInputText();
-                if (message.trim().length > 0) {
-                    this.wsClient.send('chat', {
-                        message: message,
-                        type: 'say'
-                    });
-                }
-                this.renderer.chatBox.deactivateInput();
-            } else {
-                // Ativa input do chat
-                this.renderer.chatBox.activateInput();
-            }
-            return;
-        }
-        
-        // Se chat está ativo, captura teclas para o input
-        if (this.renderer.chatBox.isInputActive()) {
-            // ESC cancela
-            if (this.keyboard.isKeyPressed('Escape')) {
-                this.renderer.chatBox.deactivateInput();
-                return;
-            }
-            
-            // Backspace remove caractere
-            if (this.keyboard.isKeyPressed('Backspace')) {
-                this.renderer.chatBox.removeCharFromInput();
-                return;
-            }
-            
-            // Captura letras, números e espaços
-            const keys = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%*()_-+=[]{}|;:,.<>?/';
-            for (const char of keys) {
-                if (this.keyboard.isKeyPressed(char)) {
-                    this.renderer.chatBox.addCharToInput(char);
-                    break;
-                }
-            }
-            return; // Bloqueia outros inputs enquanto digita
         }
         
         // Interação com NPC via tecla E (só funciona quando chat não está ativo)
