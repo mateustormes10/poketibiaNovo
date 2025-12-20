@@ -102,5 +102,10 @@ export class PlayerRepository {
         const sql = 'SELECT * FROM players WHERE online = 1';
         return await this.db.query(sql);
     }
+    
+    async updatePlayerOutfit(id, lookaddons) {
+        const sql = 'UPDATE players SET lookaddons = ? WHERE id = ?';
+        return await this.db.update(sql, [lookaddons, id]);
+    }
 }
 

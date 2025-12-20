@@ -113,7 +113,7 @@ export class WildPokemonManager {
             
             // Se mudou de estado ou posição, notifica clientes
             if (wildPokemon.state !== oldState || wildPokemon.x !== oldX || wildPokemon.y !== oldY) {
-                console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) mudou! State: ${oldState}->${wildPokemon.state}, Pos: (${oldX},${oldY})->(${wildPokemon.x},${wildPokemon.y})`);
+                // console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) mudou! State: ${oldState}->${wildPokemon.state}, Pos: (${oldX},${oldY})->(${wildPokemon.x},${wildPokemon.y})`);
                 this.broadcastUpdate(wildPokemon);
             }
         }
@@ -180,7 +180,7 @@ export class WildPokemonManager {
         let clientCount = 0;
         for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
-                console.log(`[WildPokemonManager] Enviando update de ${wildPokemon.name} para ${client.player.name}`);
+                // console.log(`[WildPokemonManager] Enviando update de ${wildPokemon.name} para ${client.player.name}`);
                 client.send(WildPokemonServerEvents.WILD_POKEMON_UPDATE, data);
                 clientCount++;
             }

@@ -99,10 +99,6 @@ export class Game {
         // Reaplica configurações do contexto
         const ctx = this.canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;
-        
-        console.log(`[Game] Canvas resized to ${width}x${height}`);
-        console.log(`[Game] Canvas CSS: ${this.canvas.style.width} x ${this.canvas.style.height}`);
-        console.log(`[Game] Canvas internal: ${this.canvas.width} x ${this.canvas.height}`);
     }
     
     handleResize() {
@@ -298,6 +294,27 @@ export class Game {
         this.wsClient.on('inventory_item_added', (data) => {
             console.log('[Game] Item added:', data);
             this.inventoryManager.receiveItemAdded(data);
+        });
+        
+        // Outfit change handler
+        this.wsClient.on('outfit_changed', (data) => {
+            console.log('[Game] Outfit changed:', data);
+            if (data.success && this.gameState.localPlayer) {
+                console.log('[Game] Atualizando sprite do player para:', data.lookaddons);
+                this.gameState.localPlayer.sprite = data.lookaddons;
+                this.renderer.chatBox.addMessage('System', `Aparência alterada para: ${data.lookaddons}`, 'system');
+            } else {
+                console.warn('[Game] Falha ao trocar outfit:', data.message);
+            }
+        });
+        
+        // Outfit update from other players
+        this.wsClient.on('player_outfit_update', (data) => {
+            console.log('[Game] Player outfit update:', data);
+            const player = this.gameState.players.get(data.playerId);
+            if (player) {
+                player.sprite = data.lookaddons;
+            }
         });
         
         // Sistema de mensagens GM
@@ -509,6 +526,14 @@ export class Game {
     }
     
     processInput() {
+        // Debug geral
+        if (this.keyboard.isKeyPressed('c') || this.keyboard.isKeyPressed('C')) {
+            console.log('[Game] ===== TECLA C DETECTADA NO INÍCIO =====');
+            console.log('[Game] Modal morte visível?', this.renderer.deathModal.isVisible());
+            console.log('[Game] NPC dialog visível?', this.renderer.npcDialog.isVisible());
+            console.log('[Game] Chat input ativo?', this.renderer.chatBox.isInputActive());
+        }
+        
         // Bloqueia input se modal de morte estiver visível
         if (this.renderer.deathModal.isVisible()) {
             // Apenas permite fechar o modal com Enter
@@ -531,8 +556,26 @@ export class Game {
             return;
         }
         
-        // Controle de chat - Enter para ativar/desativar
-        if (this.keyboard.isKeyPressed('Enter')) {
+
+        // Se OutfitSelector estiver aberto, captura navegação e bloqueia outros inputs
+        if (this.renderer.outfitSelector.isOpen) {
+            if (this.keyboard.isKeyPressed('arrowup')) {
+                this.renderer.outfitSelector.moveUp();
+            }
+            if (this.keyboard.isKeyPressed('arrowdown')) {
+                this.renderer.outfitSelector.moveDown();
+            }
+            if (this.keyboard.isKeyPressed('enter')) {
+                this.renderer.outfitSelector.selectCurrent();
+            }
+            if (this.keyboard.isKeyPressed('Escape')) {
+                this.renderer.outfitSelector.close();
+            }
+            return; // Bloqueia outros comandos quando outfit selector está aberto
+        }
+
+        // Controle de chat - Enter para ativar/desativar (só se OutfitSelector NÃO estiver aberto)
+        if (this.keyboard.isKeyPressed('Enter') && !this.renderer.outfitSelector.isOpen) {
             if (this.renderer.chatBox.isInputActive()) {
                 // Envia mensagem
                 const message = this.renderer.chatBox.getInputText();
@@ -549,7 +592,7 @@ export class Game {
             }
             return;
         }
-        
+
         // Se chat está ativo, captura teclas para o input e bloqueia outros comandos
         if (this.renderer.chatBox.isInputActive()) {
             // ESC cancela
@@ -557,13 +600,11 @@ export class Game {
                 this.renderer.chatBox.deactivateInput();
                 return;
             }
-            
             // Backspace remove caractere
             if (this.keyboard.isKeyPressed('Backspace')) {
                 this.renderer.chatBox.removeCharFromInput();
                 return;
             }
-            
             // Captura letras, números e símbolos para digitar
             const keys = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !@#$%*()_-+=[]{}|;:,.<>?/';
             for (const char of keys) {
@@ -580,6 +621,30 @@ export class Game {
             this.inventoryManager.toggle();
             console.log('[Game] Inventário toggled');
             return;
+        }
+        
+        // Toggle do seletor de outfit com tecla p (igual ao inventário e NPC)
+        if (this.keyboard.isKeyPressed('p')) {
+            console.log('[Game] OutfitSelector toggled');
+            this.renderer.outfitSelector.toggle();
+            return;
+        }
+        
+        // Se OutfitSelector estiver aberto, captura navegação e bloqueia outros inputs
+        if (this.renderer.outfitSelector.isOpen) {
+            if (this.keyboard.isKeyPressed('arrowup')) {
+                this.renderer.outfitSelector.moveUp();
+            }
+            if (this.keyboard.isKeyPressed('arrowdown')) {
+                this.renderer.outfitSelector.moveDown();
+            }
+            if (this.keyboard.isKeyPressed('enter')) {
+                this.renderer.outfitSelector.selectCurrent();
+            }
+            if (this.keyboard.isKeyPressed('Escape')) {
+                this.renderer.outfitSelector.close();
+            }
+            return; // Bloqueia outros comandos quando outfit selector está aberto
         }
         
         // Se inventário estiver aberto, bloqueia movimento

@@ -55,7 +55,7 @@ export class GameWorld {
     async loadPlayerPokemons(player, dbPlayerId) {
         const playerIdToUse = dbPlayerId || player.dbId || player.id;
         try {
-            const pokemonData = await this.playerPokemonRepository.getPlayerPokemons(playerIdToUse);
+            const pokemonData = await this.playerPokemonRepository.findByPlayerId(playerIdToUse);
             
             player.pokemons = pokemonData.map(p => ({
                 id: p.id,

@@ -113,9 +113,7 @@ export class SpriteRenderer {
             player.direction || 'down',
             player.animationFrame || 0
         );
-        
-        console.log(`[SpriteRenderer] Rendering ${player.name} with sprite: ${player.sprite}, direction: ${player.direction}, frame: ${player.animationFrame}`);
-        
+    
         let rendered = false;
         
         // Renderiza cada camada: [central, esquerda, acima]

@@ -4,11 +4,13 @@ import { HUD } from './UI/HUD.js';
 import { DeathModal } from './UI/DeathModal.js';
 import { ChatBox } from './UI/ChatBox.js';
 import { NpcDialog } from './UI/NpcDialog.js';
+import { OutfitSelector } from './UI/OutfitSelector.js';
 import { UIManager } from './UI/UIManager.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
+            console.log('[Renderer] Instanciado:', this);
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.camera = camera;
@@ -21,6 +23,7 @@ export class Renderer {
         this.deathModal = new DeathModal(this.ctx, canvas);
         this.chatBox = new ChatBox(this.ctx, canvas, this.uiManager);
         this.npcDialog = new NpcDialog(this.ctx, canvas, wsClient);
+        this.outfitSelector = new OutfitSelector(this.ctx, canvas, wsClient);
         this.showGrid = false;
         this.wildPokemonManager = null; // Será definido depois
     }
@@ -91,5 +94,8 @@ export class Renderer {
         
         // 7. Renderiza modal de morte (se visível - bloqueia tudo)
         this.deathModal.render();
+
+        // 8. Renderiza OutfitSelector (UI de troca de sprite)
+        this.outfitSelector.render(this.spriteRenderer);
     }
 }

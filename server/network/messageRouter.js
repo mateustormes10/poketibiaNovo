@@ -9,6 +9,7 @@ import { NpcHandler } from '../handlers/npcHandler.js';
 import { InventoryHandler } from '../handlers/inventoryHandler.js';
 import { setupWildPokemonHandler } from '../handlers/wildPokemonHandler.js';
 import { InventoryService } from '../services/InventoryService.js';
+import { handleChangeOutfit } from '../handlers/outfitHandler.js';
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -58,6 +59,9 @@ export class MessageRouter {
         Object.keys(wildPokemonHandlers).forEach(eventType => {
             this.handlers.set(eventType, wildPokemonHandlers[eventType]);
         });
+        
+        // Outfit change handler
+        this.handlers.set('change_outfit', handleChangeOutfit);
         
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));

@@ -15,15 +15,15 @@ export class WildPokemonManager {
         this.wsClient = wsClient;
         this.wildPokemons = new Map(); // id -> wildPokemon data
         
-        console.log('[WildPokemonManager] Criado');
-        logger.info('[WILD] WildPokemonManager criado');
+        // console.log('[WildPokemonManager] Criado');
+        // logger.info('[WILD] WildPokemonManager criado');
     }
 
     /**
      * Solicita lista inicial de Pokémon selvagens
      */
     requestWildPokemonList() {
-        logger.debug('[WILD] Solicitando lista de Pokémon selvagens');
+        // logger.debug('[WILD] Solicitando lista de Pokémon selvagens');
         this.wsClient.send(WildPokemonClientEvents.REQUEST_WILD_POKEMON_LIST, {});
     }
 
@@ -32,19 +32,19 @@ export class WildPokemonManager {
      * @param {Object} data - { wildPokemons: [...] }
      */
     receiveWildPokemonList(data) {
-        console.log('[WildPokemonManager] Recebendo lista:', data);
-        logger.info(`[WILD] Recebendo lista de ${data.wildPokemons.length} Pokémon selvagens`);
+        // console.log('[WildPokemonManager] Recebendo lista:', data);
+        // logger.info(`[WILD] Recebendo lista de ${data.wildPokemons.length} Pokémon selvagens`);
         
         this.wildPokemons.clear();
         
         for (const wildPokemon of data.wildPokemons) {
             this.wildPokemons.set(wildPokemon.id, wildPokemon);
-            console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
-            logger.debug(`[WILD] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
+            // console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
+            // logger.debug(`[WILD] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
         }
         
-        console.log(`[WildPokemonManager] ${this.wildPokemons.size} Pokémon selvagens carregados`);
-        logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens carregados`);
+        // console.log(`[WildPokemonManager] ${this.wildPokemons.size} Pokémon selvagens carregados`);
+        // logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens carregados`);
     }
 
     /**
@@ -65,16 +65,16 @@ export class WildPokemonManager {
         
         if (existing) {
             // Log ANTES de atualizar
-            if (existing.x !== data.x || existing.y !== data.y) {
-                console.log(`[WildPokemonManager] ${data.name} (id=${data.id}) moveu de (${existing.x}, ${existing.y}) para (${data.x}, ${data.y})`);
-                logger.debug(`[WILD] ${data.name} moveu para (${data.x}, ${data.y})`);
-            }
+            // if (existing.x !== data.x || existing.y !== data.y) {
+            //     console.log(`[WildPokemonManager] ${data.name} (id=${data.id}) moveu de (${existing.x}, ${existing.y}) para (${data.x}, ${data.y})`);
+            //     logger.debug(`[WILD] ${data.name} moveu para (${data.x}, ${data.y})`);
+            // }
             
             // Atualiza dados
             this.wildPokemons.set(data.id, data);
         } else {
             // Se não existe, adiciona (caso tenha perdido o spawn)
-            console.log(`[WildPokemonManager] Adicionando pokémon desconhecido: ${data.name} (id=${data.id}) em (${data.x}, ${data.y})`);
+            // console.log(`[WildPokemonManager] Adicionando pokémon desconhecido: ${data.name} (id=${data.id}) em (${data.x}, ${data.y})`);
             this.wildPokemons.set(data.id, data);
             logger.warn(`[WILD] Recebeu update de Pokémon desconhecido: ${data.name} (id=${data.id})`);
         }
