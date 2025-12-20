@@ -64,15 +64,17 @@ export class WildPokemonManager {
         const existing = this.wildPokemons.get(data.id);
         
         if (existing) {
-            // Atualiza dados
-            this.wildPokemons.set(data.id, data);
-            
-            // Log apenas se mudou de posição
+            // Log ANTES de atualizar
             if (existing.x !== data.x || existing.y !== data.y) {
+                console.log(`[WildPokemonManager] ${data.name} (id=${data.id}) moveu de (${existing.x}, ${existing.y}) para (${data.x}, ${data.y})`);
                 logger.debug(`[WILD] ${data.name} moveu para (${data.x}, ${data.y})`);
             }
+            
+            // Atualiza dados
+            this.wildPokemons.set(data.id, data);
         } else {
             // Se não existe, adiciona (caso tenha perdido o spawn)
+            console.log(`[WildPokemonManager] Adicionando pokémon desconhecido: ${data.name} (id=${data.id}) em (${data.x}, ${data.y})`);
             this.wildPokemons.set(data.id, data);
             logger.warn(`[WILD] Recebeu update de Pokémon desconhecido: ${data.name} (id=${data.id})`);
         }

@@ -56,6 +56,9 @@ export class WildPokemonManager {
             ...data
         });
         
+        // Seta referência ao GameWorld para verificação de colisão
+        wildPokemon.gameWorld = this.gameWorld;
+        
         this.wildPokemons.set(id, wildPokemon);
         
         // Notifica todos os players próximos (apenas se broadcast ativo e servidor disponível)
@@ -90,7 +93,15 @@ export class WildPokemonManager {
         // Lista de players online
         const players = Array.from(this.gameWorld.players.values());
         
-        if (players.length === 0) return;
+        if (players.length === 0) {
+            // Sem players online, pokémons ficam idle
+            return;
+        }
+        
+        // Log ocasional para debug
+        if (Math.random() < 0.01) { // 1% de chance
+            console.log(`[WildPokemonManager] Update: ${this.wildPokemons.size} pokémons, ${players.length} players online, currentTime=${currentTime}`);
+        }
         
         // Atualiza cada Pokémon
         for (const wildPokemon of this.wildPokemons.values()) {
@@ -102,6 +113,7 @@ export class WildPokemonManager {
             
             // Se mudou de estado ou posição, notifica clientes
             if (wildPokemon.state !== oldState || wildPokemon.x !== oldX || wildPokemon.y !== oldY) {
+                console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) mudou! State: ${oldState}->${wildPokemon.state}, Pos: (${oldX},${oldY})->(${wildPokemon.x},${wildPokemon.y})`);
                 this.broadcastUpdate(wildPokemon);
             }
         }
@@ -129,7 +141,15 @@ export class WildPokemonManager {
     }
 
     /**
-     * Retorna lista completa de Pokémon selvagens
+     * Retorna lista completa de Pokémon selvagens (para uso interno)
+     * @returns {Array<WildPokemon>}
+     */
+    getAll() {
+        return Array.from(this.wildPokemons.values());
+    }
+    
+    /**
+     * Retorna lista completa de Pokémon selvagens (DTOs para envio ao cliente)
      * @returns {Array}
      */
     getAllPokemons() {
@@ -143,7 +163,7 @@ export class WildPokemonManager {
     broadcastSpawn(wildPokemon) {
         const data = wildPokemon.toDTO();
         
-        for (const client of this.gameWorld.server.clients) {
+        for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
                 client.send(WildPokemonServerEvents.WILD_POKEMON_SPAWN, data);
             }
@@ -157,10 +177,17 @@ export class WildPokemonManager {
     broadcastUpdate(wildPokemon) {
         const data = wildPokemon.toDTO();
         
-        for (const client of this.gameWorld.server.clients) {
+        let clientCount = 0;
+        for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
+                console.log(`[WildPokemonManager] Enviando update de ${wildPokemon.name} para ${client.player.name}`);
                 client.send(WildPokemonServerEvents.WILD_POKEMON_UPDATE, data);
+                clientCount++;
             }
+        }
+        
+        if (clientCount === 0) {
+            console.log(`[WildPokemonManager] AVISO: Nenhum cliente conectado para receber update de ${wildPokemon.name}`);
         }
     }
 
@@ -169,7 +196,7 @@ export class WildPokemonManager {
      * @param {number} id - ID do Pokémon
      */
     broadcastDespawn(id) {
-        for (const client of this.gameWorld.server.clients) {
+        for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
                 client.send(WildPokemonServerEvents.WILD_POKEMON_DESPAWN, { id });
             }

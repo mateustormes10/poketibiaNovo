@@ -53,11 +53,29 @@ export class MovementSystem {
     }
     
     hasEntityAt(x, y, z, excludeId) {
+        // Verifica colisão com players
         for (const [id, player] of this.gameWorld.players) {
             if (id !== excludeId && player.x === x && player.y === y && player.z === z) {
                 return true;
             }
         }
+        
+        // Verifica colisão com NPCs
+        for (const [id, npc] of this.gameWorld.npcs) {
+            if (npc.x === x && npc.y === y && npc.z === z) {
+                return true;
+            }
+        }
+        
+        // Verifica colisão com wild pokémons
+        if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
+            for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
+                if (wildPokemon.id !== excludeId && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
+                    return true;
+                }
+            }
+        }
+        
         return false;
     }
 }

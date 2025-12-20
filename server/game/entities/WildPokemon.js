@@ -37,10 +37,49 @@ export class WildPokemon {
         this.spawnY = this.y;
         this.spawnZ = this.z;
         
+        // Referência ao GameWorld (será setada pelo manager)
+        this.gameWorld = null;
+        
         // Log de spawn
         logger.info(`[WILD] Pokémon spawnado: ${this.name} (id=${this.id}) em x=${this.x}, y=${this.y}, z=${this.z} | HP=${this.hp}`);
     }
 
+    /**
+     * Verifica se uma posição está ocupada por outra entidade
+     * @param {number} x - Coordenada X
+     * @param {number} y - Coordenada Y
+     * @param {number} z - Coordenada Z
+     * @returns {boolean} true se posição ocupada
+     */
+    isPositionOccupied(x, y, z) {
+        if (!this.gameWorld) return false;
+        
+        // Verifica players
+        for (const [id, player] of this.gameWorld.players) {
+            if (player.x === x && player.y === y && player.z === z) {
+                return true;
+            }
+        }
+        
+        // Verifica NPCs
+        for (const [id, npc] of this.gameWorld.npcs) {
+            if (npc.x === x && npc.y === y && npc.z === z) {
+                return true;
+            }
+        }
+        
+        // Verifica outros wild pokémons
+        if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
+            for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
+                if (wildPokemon.id !== this.id && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
     /**
      * Calcula distância até um player (Chebyshev distance)
      * @param {Object} player - Player alvo
@@ -131,7 +170,8 @@ export class WildPokemon {
             Math.abs(newY - this.spawnY)
         );
         
-        if (distanceFromSpawn <= this.moveRange) {
+        // Verifica se pode mover (distância do spawn + colisão)
+        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z)) {
             this.x = newX;
             this.y = newY;
         }
@@ -145,11 +185,21 @@ export class WildPokemon {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         
+        // Calcula nova posição
+        let newX = this.x;
+        let newY = this.y;
+        
         // Move um tile por vez
         if (Math.abs(dx) > Math.abs(dy)) {
-            this.x += dx > 0 ? 1 : -1;
+            newX += dx > 0 ? 1 : -1;
         } else if (dy !== 0) {
-            this.y += dy > 0 ? 1 : -1;
+            newY += dy > 0 ? 1 : -1;
+        }
+        
+        // Só move se não houver colisão
+        if (!this.isPositionOccupied(newX, newY, this.z)) {
+            this.x = newX;
+            this.y = newY;
         }
     }
 

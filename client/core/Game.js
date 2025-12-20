@@ -276,6 +276,7 @@ export class Game {
         });
         
         this.wsClient.on('wild_pokemon_update', (data) => {
+            console.log(`[Game] Wild Pokémon UPDATE: ${data.name} (id=${data.id}) moveu para (${data.x}, ${data.y}, ${data.z})`);
             this.wildPokemonManager.receiveUpdate(data);
         });
         
