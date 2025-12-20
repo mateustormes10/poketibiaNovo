@@ -33,6 +33,7 @@ export class Player {
         this.sprite = data.sprite || 'player';
         this.direction = data.direction || 'down';
         this.pokemons = data.pokemons || [];
+        this.goldCoin = data.goldCoin || 0;
         
         // Animação
         this.animationFrame = 0;

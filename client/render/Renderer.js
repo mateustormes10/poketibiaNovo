@@ -3,13 +3,15 @@ import { SpriteRenderer } from './SpriteRenderer.js';
 import { HUD } from './UI/HUD.js';
 import { DeathModal } from './UI/DeathModal.js';
 import { ChatBox } from './UI/ChatBox.js';
+import { NpcDialog } from './UI/NpcDialog.js';
 import { UIManager } from './UI/UIManager.js';
 
 export class Renderer {
-    constructor(canvas, camera) {
+    constructor(canvas, camera, wsClient) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.camera = camera;
+        this.wsClient = wsClient;
         
         this.tileRenderer = new TileRenderer(64); // 64 tiles
         this.spriteRenderer = new SpriteRenderer(this.ctx, camera);
@@ -17,6 +19,7 @@ export class Renderer {
         this.hud = new HUD(this.ctx, canvas, this.uiManager);
         this.deathModal = new DeathModal(this.ctx, canvas);
         this.chatBox = new ChatBox(this.ctx, canvas, this.uiManager);
+        this.npcDialog = new NpcDialog(this.ctx, canvas, wsClient);
         this.showGrid = false;
     }
     
@@ -77,7 +80,10 @@ export class Renderer {
         // 5. Renderiza indicador de modo de edição
         this.uiManager.renderEditModeIndicator();
         
-        // 6. Renderiza modal de morte (se visível - bloqueia tudo)
+        // 6. Renderiza diálogo de NPC (se visível)
+        this.npcDialog.render();
+        
+        // 7. Renderiza modal de morte (se visível - bloqueia tudo)
         this.deathModal.render();
     }
 }

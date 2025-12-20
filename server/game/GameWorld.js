@@ -1,12 +1,16 @@
 import { MapManager } from './map/MapManager.js';
 import { ZoneManager } from './zones/ZoneManager.js';
 import { Player } from './entities/Player.js';
+import { Npc } from './entities/Npc.js';
 import { SpatialGrid } from './systems/SpatialGrid.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
 import { PlayerPokemonRepository } from '../persistence/PlayerPokemonRepository.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { PlayerDeathRepository } from '../persistence/PlayerDeathRepository.js';
+import { NpcRepository } from '../persistence/NpcRepository.js';
+import { BalanceRepository } from '../persistence/BalanceRepository.js';
+import { InventoryRepository } from '../persistence/InventoryRepository.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { Logger } from '../utils/Logger.js';
 
@@ -27,6 +31,9 @@ export class GameWorld {
         this.playerPokemonRepository = new PlayerPokemonRepository(database);
         this.playerRepository = new PlayerRepository(database);
         this.playerDeathRepository = new PlayerDeathRepository(database);
+        this.npcRepository = new NpcRepository(database);
+        this.balanceRepository = new BalanceRepository(database);
+        this.inventoryRepository = new InventoryRepository(database);
         
         // Sistemas de otimização
         this.spatialGrid = new SpatialGrid(64); // 64 tiles por célula
@@ -142,7 +149,38 @@ export class GameWorld {
         await this.mapManager.loadMaps();
         await this.zoneManager.init();
         
+        // Carrega NPCs do banco de dados
+        await this.loadNpcs();
+        
         logger.info('Game world initialized');
+    }
+    
+    async loadNpcs() {
+        try {
+            logger.info('Loading NPCs from database...');
+            const npcData = await this.npcRepository.loadAll();
+            logger.info(`Found ${npcData.length} NPCs in database`);
+            
+            for (const data of npcData) {
+                const npc = new Npc({
+                    id: data.id,
+                    name: data.name,
+                    type: data.type,
+                    x: data.x,
+                    y: data.y,
+                    z: data.z,
+                    sprite: data.sprite,
+                    worldId: data.world_id
+                });
+                
+                this.npcs.set(npc.id, npc);
+                logger.info(`[NPC] Spawnado: ${npc.name} (id=${npc.id}) em x=${npc.x}, y=${npc.y}, z=${npc.z}`);
+            }
+            
+            logger.info(`Loaded ${this.npcs.size} NPCs`);
+        } catch (error) {
+            logger.error('Error loading NPCs:', error);
+        }
     }
     
     async addPlayer(playerData) {
@@ -254,10 +292,18 @@ export class GameWorld {
             serializedPlayers.push(localData);
         }
         
+        // Serializa NPCs visíveis no mesmo andar
+        const serializedNpcs = [];
+        this.npcs.forEach(npc => {
+            if (npc.z === player.z) {
+                serializedNpcs.push(npc.toClientData());
+            }
+        });
+        
         return {
             tick: this.tick,
             players: serializedPlayers,
-            npcs: [], // Implementar visão de NPCs
+            npcs: serializedNpcs,
             monsters: [], // Implementar visão de monstros
             map: mapData // Dados de mapa com tiles
         };

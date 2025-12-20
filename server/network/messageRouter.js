@@ -3,6 +3,7 @@ import { AuthHandler } from '../handlers/authHandler.js';
 import { MovementHandler } from '../handlers/movementHandler.js';
 import { CombatHandler } from '../handlers/combatHandler.js';
 import { ChatHandler } from '../handlers/chatHandler.js';
+import { NpcHandler } from '../handlers/npcHandler.js';
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -18,11 +19,21 @@ export class MessageRouter {
         const movementHandler = new MovementHandler(this.gameWorld);
         const combatHandler = new CombatHandler(this.gameWorld);
         const chatHandler = new ChatHandler(this.gameWorld);
+        const npcHandler = new NpcHandler(
+            this.gameWorld,
+            this.gameWorld.balanceRepository,
+            this.gameWorld.npcRepository,
+            this.gameWorld.inventoryRepository
+        );
         
         this.handlers.set(ClientEvents.LOGIN, authHandler.handleLogin.bind(authHandler));
         this.handlers.set(ClientEvents.MOVE, movementHandler.handleMove.bind(movementHandler));
         this.handlers.set(ClientEvents.ATTACK, combatHandler.handleAttack.bind(combatHandler));
         this.handlers.set(ClientEvents.CHAT, chatHandler.handleChat.bind(chatHandler));
+        
+        // NPC handlers
+        this.handlers.set('npc_interact', npcHandler.handleInteract.bind(npcHandler));
+        this.handlers.set('npc_buy', npcHandler.handleBuy.bind(npcHandler));
         
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));

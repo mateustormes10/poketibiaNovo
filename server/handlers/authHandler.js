@@ -64,10 +64,22 @@ export class AuthHandler {
             console.log(`[AuthHandler] Loading pokemons for player DB ID: ${playerIdToUse}`);
             await this.gameWorld.loadPlayerPokemons(player, playerIdToUse);
             
+            // Carrega balance do player
+            const balance = await this.gameWorld.balanceRepository.getBalance(playerIdToUse);
+            console.log(`[AuthHandler] Player ${player.name} balance: ${balance} gold`);
+            
+            // Define o goldCoin no player
+            player.goldCoin = balance;
+            
             // Envia resposta
             client.send(ServerEvents.LOGIN_SUCCESS, {
                 playerId: player.id,
                 player: player.serialize()
+            });
+            
+            // Envia balance atualizado
+            client.send('balance_update', {
+                balance: balance
             });
             
             // Envia estado inicial do jogo

@@ -36,7 +36,7 @@ export class Game {
         this.onPokemonSpawn = null;
         
         // Rendering
-        this.renderer = new Renderer(canvas, this.camera);
+        this.renderer = new Renderer(canvas, this.camera, this.wsClient);
         
         this.lastFrameTime = 0;
         this.resizeTimeout = null;
@@ -99,6 +99,18 @@ export class Game {
         
         // Listener para redimensionamento com debounce
         window.addEventListener('resize', () => this.handleResize());
+        
+        // Listener para Ctrl+V (colar no chat)
+        window.addEventListener('paste', (e) => {
+            if (this.renderer.chatBox.isInputActive()) {
+                e.preventDefault();
+                const text = e.clipboardData.getData('text');
+                // Adiciona o texto colado ao input
+                for (const char of text) {
+                    this.renderer.chatBox.addCharToInput(char);
+                }
+            }
+        });
         
         // Initialize systems
         await this.wsClient.connect();
@@ -169,6 +181,46 @@ export class Game {
         this.wsClient.on('chatMessage', (data) => {
             console.log('[Game] Chat message:', data);
             this.renderer.chatBox.addMessage(data.playerName, data.message, data.type);
+        });
+        
+        this.wsClient.on('npc_list', (data) => {
+            console.log('[Game] NPC list received:', data);
+            if (data.npcs) {
+                this.gameState.update({ npcs: data.npcs });
+            }
+        });
+        
+        this.wsClient.on('npc_dialog', (data) => {
+            console.log('[Game] NPC dialog received:', data);
+            this.renderer.npcDialog.show(data);
+        });
+        
+        this.wsClient.on('balance_update', (data) => {
+            console.log('[Game] Balance updated:', data.balance);
+            // Atualiza HUD com novo balance
+            if (this.gameState.localPlayer) {
+                this.gameState.localPlayer.goldCoin = data.balance;
+            }
+        });
+        
+        this.wsClient.on('purchase_success', (data) => {
+            console.log('[Game] Purchase success:', data);
+            // Atualiza balance no player
+            if (this.gameState.localPlayer) {
+                this.gameState.localPlayer.goldCoin = data.newBalance;
+            }
+            // Mostra mensagem
+            this.renderer.chatBox.addMessage('System', `Você comprou ${data.itemName} por ${data.price} gold`, 'system');
+        });
+        
+        this.wsClient.on('npc_heal', (data) => {
+            console.log('[Game] Healed:', data);
+            this.renderer.chatBox.addMessage('System', data.message, 'system');
+        });
+        
+        this.wsClient.on('system_message', (data) => {
+            console.log('[Game] System message:', data.message);
+            this.renderer.chatBox.addMessage('System', data.message, 'system');
         });
     }
     
@@ -288,6 +340,11 @@ export class Game {
                 return; // Modal foi fechado, não processa outros cliques
             }
             
+            // Verifica clique no diálogo de NPC
+            if (this.renderer.npcDialog.checkClick(mousePos.x, mousePos.y)) {
+                return; // Clique no diálogo processado
+            }
+            
             // Em modo de edição, verifica drag nos elementos UI
             if (this.renderer.uiManager.isEditMode()) {
                 if (this.renderer.hud.handleMouseDown(mousePos.x, mousePos.y)) {
@@ -352,6 +409,19 @@ export class Game {
             return;
         }
         
+        // Bloqueia input se diálogo de NPC estiver visível
+        if (this.renderer.npcDialog.isVisible()) {
+            // Verifica se o diálogo capturou a tecla
+            const keys = ['Escape', 'ArrowUp', 'ArrowDown', 'w', 's', 'Enter'];
+            for (const key of keys) {
+                if (this.keyboard.isKeyPressed(key)) {
+                    this.renderer.npcDialog.handleKeyPress(key);
+                    return;
+                }
+            }
+            return;
+        }
+        
         // Toggle do modo de edição com F2
         if (this.keyboard.isKeyPressed('F2')) {
             this.renderer.uiManager.toggleEditMode();
@@ -404,6 +474,12 @@ export class Game {
             return; // Bloqueia outros inputs enquanto digita
         }
         
+        // Interação com NPC via tecla E (só funciona quando chat não está ativo)
+        if (this.keyboard.isKeyPressed('e')) {
+            this.tryInteractWithNpc();
+            return;
+        }
+        
         const player = this.gameState.localPlayer;
         if (!player) return;
         
@@ -438,6 +514,25 @@ export class Game {
         if (player.startPrediction) {
             player.startPrediction(direction);
         }
+    }
+    
+    tryInteractWithNpc() {
+        const player = this.gameState.localPlayer;
+        if (!player) return;
+        
+        // Busca NPC próximo
+        for (const [id, npc] of this.gameState.npcs) {
+            const dx = Math.abs(player.x - npc.x);
+            const dy = Math.abs(player.y - npc.y);
+            
+            if (dx <= 1 && dy <= 1 && player.z === npc.z) {
+                console.log(`[Game] Interacting with NPC: ${npc.name}`);
+                this.wsClient.send('npc_interact', { npcId: npc.id });
+                return;
+            }
+        }
+        
+        console.log('[Game] No NPC nearby');
     }
     
     render() {

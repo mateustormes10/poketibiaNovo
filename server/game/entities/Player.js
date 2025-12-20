@@ -77,6 +77,21 @@ export class Player extends Entity {
         return directionMap[this.direction] || 3; // Default: Sul
     }
     
+    /**
+     * Envia mensagem ao client do player
+     */
+    sendMessage(data) {
+        if (this.wsServer) {
+            // Busca o client do player
+            const client = Array.from(this.wsServer.clients.values())
+                .find(c => c.player?.id === this.id);
+            
+            if (client) {
+                client.send(data.action, data);
+            }
+        }
+    }
+    
     serialize() {
         return {
             ...super.serialize(),
@@ -87,6 +102,7 @@ export class Player extends Entity {
             maxHp: this.maxHp,
             mp: this.mp,
             maxMp: this.maxMp,
+            goldCoin: this.goldCoin || 0,
             pokemons: this.pokemons || []
         };
     }

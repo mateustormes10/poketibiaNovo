@@ -107,6 +107,11 @@ export class ChatHandler {
                 });
                 break;
             
+            case 'add':
+                // Comando: /add goldcoin(100) player(1)
+                this.handleAddCommand(client, message);
+                break;
+            
             default:
                 client.send('chatMessage', {
                     playerName: 'System',
@@ -115,6 +120,67 @@ export class ChatHandler {
                     timestamp: Date.now()
                 });
                 console.log(`[ChatHandler] Unknown command: ${command}`);
+        }
+    }
+    
+    async handleAddCommand(client, message) {
+        // Parse: /add goldcoin(100) player(1)
+        const goldcoinMatch = message.match(/goldcoin\((\d+)\)/);
+        const playerMatch = message.match(/player\((\d+)\)/);
+        
+        if (!goldcoinMatch || !playerMatch) {
+            client.send('chatMessage', {
+                playerName: 'System',
+                message: 'Sintaxe incorreta. Use: /add goldcoin(quantidade) player(id)',
+                type: 'system',
+                timestamp: Date.now()
+            });
+            return;
+        }
+        
+        const amount = parseInt(goldcoinMatch[1]);
+        const targetPlayerId = parseInt(playerMatch[1]);
+        
+        try {
+            // Adiciona gold ao balance
+            const newBalance = await this.gameWorld.balanceRepository.addGold(targetPlayerId, amount);
+            
+            // Encontra o client do player alvo
+            const targetClient = Array.from(this.gameWorld.wsServer?.clients?.values() || [])
+                .find(c => c.player?.dbId === targetPlayerId);
+            
+            if (targetClient) {
+                // Atualiza o balance no client
+                targetClient.send('balance_update', {
+                    balance: newBalance
+                });
+                
+                targetClient.send('chatMessage', {
+                    playerName: 'System',
+                    message: `Você recebeu ${amount} gold coins! Novo saldo: ${newBalance}`,
+                    type: 'system',
+                    timestamp: Date.now()
+                });
+            }
+            
+            // Feedback para o GM
+            client.send('chatMessage', {
+                playerName: 'System',
+                message: `${amount} gold coins adicionados ao player ID ${targetPlayerId}. Novo saldo: ${newBalance}`,
+                type: 'system',
+                timestamp: Date.now()
+            });
+            
+            console.log(`[ChatHandler] GM ${client.player.name} added ${amount} gold coins to player ID ${targetPlayerId}`);
+            
+        } catch (error) {
+            console.error(`[ChatHandler] Error adding gold:`, error);
+            client.send('chatMessage', {
+                playerName: 'System',
+                message: 'Erro ao adicionar gold coins.',
+                type: 'system',
+                timestamp: Date.now()
+            });
         }
     }
 }

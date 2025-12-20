@@ -56,7 +56,7 @@ export class HUD {
         const x = pos.x !== null ? pos.x : 10;
         const y = pos.y !== null ? pos.y : 10;
         const width = 200;
-        const height = 100;
+        const height = 115; // Aumentado para caber o gold
         
         // Salva bounds para drag
         this.playerInfoBounds = { x, y, width, height };
@@ -115,7 +115,16 @@ export class HUD {
         this.ctx.textAlign = 'left';
         this.ctx.font = '12px Arial';
         this.ctx.fillStyle = '#cccccc';
-        this.ctx.fillText(`Pos: ${player.x}, ${player.y}, ${player.z}`, marginX, y + 90);
+        this.ctx.fillText(`Pos: ${player.x}, ${player.y}, ${player.z}`, marginX, y + 85);
+        
+        // Gold Coin (balance)
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillStyle = '#FFD700'; // Cor dourada
+        const goldText = `Gold: ${player.goldCoin || 0}`;
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText(goldText, marginX, y + 100);
+        this.ctx.fillText(goldText, marginX, y + 100);
     }
     
     renderPokemonList(player) {
