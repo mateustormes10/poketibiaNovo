@@ -1,0 +1,22 @@
+{
+  "name": "poketibia-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "PokeTibia Game Server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "game",
+    "websocket",
+    "mmorpg"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "mysql2": "^3.16.0",
+    "ws": "^8.14.2"
+  }
+}

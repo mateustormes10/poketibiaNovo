@@ -1,0 +1,385 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { Chunk } from './ChunkManager.js';
+import { Logger } from '../../utils/Logger.js';
+
+const logger = new Logger('MapLoader');
+
+/**
+ * Carregador de mapas com suporte a múltiplos formatos
+ * Suporta: .txt (formato legado), .json, Tiled (.tmj)
+ */
+export class MapLoader {
+    constructor() {
+        this.mapPath = path.join(process.cwd(), '..', 'assets');
+        this.mapCache = new Map(); // Cache de mapas completos
+    }
+    
+    /**
+     * Detecta formato do arquivo
+     */
+    detectFormat(filePath) {
+        const ext = path.extname(filePath).toLowerCase();
+        
+        switch (ext) {
+            case '.txt':
+                return 'txt';
+            case '.json':
+                return 'json';
+            case '.tmj':
+                return 'tiled';
+            default:
+                return 'unknown';
+        }
+    }
+    
+    /**
+     * Carrega mapa completo de um arquivo
+     */
+    async loadMap(z, format = 'txt') {
+        const cacheKey = `map_z${z}`;
+        
+        // Verifica cache
+        if (this.mapCache.has(cacheKey)) {
+            logger.debug(`Map z${z} loaded from cache`);
+            return this.mapCache.get(cacheKey);
+        }
+        
+        let filePath;
+        let mapData;
+        
+        try {
+            switch (format) {
+                case 'txt':
+                    filePath = path.join(this.mapPath, `map_z${z}.txt`);
+                    mapData = await this.loadFromTxt(filePath, z);
+                    break;
+                    
+                case 'json':
+                    filePath = path.join(this.mapPath, `map_z${z}.json`);
+                    mapData = await this.loadFromJSON(filePath, z);
+                    break;
+                    
+                case 'tiled':
+                    filePath = path.join(this.mapPath, `map_z${z}.tmj`);
+                    mapData = await this.loadFromTiled(filePath, z);
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported format: ${format}`);
+            }
+            
+            // Armazena no cache
+            this.mapCache.set(cacheKey, mapData);
+            logger.info(`Map z${z} loaded (${format} format, ${mapData.tiles.length} tiles)`);
+            
+            return mapData;
+            
+        } catch (error) {
+            logger.error(`Failed to load map z${z}:`, error.message);
+            throw error;
+        }
+    }
+    
+    /**
+     * Carrega chunk específico de um mapa
+     */
+    async loadChunk(cx, cy, cz, chunkSize) {
+        // Carrega mapa completo (usa cache)
+        const mapData = await this.loadMap(cz);
+        
+        if (!mapData) {
+            return null;
+        }
+        
+        // Cria chunk
+        const chunk = new Chunk(cx, cy, cz, chunkSize);
+        
+        // Calcula bounds do chunk
+        const startX = cx * chunkSize;
+        const startY = cy * chunkSize;
+        const endX = startX + chunkSize;
+        const endY = startY + chunkSize;
+        
+        // Filtra tiles do chunk
+        mapData.tiles.forEach(tile => {
+            if (tile.x >= startX && tile.x < endX && 
+                tile.y >= startY && tile.y < endY) {
+                
+                // Adiciona com coordenadas locais
+                chunk.addTile({
+                    ...tile,
+                    localX: tile.x - startX,
+                    localY: tile.y - startY
+                });
+            }
+        });
+        
+        return chunk;
+    }
+    
+    /**
+     * Carrega de arquivo .txt (formato legado)
+     */
+    async loadFromTxt(filePath, z) {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const lines = content.split('\n').filter(l => l.trim().length > 0);
+        const tiles = [];
+        
+        let maxX = 0;
+        let maxY = lines.length;
+        
+        lines.forEach((line, y) => {
+            // Parse tiles no formato [ID1,ID2,...,modificador]
+            const tileMatches = line.matchAll(/\[([^\]]+)\]/g);
+            let x = 0;
+            
+            for (const match of tileMatches) {
+                const parts = match[1].split(',');
+                const modifier = parts[parts.length - 1]; // Último elemento (S ou N)
+                const spriteIds = parts.slice(0, -1).map(id => parseInt(id)); // Todos exceto último
+                
+                // Sprite principal (primeiro ID)
+                const mainSpriteId = spriteIds[0];
+                
+                tiles.push({
+                    x,
+                    y,
+                    z,
+                    type: this.getTileTypeFromId(mainSpriteId),
+                    walkable: modifier === 'S', // S = Sim, N = Não
+                    spriteId: mainSpriteId,
+                    spriteIds: spriteIds, // Array com todas as sprites (layers)
+                    modifier: modifier
+                });
+                
+                x++;
+            }
+            
+            if (x > maxX) maxX = x;
+        });
+        
+        return {
+            z,
+            width: maxX,
+            height: maxY,
+            tiles,
+            format: 'txt'
+        };
+    }
+    
+    /**
+     * Carrega de arquivo .json (formato customizado)
+     */
+    async loadFromJSON(filePath, z) {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const data = JSON.parse(content);
+        
+        return {
+            z,
+            width: data.width || 0,
+            height: data.height || 0,
+            tiles: data.tiles.map(tile => ({
+                x: tile.x,
+                y: tile.y,
+                z,
+                type: tile.type || 'grass',
+                walkable: tile.walkable !== false,
+                spriteId: tile.spriteId || 0
+            })),
+            format: 'json',
+            metadata: data.metadata || {}
+        };
+    }
+    
+    /**
+     * Carrega de arquivo Tiled (.tmj)
+     */
+    async loadFromTiled(filePath, z) {
+        const content = await fs.readFile(filePath, 'utf-8');
+        const tiledData = JSON.parse(content);
+        
+        const tiles = [];
+        
+        // Processa cada layer
+        tiledData.layers?.forEach(layer => {
+            if (layer.type === 'tilelayer' && layer.data) {
+                const width = layer.width;
+                
+                layer.data.forEach((gid, index) => {
+                    if (gid === 0) return; // Tile vazio
+                    
+                    const x = index % width;
+                    const y = Math.floor(index / width);
+                    
+                    tiles.push({
+                        x,
+                        y,
+                        z,
+                        type: this.getTileTypeFromGid(gid, tiledData.tilesets),
+                        walkable: this.isWalkableGid(gid, tiledData.tilesets),
+                        spriteId: gid,
+                        layer: layer.name
+                    });
+                });
+            }
+        });
+        
+        return {
+            z,
+            width: tiledData.width,
+            height: tiledData.height,
+            tiles,
+            format: 'tiled',
+            tilesets: tiledData.tilesets,
+            metadata: {
+                orientation: tiledData.orientation,
+                renderorder: tiledData.renderorder,
+                tilewidth: tiledData.tilewidth,
+                tileheight: tiledData.tileheight
+            }
+        };
+    }
+    
+    /**
+     * Converte caractere para tipo de tile
+     */
+    getTileTypeFromChar(char) {
+        const mapping = {
+            '.': 'grass',
+            '#': 'wall',
+            '~': 'water',
+            '^': 'mountain',
+            'T': 'tree',
+            '=': 'floor',
+            ',': 'sand',
+            ' ': 'void'
+        };
+        
+        return mapping[char] || 'grass';
+    }
+    
+    /**
+     * Verifica se caractere é walkable
+     */
+    isWalkableChar(char) {
+        const walkable = ['.', '=', ',', ' '];
+        return walkable.includes(char);
+    }
+    
+    /**
+     * Obtém sprite ID do caractere
+     */
+    getSpriteIdFromChar(char) {
+        const mapping = {
+            '.': 100, // grass
+            '#': 200, // wall
+            '~': 300, // water
+            '^': 400, // mountain
+            'T': 500, // tree
+            '=': 600, // floor
+            ',': 700, // sand
+            ' ': 0    // void
+        };
+        
+        return mapping[char] || 0;
+    }
+    
+    /**
+     * Obtém tipo de tile do ID (formato [ID,modificador])
+     */
+    getTileTypeFromId(spriteId) {
+        // IDs comuns do Tibia/PokeTibia
+        if (spriteId >= 9900 && spriteId <= 9920) return 'sand';
+        if (spriteId >= 300 && spriteId <= 400) return 'grass';
+        if (spriteId >= 100 && spriteId <= 200) return 'floor';
+        if (spriteId >= 4500 && spriteId <= 4600) return 'water';
+        return 'ground';
+    }
+    
+    /**
+     * Verifica se ID é walkable
+     */
+    isWalkableId(spriteId) {
+        // A maioria dos tiles são walkable, exceto paredes e água
+        if (spriteId >= 4500 && spriteId <= 4600) return false; // água
+        if (spriteId >= 1000 && spriteId <= 2000) return false; // paredes
+        return true;
+    }
+    
+    /**
+     * Obtém tipo de tile do GID (Tiled)
+     */
+    getTileTypeFromGid(gid, tilesets) {
+        // Implementar lógica de conversão GID -> tipo
+        // Por enquanto retorna padrão
+        return 'grass';
+    }
+    
+    /**
+     * Verifica se GID é walkable (Tiled)
+     */
+    isWalkableGid(gid, tilesets) {
+        // Verifica propriedades customizadas do tile no Tiled
+        for (const tileset of tilesets) {
+            const localId = gid - tileset.firstgid;
+            const tile = tileset.tiles?.find(t => t.id === localId);
+            
+            if (tile?.properties) {
+                const walkableProp = tile.properties.find(p => p.name === 'walkable');
+                if (walkableProp) {
+                    return walkableProp.value;
+                }
+            }
+        }
+        
+        return true; // Default walkable
+    }
+    
+    /**
+     * Exporta mapa para JSON
+     */
+    async exportToJSON(z, outputPath) {
+        const mapData = await this.loadMap(z);
+        
+        const exportData = {
+            version: '1.0',
+            z,
+            width: mapData.width,
+            height: mapData.height,
+            tiles: mapData.tiles.map(t => ({
+                x: t.x,
+                y: t.y,
+                type: t.type,
+                walkable: t.walkable,
+                spriteId: t.spriteId
+            })),
+            metadata: {
+                exportedAt: new Date().toISOString(),
+                format: mapData.format
+            }
+        };
+        
+        await fs.writeFile(outputPath, JSON.stringify(exportData, null, 2));
+        logger.info(`Map z${z} exported to ${outputPath}`);
+    }
+    
+    /**
+     * Limpa cache de mapas
+     */
+    clearCache() {
+        this.mapCache.clear();
+        logger.info('Map cache cleared');
+    }
+    
+    /**
+     * Estatísticas do loader
+     */
+    getStats() {
+        return {
+            cachedMaps: this.mapCache.size,
+            memoryUsage: Array.from(this.mapCache.values())
+                .reduce((sum, map) => sum + map.tiles.length * 64, 0)
+        };
+    }
+}

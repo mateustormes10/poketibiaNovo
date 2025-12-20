@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+    #container { display: flex; font-family: sans-serif; }
+#sprite-panel { width: 340px; margin-right: 10px; }
+#sprite-nav { display: flex; justify-content: space-between; margin-bottom: 5px; }
+#sprite-list { width: 100%; height: 600px; overflow-y: auto; display: flex; flex-wrap: wrap; border: 1px solid #aaa; }
+#sprite-list img { width: 64x; height: 64px; cursor: pointer; margin: 2px; border: 1px solid #ccc; }
+.selected { border: 2px solid red !important; }
+#map-panel { flex-grow: 1; }
+canvas { border: 1px solid black; display: block; margin-top: 5px; }
+.cursor { outline: 2px solid yellow; }
+
+</style>
+<title>Map Editor Avançado</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="container">
+  <div id="sprite-panel">
+    <div id="sprite-nav">
+      <button id="prevSprites">&uarr;</button>
+      <button id="nextSprites">&darr;</button>
+    </div>
+    <!-- Input de pesquisa -->
+    <input type="text" id="spriteSearch" placeholder="Pesquisar sprite por ID">
+      <!-- Input de pesquisa por grupo de 250 -->
+    <input type="number" id="spriteGroupSearch" placeholder="Pesquisar grupo (1,2,3...)" min="1">
+
+    <!-- Botão para desselecionar -->
+    <button id="deselectSprite">Deselecionar sprite</button>
+    <label for="brushSize">Tamanho do bloco:</label>
+    <button id="floorUp">+</button>
+<button id="floorDown">-</button>
+<span id="floorDisplay">Andar: 1</span>
+
+    
+
+    <div id="sprite-list"></div>
+    <select id="brushSize">
+      <option value="1">1x1</option>
+      <option value="3">3x3</option>
+      <option value="5">5x5</option>
+      <option value="7">7x7</option>
+      <option value="9">9x9</option>
+      <option value="15">15x15</option>
+    </select>
+    <!-- Mostra dados da célula -->
+    <div id="tile-info">
+      X: <span id="tileX">0</span> 
+      Y: <span id="tileY">0</span> 
+      Conteúdo: <span id="tileContent">[]</span>
+    </div>
+    <label for="floorValueInput">Valor:</label>
+    <input type="number" id="floorValueInput" value="4" min="0">
+    <button id="floorUpTileBtn">UP</button>
+    <button id="floorDownTileBtn">DOWN</button>
+
+
+  </div>
+
+
+
+  <div id="map-panel">
+    <div>
+        Walkable: <input type="checkbox" id="walkable" checked>
+        <label>
+            <input type="checkbox" id="spawn"> Spawn
+        </label>
+        <input type="text" id="spawnName" placeholder="Nome do Pokémon" disabled>
+        <button id="saveBtn">Salvar Map.txt</button>
+    </div>
+    <canvas id="mapCanvas" width="1600" height="1600"></canvas>
+  </div>
+</div>
+
+<script src="editor.js"></script>
+</body>
+</html>

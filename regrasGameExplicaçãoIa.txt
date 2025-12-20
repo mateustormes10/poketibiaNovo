@@ -1,0 +1,283 @@
+ESPECIFICAÇÃO PARA IA
+Jogo 2D Estilo PokexGames (Baseado em Tibia)
+Objetivo
+
+Criar um MMORPG 2D em tiles, inspirado em PokexGames e Tibia, utilizando arquitetura client–server, com WebSocket, backend autoritativo, visão limitada por viewport e suporte escalável para milhares de jogadores simultâneos.
+
+1. Arquitetura Geral (OBRIGATÓRIA)
+
+O sistema é dividido em três camadas:
+
+Client (Frontend)
+Apenas renderiza o jogo e envia intenções do jogador.
+
+Server (Backend)
+Controla totalmente o estado do jogo (autoritativo).
+
+Shared
+Contratos, enums e formatos de mensagens compartilhados.
+
+❌ O cliente NUNCA decide:
+
+Colisão
+
+Posição final
+
+Spawn de Pokémon
+
+Visão do mundo
+
+2. Conceito Fundamental (MUITO IMPORTANTE)
+Renderização ≠ Lógica do jogo
+
+O cliente renderiza em FPS (ex: 60 FPS)
+
+O servidor processa lógica em ticks (ex: 10–20 TPS)
+
+O jogo NÃO funciona como FPS
+
+👉 Nunca enviar posição por frame.
+
+3. Movimento (Modelo Tibia)
+Movimento é DISCRETO (por tile), não contínuo
+
+O cliente envia apenas a intenção:
+
+{
+  "action": "MOVE",
+  "direction": "UP"
+}
+
+
+O servidor:
+
+Verifica cooldown
+
+Verifica colisão
+
+Atualiza posição
+
+Atualiza visão
+
+Envia atualização ao cliente
+
+O cliente:
+
+Apenas anima o sprite
+
+Atualiza a câmera
+
+Renderiza o novo estado
+
+❌ O cliente nunca envia coordenadas
+❌ Não existe envio por frame
+
+4. Visão Limitada (Viewport)
+Como Tibia / PokexGames funciona
+
+Cada jogador possui uma área de visão fixa:
+
+Exemplo:
+
+Raio: 15 tiles
+
+Viewport: 31x31 tiles
+
+O servidor:
+
+Calcula a visão baseada na posição do jogador
+
+Envia apenas:
+
+Tiles visíveis
+
+Entidades dentro da visão
+
+Eventos relevantes
+
+O cliente nunca recebe o mapa inteiro.
+
+👉 A visão é recalculada apenas por evento, nunca por frame.
+
+5. Mundo do Jogo
+Estrutura
+
+Mundo dividido em:
+
+Zonas
+
+Mapas
+
+Níveis Z
+
+Cada mapa é um grid de tiles
+
+Cada tile pode ter:
+
+Tipo de terreno
+
+Colisão
+
+Múltiplas entidades empilhadas
+
+6. Entidades
+
+Todas as entidades herdam de uma classe base Entity.
+
+Tipos principais:
+
+Player
+
+Pokémon selvagem
+
+Pokémon do jogador
+
+NPC
+
+Item
+
+Cada entidade possui:
+
+ID único
+
+Posição (x, y, z)
+
+Sprite ID
+
+Estado atual
+
+7. Sistema de Pokémon (Estilo PokexGames)
+Pokémon Selvagem
+
+Existe apenas no servidor
+
+Spawn controlado por zona
+
+Baseado em tipo de terreno
+
+Não persistido no banco
+
+Pokémon do Jogador
+
+Persistido no banco
+
+Só vira entidade visível quando necessário
+
+Controlado exclusivamente pelo servidor
+
+❌ Cliente nunca cria Pokémon
+
+8. Game Loop do Servidor
+
+O servidor roda um loop fixo:
+
+Tick rate: 10–20 ticks por segundo
+
+Em cada tick:
+
+Processa inputs recebidos
+
+Atualiza entidades
+
+Resolve colisões
+
+Atualiza visão
+
+Envia apenas deltas, não snapshots completos
+
+9. Comunicação WebSocket
+Comunicação baseada em eventos
+
+Exemplos:
+
+MOVE
+
+CHAT
+
+ENTITY_SPAWN
+
+ENTITY_DESPAWN
+
+WORLD_UPDATE
+
+BATTLE_START
+
+As mensagens:
+
+São pequenas
+
+Direcionadas apenas aos jogadores relevantes (por visão)
+
+10. Escalabilidade (Requisito Crítico)
+
+O sistema deve:
+
+Usar visão limitada
+
+Evitar broadcast global
+
+Indexar entidades por grid
+
+Carregar mapas sob demanda
+
+Separar zonas logicamente
+
+Objetivo:
+
+Suportar milhares de jogadores simultâneos
+
+Sem flood de mensagens
+
+Sem lógica no cliente
+
+11. Persistência
+
+Persistir no banco:
+
+Conta
+
+Player
+
+Pokémon
+
+Inventário
+
+Última posição salva
+
+Não persistir:
+
+Pokémon selvagem
+
+Estado momentâneo do mundo
+
+12. Regras de Ouro (NÃO QUEBRAR)
+
+Cliente renderiza, servidor manda
+
+Movimento é por tile
+
+Visão é limitada
+
+Comunicação é por evento
+
+Nunca sincronizar por frame
+
+Nunca confiar no cliente
+
+13. Frase-chave de contexto (IMPORTANTE)
+
+“Este projeto implementa um MMORPG 2D em tiles, inspirado em Tibia e PokexGames, com servidor autoritativo, comunicação via WebSocket, visão limitada por viewport, movimentação discreta por tile, renderização em FPS no cliente e lógica baseada em ticks no backend.”
+
+14. Resultado Esperado
+
+O jogo deve:
+
+Funcionar como PokexGames
+
+Ter movimentação estilo Tibia
+
+Ser escalável
+
+Ter código modular
+
+Ter separação clara entre client e server
