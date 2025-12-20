@@ -1,4 +1,5 @@
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { SpritePlayerList, getPlayerSprites } from '../config/SpritePlayerList.js';
 
 export class SpriteRenderer {
     constructor(ctx, camera) {
@@ -15,6 +16,50 @@ export class SpriteRenderer {
         return img;
     }
     
+    /**
+     * Pré-carrega todas as sprites de players do SpritePlayerList
+     * @returns {Promise<void>}
+     */
+    async preloadPlayerSprites() {
+        try {
+            const spritesToLoad = new Set();
+            
+            // Coleta todos os IDs únicos de sprites
+            for (const lookType in SpritePlayerList) {
+                const directions = SpritePlayerList[lookType];
+                for (const direction in directions) {
+                    const frames = directions[direction];
+                    for (const frame of frames) {
+                        for (const spriteId of frame) {
+                            if (spriteId !== 0) {
+                                spritesToLoad.add(spriteId);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Carrega todas as sprites (não bloqueia se falhar)
+            const loadPromises = Array.from(spritesToLoad).map(spriteId => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve();
+                    img.onerror = () => {
+                        console.warn(`[SpriteRenderer] Failed to load sprite: ${spriteId}.png`);
+                        resolve(); // Continua mesmo se falhar
+                    };
+                    img.src = `../assets/sprites/${spriteId}.png`;
+                    this.sprites.set(spriteId.toString(), img);
+                });
+            });
+            
+            await Promise.all(loadPromises);
+            console.log(`[SpriteRenderer] Loaded ${spritesToLoad.size} player sprites`);
+        } catch (error) {
+            console.warn('[SpriteRenderer] Error in preloadPlayerSprites:', error);
+        }
+    }
+    
     renderEntity(entity, startX, startY) {
         // Usa posição renderizada se disponível (interpolada)
         const pos = entity.getRenderPosition ? entity.getRenderPosition() : {
@@ -29,20 +74,25 @@ export class SpriteRenderer {
             y: (pos.y - startY) * this.tileSize
         };
         
-        // Renderiza sprite ou placeholder
-        const sprite = this.sprites.get(entity.sprite);
-        
-        if (sprite && sprite.complete) {
-            this.ctx.drawImage(
-                sprite,
-                screenPos.x,
-                screenPos.y,
-                this.tileSize,
-                this.tileSize
-            );
+        // Se for player, usa sistema de 3 sprites
+        if (entity.type === 'player') {
+            this.renderPlayer(entity, screenPos);
         } else {
-            // Placeholder com indicador de movimento
-            this.renderPlaceholder(entity, screenPos);
+            // Outras entidades usam sprite única
+            const sprite = this.sprites.get(entity.sprite);
+            
+            if (sprite && sprite.complete) {
+                this.ctx.drawImage(
+                    sprite,
+                    screenPos.x,
+                    screenPos.y,
+                    this.tileSize,
+                    this.tileSize
+                );
+            } else {
+                // Placeholder com indicador de movimento
+                this.renderPlaceholder(entity, screenPos);
+            }
         }
         
         // Indicador visual de predição (opcional)
@@ -53,6 +103,61 @@ export class SpriteRenderer {
         // Renderiza nome
         if (entity.name) {
             this.renderName(entity.name, screenPos);
+        }
+    }
+    
+    renderPlayer(player, screenPos) {
+        // Obtém as 3 sprites do frame atual
+        const sprites = getPlayerSprites(
+            player.sprite || 'default',
+            player.direction || 'down',
+            player.animationFrame || 0
+        );
+        
+        console.log(`[SpriteRenderer] Rendering ${player.name} with sprite: ${player.sprite}, direction: ${player.direction}, frame: ${player.animationFrame}`);
+        
+        let rendered = false;
+        
+        // Renderiza cada camada: [central, esquerda, acima]
+        for (let i = 0; i < sprites.length; i++) {
+            const spriteId = sprites[i];
+            
+            // Ignora sprites vazias (0)
+            if (spriteId === 0) continue;
+            
+            const spriteImg = this.sprites.get(spriteId.toString());
+            
+            // Só renderiza se a imagem carregou com sucesso
+            // complete = true significa que terminou de carregar (sucesso ou erro)
+            // naturalWidth > 0 significa que carregou com sucesso
+            if (spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0) {
+                let posX = screenPos.x;
+                let posY = screenPos.y;
+                
+                // Define posição de cada sprite:
+                // i=0 (central): posição base (x, y)
+                // i=1 (esquerda): uma tile à esquerda (x - tileSize, y)
+                // i=2 (acima): uma tile acima (x, y - tileSize)
+                if (i === 1) {
+                    posX -= this.tileSize; // Esquerda
+                } else if (i === 2) {
+                    posY -= this.tileSize; // Acima
+                }
+                
+                this.ctx.drawImage(
+                    spriteImg,
+                    posX,
+                    posY,
+                    this.tileSize,
+                    this.tileSize
+                );
+                rendered = true;
+            }
+        }
+        
+        // Se nenhuma sprite foi renderizada, mostra placeholder
+        if (!rendered) {
+            this.renderPlaceholder(player, screenPos);
         }
     }
     

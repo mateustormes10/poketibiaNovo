@@ -30,10 +30,13 @@ export class Player {
         this.maxHp = data.maxHp;
         this.level = data.level;
         this.vocation = data.vocation || 0;
-        this.sprite = data.sprite || 'player';
+        this.sprite = data.sprite || 'default';
         this.direction = data.direction || 'down';
         this.pokemons = data.pokemons || [];
         this.goldCoin = data.goldCoin || 0;
+        this.type = 'player';
+        
+        console.log(`[Player] Constructor - ${this.name} created with sprite: ${this.sprite}`);
         
         // Animação
         this.animationFrame = 0;
@@ -47,6 +50,7 @@ export class Player {
         if (data.maxHp !== undefined) this.maxHp = data.maxHp;
         if (data.level !== undefined) this.level = data.level;
         if (data.vocation !== undefined) this.vocation = data.vocation;
+        if (data.sprite !== undefined) this.sprite = data.sprite;
         if (data.direction !== undefined) this.direction = data.direction;
         if (data.pokemons !== undefined) {
             this.pokemons = data.pokemons;
@@ -98,14 +102,21 @@ export class Player {
             }
         }
         
-        // Atualiza animação se está se movendo
+        // Atualiza animação de sprite
+        this.updateAnimation(deltaTime);
+    }
+    
+    updateAnimation(deltaTime) {
+        // Só anima se estiver se movendo ou predizendo
         if (this.isMoving || this.isPredicting) {
             this.animationTime += deltaTime;
             if (this.animationTime >= this.animationSpeed) {
                 this.animationTime = 0;
-                this.animationFrame = (this.animationFrame + 1) % 4;
+                // Ciclo de 3 frames: 0 -> 1 -> 2
+                this.animationFrame = (this.animationFrame + 1) % 3;
             }
         } else {
+            // Parado usa frame 0
             this.animationFrame = 0;
             this.animationTime = 0;
         }

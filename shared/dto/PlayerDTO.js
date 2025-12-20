@@ -1,6 +1,13 @@
 export class PlayerDTO {
     static serialize(player) {
-        return {
+        // Converte direction de número para string se necessário
+        const directionMap = { 0: 'up', 1: 'right', 2: 'down', 3: 'left' };
+        let direction = player.direction;
+        if (typeof direction === 'number') {
+            direction = directionMap[direction] || 'down';
+        }
+        
+        const dto = {
             id: player.id,
             name: player.name,
             x: player.x,
@@ -11,9 +18,11 @@ export class PlayerDTO {
             mp: player.mp,
             maxMp: player.maxMp,
             level: player.level,
-            direction: player.direction,
-            sprite: player.sprite || 'player'
+            direction: direction,
+            sprite: player.sprite || 'default'
         };
+        console.log(`[PlayerDTO] Serializing player ${player.name} with sprite: ${dto.sprite}, direction: ${dto.direction}`);
+        return dto;
     }
     
     static deserialize(data) {

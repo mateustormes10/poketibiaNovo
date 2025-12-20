@@ -25,7 +25,7 @@ export class Player extends Entity {
         this.equipment = data.equipment || {};
         this.pokemons = []; // Será carregado do banco
         this.direction = data.direction || 'down'; // up, down, left, right
-        this.sprite = data.sprite || 'player'; // lookaddons
+        this.sprite = data.sprite || 'default'; // lookaddons
         this.isDead = false;
         this.gameWorld = null; // Será setado quando adicionado ao mundo
         this.wsServer = null; // Será setado quando adicionado ao mundo
@@ -103,6 +103,8 @@ export class Player extends Entity {
             maxHp: this.maxHp,
             mp: this.mp,
             maxMp: this.maxMp,
+            sprite: this.sprite,
+            direction: this.direction,
             goldCoin: this.goldCoin || 0,
             pokemons: this.pokemons || []
         };

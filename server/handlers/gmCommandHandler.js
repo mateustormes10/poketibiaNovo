@@ -293,7 +293,7 @@ export class GMCommandHandler {
             level: targetPlayer.level || 1,
             exp: targetPlayer.exp || 0,
             direction: targetPlayer.direction || 2,
-            sprite: targetPlayer.sprite || 'player'
+            sprite: targetPlayer.sprite || 'default'
         });
 
         // Notifica o player curado
@@ -569,7 +569,7 @@ export class GMCommandHandler {
             level: newLevel,
             exp: targetPlayer.exp || 0,
             direction: targetPlayer.direction || 2,
-            sprite: targetPlayer.sprite || 'player'
+            sprite: targetPlayer.sprite || 'default'
         });
 
         // Notifica o player

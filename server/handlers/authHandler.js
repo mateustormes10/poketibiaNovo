@@ -20,10 +20,14 @@ export class AuthHandler {
             const playerIdToUse = playerId || 1;
             const accountId = 1;
             
-            console.log(`[AuthHandler] Login request for player ID: ${playerIdToUse}`);
-            
             // Busca player do banco de dados
             const playerData = await this.playerRepository.findById(playerIdToUse);
+            
+            console.log('[AuthHandler] Raw playerData from DB:', JSON.stringify({
+                name: playerData?.name,
+                lookaddons: playerData?.lookaddons,
+                direction: playerData?.direction
+            }));
             
             if (!playerData) {
                 logger.error(`Player not found: ${playerIdToUse}`);
@@ -34,6 +38,13 @@ export class AuthHandler {
             }
             
             logger.info(`Player ${playerData.name} logged in (ID: ${playerIdToUse})`);
+            
+            // Converte direction de número para string
+            const directionMap = { 0: 'up', 1: 'right', 2: 'down', 3: 'left' };
+            const directionValue = playerData.direction || 2;
+            const directionString = directionMap[directionValue] || 'down';
+            
+            console.log(`[AuthHandler] Player ${playerData.name} - lookaddons: ${playerData.lookaddons}, direction: ${directionValue} -> ${directionString}`);
             
             // Usa dados do banco e aguarda carregamento dos chunks
             const player = await this.gameWorld.addPlayer({
@@ -50,6 +61,8 @@ export class AuthHandler {
                 maxMp: playerData.max_mp || playerData.manamax,
                 level: playerData.level,
                 experience: playerData.experience,
+                sprite: playerData.lookaddons || 'default',
+                direction: directionString,
                 // Adiciona mais campos conforme necessário
             });
             
@@ -62,15 +75,15 @@ export class AuthHandler {
             }
             
             // Carrega pokémons do player do banco de dados usando o ID do banco
-            console.log(`[AuthHandler] Loading pokemons for player DB ID: ${playerIdToUse}`);
             await this.gameWorld.loadPlayerPokemons(player, playerIdToUse);
             
             // Carrega balance do player
             const balance = await this.gameWorld.balanceRepository.getBalance(playerIdToUse);
-            console.log(`[AuthHandler] Player ${player.name} balance: ${balance} gold`);
             
             // Define o goldCoin no player
             player.goldCoin = balance;
+            
+            console.log('[AuthHandler] Player object before serialize - sprite:', player.sprite, 'direction:', player.direction);
             
             // Envia resposta
             client.send(ServerEvents.LOGIN_SUCCESS, {

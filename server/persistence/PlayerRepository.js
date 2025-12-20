@@ -67,7 +67,7 @@ export class PlayerRepository {
             playerData.level,
             playerData.exp,
             playerData.direction || 2,
-            playerData.sprite || 'player',
+            playerData.sprite || 'default',
             id
         ]);
         return await this.findById(id);

@@ -54,9 +54,6 @@ export class VisionSystem {
         const startY = player.y - halfHeight;
         
         // Log detalhado
-        console.log(`[VisionSystem] Getting tiles for player at (${player.x}, ${player.y}, ${player.z})`);
-        console.log(`[VisionSystem] Requesting area: x=${startX} to ${startX + width}, y=${startY} to ${startY + height}`);
-        
         // Obtém tiles do ChunkManager
         const tiles = this.gameWorld.mapManager.chunkManager.getTilesInArea(
             startX,

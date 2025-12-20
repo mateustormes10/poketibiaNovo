@@ -53,11 +53,9 @@ export class GameWorld {
     }
     
     async loadPlayerPokemons(player, dbPlayerId) {
+        const playerIdToUse = dbPlayerId || player.dbId || player.id;
         try {
-            const playerIdToUse = dbPlayerId || player.dbId || player.id;
-            console.log(`[GameWorld] Loading pokemons for player DB ID: ${playerIdToUse}`);
-            const pokemonData = await this.playerPokemonRepository.findByPlayerId(playerIdToUse);
-            console.log(`[GameWorld] Raw pokemon data from DB for player ${playerIdToUse}:`, pokemonData);
+            const pokemonData = await this.playerPokemonRepository.getPlayerPokemons(playerIdToUse);
             
             player.pokemons = pokemonData.map(p => ({
                 id: p.id,
@@ -71,7 +69,7 @@ export class GameWorld {
                 maxMana: p.max_mana,
                 experience: p.experience
             }));
-            console.log(`[GameWorld] Loaded ${player.pokemons.length} pokemons for player ${player.name}:`, player.pokemons);
+            
             logger.info(`Loaded ${player.pokemons.length} pokemons for player ${player.name}`);
         } catch (error) {
             logger.error(`Error loading pokemons for player ${playerIdToUse}:`, error);

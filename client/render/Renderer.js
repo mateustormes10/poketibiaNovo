@@ -32,7 +32,11 @@ export class Renderer {
         // Pode carregar tileset de imagem aqui se disponível
         // await this.tileRenderer.init('./assets/tileset.png');
         await this.tileRenderer.init(); // Usa fallback de cores
-        console.log('[Renderer] Initialized');
+        
+        // Pré-carrega sprites de players em background (não bloqueia renderização)
+        this.spriteRenderer.preloadPlayerSprites().catch(error => {
+            console.warn('[Renderer] Failed to preload player sprites, using fallback:', error);
+        });
     }
     
     clear() {
