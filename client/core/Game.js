@@ -8,6 +8,8 @@ import { Renderer } from '../render/Renderer.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { InventoryManager } from '../managers/InventoryManager.js';
 import { InventoryUI } from '../render/UI/InventoryUI.js';
+import { WildPokemonManager } from '../managers/WildPokemonManager.js';
+import { WildPokemonRenderer } from '../render/WildPokemonRenderer.js';
 
 export class Game {
     constructor(canvas, config) {
@@ -44,6 +46,11 @@ export class Game {
         // Inventory system
         this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
         this.inventoryManager = new InventoryManager(this.wsClient, this.inventoryUI);
+        
+        // Wild Pokémon system
+        this.wildPokemonManager = new WildPokemonManager(this.wsClient);
+        this.wildPokemonRenderer = new WildPokemonRenderer();
+        console.log('[Game] WildPokemonManager e WildPokemonRenderer criados');
         
         // Callback para bloquear movimento quando inventário aberto
         this.inventoryManager.onToggle((isOpen) => {
@@ -240,6 +247,26 @@ export class Game {
         this.wsClient.on('inventory_data', (data) => {
             console.log('[Game] Inventory data received:', data);
             this.inventoryManager.receiveInventoryData(data);
+        });
+        
+        // Wild Pokémon handlers
+        this.wsClient.on('wild_pokemon_list', (data) => {
+            console.log('[Game] Wild Pokémon list received:', data);
+            this.wildPokemonManager.receiveWildPokemonList(data);
+        });
+        
+        this.wsClient.on('wild_pokemon_spawn', (data) => {
+            console.log('[Game] Wild Pokémon spawned:', data);
+            this.wildPokemonManager.receiveSpawn(data);
+        });
+        
+        this.wsClient.on('wild_pokemon_update', (data) => {
+            this.wildPokemonManager.receiveUpdate(data);
+        });
+        
+        this.wsClient.on('wild_pokemon_despawn', (data) => {
+            console.log('[Game] Wild Pokémon despawned:', data);
+            this.wildPokemonManager.receiveDespawn(data);
         });
         
         this.wsClient.on('inventory_update', (data) => {
@@ -603,6 +630,10 @@ export class Game {
     render() {
         this.renderer.clear();
         this.renderer.render(this.gameState);
+        
+        // Renderiza Pokémon selvagens
+        const wildPokemons = this.wildPokemonManager.getAll();
+        this.wildPokemonRenderer.render(this.renderer.ctx, wildPokemons, this.camera);
         
         // Renderiza inventário por último (acima de tudo)
         this.inventoryManager.render();

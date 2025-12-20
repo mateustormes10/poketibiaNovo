@@ -1,4 +1,5 @@
 import { ServerEvents } from '../../shared/protocol/actions.js';
+import { WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { Logger } from '../utils/Logger.js';
 
@@ -86,7 +87,14 @@ export class AuthHandler {
             const gameState = this.gameWorld.getGameState(player);
             client.send(ServerEvents.GAME_STATE, gameState);
             
+            // Envia lista de Pokémon selvagens
+            const wildPokemons = this.gameWorld.wildPokemonManager.getAllPokemons();
+            client.send(WildPokemonServerEvents.WILD_POKEMON_LIST, {
+                wildPokemons
+            });
+            
             logger.info(`Game state sent to ${player.name} at (${player.x}, ${player.y}, ${player.z}) with ${player.pokemons.length} pokemons`);
+            logger.info(`Sent ${wildPokemons.length} wild Pokémon to ${player.name}`);
             
         } catch (error) {
             logger.error('Login error:', error);

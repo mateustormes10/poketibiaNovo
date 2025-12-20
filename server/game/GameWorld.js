@@ -5,6 +5,7 @@ import { Npc } from './entities/Npc.js';
 import { SpatialGrid } from './systems/SpatialGrid.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
+import { WildPokemonManager } from './systems/WildPokemonManager.js';
 import { PlayerPokemonRepository } from '../persistence/PlayerPokemonRepository.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { PlayerDeathRepository } from '../persistence/PlayerDeathRepository.js';
@@ -26,6 +27,7 @@ export class GameWorld {
         
         this.mapManager = new MapManager();
         this.zoneManager = new ZoneManager();
+        this.wildPokemonManager = new WildPokemonManager(this);
         
         // Repositórios
         this.playerPokemonRepository = new PlayerPokemonRepository(database);
@@ -46,6 +48,7 @@ export class GameWorld {
     
     setWsServer(wsServer) {
         this.wsServer = wsServer;
+        this.server = wsServer; // Alias para compatibilidade
         logger.info('WsServer reference set in GameWorld');
     }
     
@@ -152,6 +155,9 @@ export class GameWorld {
         // Carrega NPCs do banco de dados
         await this.loadNpcs();
         
+        // Inicializa Pokémon selvagens
+        await this.wildPokemonManager.initialize();
+        
         logger.info('Game world initialized');
     }
     
@@ -235,6 +241,8 @@ export class GameWorld {
     update(deltaTime) {
         this.tick++;
         
+        const currentTime = Date.now();
+        
         // Atualiza todas as entidades
         this.players.forEach(player => {
             player.update(deltaTime);
@@ -251,6 +259,9 @@ export class GameWorld {
             monster.update(deltaTime);
             this.spatialGrid.update(monster);
         });
+        
+        // Atualiza Pokémon selvagens
+        this.wildPokemonManager.update(currentTime);
         
         // Atualiza zonas
         this.zoneManager.update(deltaTime);

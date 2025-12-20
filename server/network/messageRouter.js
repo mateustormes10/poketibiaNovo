@@ -1,11 +1,13 @@
 import { ClientEvents } from '../../shared/protocol/actions.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
+import { WildPokemonClientEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { AuthHandler } from '../handlers/authHandler.js';
 import { MovementHandler } from '../handlers/movementHandler.js';
 import { CombatHandler } from '../handlers/combatHandler.js';
 import { ChatHandler } from '../handlers/chatHandler.js';
 import { NpcHandler } from '../handlers/npcHandler.js';
 import { InventoryHandler } from '../handlers/inventoryHandler.js';
+import { setupWildPokemonHandler } from '../handlers/wildPokemonHandler.js';
 import { InventoryService } from '../services/InventoryService.js';
 
 export class MessageRouter {
@@ -50,6 +52,12 @@ export class MessageRouter {
         this.handlers.set(InventoryClientEvents.REQUEST_INVENTORY, inventoryHandler.handleInventoryRequest.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.USE_ITEM, inventoryHandler.handleUseItem.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.DROP_ITEM, inventoryHandler.handleDropItem.bind(inventoryHandler));
+        
+        // Wild Pokémon handlers
+        const wildPokemonHandlers = setupWildPokemonHandler(this.gameWorld);
+        Object.keys(wildPokemonHandlers).forEach(eventType => {
+            this.handlers.set(eventType, wildPokemonHandlers[eventType]);
+        });
         
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));
