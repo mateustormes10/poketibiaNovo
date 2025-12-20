@@ -1,0 +1,12 @@
+Já testado e funcionando tudo:
+/teleport x(15) y(19) z(3)
+/spawn pokemon(Rattata) level(5)
+/heal player(1)
+/kick player(1)
+/item add(potion) quantity(10) player(1)
+/setlevel player(2) level(8)
+/broadcast message(Servidor reiniciará em 10 minutos) -> ok funcionando
+
+
+Não testado:
+/ban player(1) days(1)

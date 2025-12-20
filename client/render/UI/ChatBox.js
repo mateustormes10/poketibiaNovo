@@ -21,13 +21,24 @@ export class ChatBox {
         return false;
     }
     
-    addMessage(playerName, message, type = 'say') {
-        this.messages.push({
-            playerName,
-            message,
-            type,
-            timestamp: Date.now()
-        });
+    addMessage(playerNameOrObject, message, type = 'say') {
+        // Suporta tanto objeto quanto parâmetros separados
+        if (typeof playerNameOrObject === 'object') {
+            this.messages.push({
+                playerName: playerNameOrObject.playerName || 'System',
+                message: playerNameOrObject.message,
+                type: playerNameOrObject.type || 'say',
+                color: playerNameOrObject.color,
+                timestamp: Date.now()
+            });
+        } else {
+            this.messages.push({
+                playerName: playerNameOrObject,
+                message,
+                type,
+                timestamp: Date.now()
+            });
+        }
         
         // Remove mensagens antigas se exceder o limite
         if (this.messages.length > this.maxMessages) {
@@ -103,12 +114,14 @@ export class ChatBox {
             
             if (msgY < y + 10) break; // Não renderiza se sair do box
             
-            // Cor baseada no tipo
-            let color = '#ffffff';
-            if (msg.type === 'system') {
-                color = '#ffff00';
-            } else if (msg.type === 'whisper') {
-                color = '#ff00ff';
+            // Cor baseada no tipo ou customizada
+            let color = msg.color || '#ffffff';
+            if (!msg.color) {
+                if (msg.type === 'system') {
+                    color = '#ffff00';
+                } else if (msg.type === 'whisper') {
+                    color = '#ff00ff';
+                }
             }
             
             this.ctx.font = '12px Arial';

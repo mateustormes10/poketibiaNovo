@@ -300,6 +300,23 @@ export class Game {
             this.inventoryManager.receiveItemAdded(data);
         });
         
+        // Sistema de mensagens GM
+        this.wsClient.on('system_message', (data) => {
+            console.log('[Game] System message:', data);
+            this.renderer.chatBox.addMessage({
+                playerName: 'Sistema',
+                message: data.message,
+                type: 'system',
+                color: data.color || 'white'
+            });
+        });
+        
+        // Broadcast global
+        this.wsClient.on('broadcast', (data) => {
+            console.log('[Game] Broadcast received:', data);
+            this.showBroadcast(data.message, data.duration || 5000);
+        });
+        
         this.wsClient.on('inventory_error', (data) => {
             console.log('[Game] Inventory error:', data);
             this.inventoryManager.receiveError(data);
@@ -641,6 +658,64 @@ export class Game {
         }
         
         console.log('[Game] No NPC nearby');
+    }
+    
+    /**
+     * Exibe broadcast global centralizado na tela
+     * @param {string} message - Mensagem do broadcast
+     * @param {number} duration - Duração em ms
+     */
+    showBroadcast(message, duration = 5000) {
+        // Remove broadcast anterior se existir
+        const existingBroadcast = document.getElementById('game-broadcast');
+        if (existingBroadcast) {
+            existingBroadcast.remove();
+        }
+        
+        // Cria elemento do broadcast
+        const broadcastDiv = document.createElement('div');
+        broadcastDiv.id = 'game-broadcast';
+        broadcastDiv.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: #FFD700;
+            padding: 30px 50px;
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 10000;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            animation: broadcastFade 0.3s ease-in;
+        `;
+        broadcastDiv.textContent = message;
+        
+        // Adiciona animação CSS
+        if (!document.getElementById('broadcast-animation')) {
+            const style = document.createElement('style');
+            style.id = 'broadcast-animation';
+            style.textContent = `
+                @keyframes broadcastFade {
+                    from { opacity: 0; transform: translate(-50%, -60%); }
+                    to { opacity: 1; transform: translate(-50%, -50%); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        document.body.appendChild(broadcastDiv);
+        
+        // Remove após duração
+        setTimeout(() => {
+            broadcastDiv.style.animation = 'broadcastFade 0.3s ease-out reverse';
+            setTimeout(() => {
+                broadcastDiv.remove();
+            }, 300);
+        }, duration);
     }
     
     render() {

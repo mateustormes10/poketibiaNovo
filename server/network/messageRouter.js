@@ -23,7 +23,7 @@ export class MessageRouter {
         const authHandler = new AuthHandler(this.gameWorld, this.wsServer);
         const movementHandler = new MovementHandler(this.gameWorld);
         const combatHandler = new CombatHandler(this.gameWorld);
-        const chatHandler = new ChatHandler(this.gameWorld);
+        const chatHandler = new ChatHandler(this.gameWorld, this.wsServer);
         const npcHandler = new NpcHandler(
             this.gameWorld,
             this.gameWorld.balanceRepository,

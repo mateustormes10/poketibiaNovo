@@ -1,9 +1,12 @@
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { GMCommandHandler } from './gmCommandHandler.js';
 
 export class ChatHandler {
-    constructor(gameWorld) {
+    constructor(gameWorld, wsServer) {
         this.gameWorld = gameWorld;
+        this.wsServer = wsServer;
+        this.gmCommandHandler = new GMCommandHandler(gameWorld, wsServer);
     }
     
     handleChat(client, data) {
@@ -16,9 +19,9 @@ export class ChatHandler {
             return;
         }
         
-        // Comandos de teste (apenas GM)
+        // Comandos GM (intercepta mensagens que começam com /)
         if (message.startsWith('/')) {
-            this.handleCommand(client, message);
+            this.gmCommandHandler.handleCommand(client, message);
             return;
         }
         

@@ -36,6 +36,13 @@ export class BanRepository {
         return await this.findById(id);
     }
     
+    /**
+     * Cria um ban (alias para create)
+     */
+    async createBan(banData) {
+        return await this.create(banData);
+    }
+    
     async deactivate(id) {
         const sql = 'UPDATE bans SET active = 0 WHERE id = ?';
         return await this.db.update(sql, [id]);

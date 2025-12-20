@@ -108,55 +108,238 @@ SELECT player_id, item_type, item_name, quantity FROM player_inventory WHERE pla
 
 ---
 
-## 🔧 Comandos Futuros (Planejados)
+## 🔧 Comandos GM Disponíveis
 
-> **Nota:** Estes comandos ainda não foram implementados
+### Sistema de Permissões
 
-- `/teleport x(coord) y(coord) z(floor)` - Teleportar jogador
-- `/spawn pokemon(id) level(lvl)` - Spawnar Pokémon
-- `/heal player(id)` - Curar jogador específico
-- `/kick player(id) reason(texto)` - Expulsar jogador
-- `/ban player(id) days(quantidade)` - Banir jogador
-- `/item add(item_id) quantity(qtd) player(id)` - Adicionar item ao inventário
-- `/setlevel player(id) level(lvl)` - Definir nível do jogador
-- `/broadcast message(texto)` - Enviar mensagem global
+**Requisito:** Apenas jogadores com `vocation = 4` podem executar comandos GM.
+
+### Comandos Implementados
+
+#### `/teleport`
+Teleporta o GM para coordenadas específicas.
+
+**Sintaxe:**
+```
+/teleport x(coord) y(coord) z(floor)
+```
+
+**Exemplos:**
+```
+/teleport x(100) y(200) z(7)
+/teleport x(15) y(19) z(3)
+```
+
+**Comportamento:**
+- Teleporta instantaneamente para as coordenadas
+- Atualiza spatial grid e map manager
+- Funciona mesmo em tiles não-walkable (com aviso)
 
 ---
 
-## ⚠️ Observações Importantes
+#### `/spawn`
+Spawna um Pokémon selvagem na posição atual do GM.
 
-1. **Segurança:** Todos os comandos GM são server-side, não podem ser exploitados pelo client
-2. **Validação:** O sistema valida proximidade para interações com NPCs (distância máxima: 1 tile)
-3. **Logs:** Todas as ações importantes são registradas no console do servidor
-4. **Economia:** Sistema de balance atômico - transações são seguras contra race conditions
-5. **Chat Priority:** Quando o chat está ativo, todas as teclas são capturadas para digitação
+**Sintaxe:**
+```
+/spawn pokemon(nome) level(lvl)
+```
+
+**Exemplos:**
+```
+/spawn pokemon(Pikachu) level(25)
+/spawn pokemon(Charizard) level(50)
+/spawn pokemon(Rattata) level(5)
+```
+
+**Comportamento:**
+- Cria Pokémon na posição exata do GM
+- HP calculado automaticamente: 20 + (level × 5)
+- Pokémon entra no sistema de IA (idle/roaming/engage)
+- Todos os players online veem o spawn
 
 ---
 
-## 📝 Como Adicionar Novos Comandos
+#### `/heal`
+Cura completamente um jogador e seus Pokémon.
 
-Para adicionar um novo comando GM, edite o arquivo:
+**Sintaxe:**
 ```
-server/handlers/chatHandler.js
+/heal player(id)
 ```
 
-Exemplo de estrutura:
-```javascript
-async handleMyCommand(player, params) {
-    // Validação de permissões
-    if (!player.isGM) return;
-    
-    // Lógica do comando
-    // ...
-    
-    // Feedback ao jogador
-    client.send('system_message', {
-        message: 'Comando executado com sucesso!'
-    });
-}
+**Exemplos:**
+```
+/heal player(1)
+/heal player(5)
+```
+
+**Comportamento:**
+- Restaura HP e Mana do player para máximo
+- Restaura HP e Mana de todos os Pokémon do player
+- Atualiza banco de dados
+- Player recebe notificação de cura
+
+---
+
+#### `/kick`
+Remove um jogador do servidor imediatamente.
+
+**Sintaxe:**
+```
+/kick player(id)
+```
+
+**Exemplos:**
+```
+/kick player(3)
+```
+
+**Comportamento:**
+- Desconecta o player instantaneamente
+- Salva progresso antes de desconectar
+- Player vê mensagem de remoção
+
+---
+
+#### `/ban`
+Bane um jogador por tempo determinado.
+
+**Sintaxe:**
+```
+/ban player(id) days(quantidade)
+```
+
+**Exemplos:**
+```
+/ban player(7) days(3)
+/ban player(10) days(30)
+/ban player(5) days(1)
+```
+
+**Comportamento:**
+- Registra ban na tabela `bans`
+- Kicka o player se estiver online
+- Ban expira automaticamente após o período
+- Login bloqueado durante o período
+
+---
+
+#### `/item`
+Adiciona itens ao inventário de um jogador.
+
+**Sintaxe:**
+```
+/item add(item_id) quantity(qtd) player(id)
+```
+
+**Exemplos:**
+```
+/item add(potion) quantity(10) player(1)
+/item add(pokeball) quantity(50) player(2)
+/item add(goldcoin) quantity(1000) player(3)
+```
+
+**Comportamento:**
+- Adiciona item via InventoryRepository
+- Atualiza banco de dados
+- Player recebe notificação e atualização de inventário
+- Funciona com player offline (atualiza apenas DB)
+
+---
+
+#### `/setlevel`
+Define o nível de um jogador.
+
+**Sintaxe:**
+```
+/setlevel player(id) level(lvl)
+```
+
+**Exemplos:**
+```
+/setlevel player(1) level(50)
+/setlevel player(3) level(100)
+```
+
+**Comportamento:**
+- Atualiza level no estado em memória
+- Atualiza banco de dados
+- Player recebe notificação
+- Level válido: 1-300
+
+---
+
+#### `/broadcast`
+Envia mensagem global para todos os jogadores online.
+
+**Sintaxe:**
+```
+/broadcast message(texto)
+```
+
+**Exemplos:**
+```
+/broadcast message(Servidor reiniciará em 10 minutos)
+/broadcast message(Evento iniciando agora na área PvP!)
+/broadcast message(Manutenção programada às 22h)
+```
+
+**Comportamento:**
+- Aparece centralizada na tela de todos os players
+- Duração: 5 segundos
+- Destaque visual (overlay)
+- Visível mesmo durante movimento/combate
+
+---
+
+## 🛡️ Sistema de Segurança
+
+### Validações Automáticas
+
+1. **Permissão:** Apenas vocation = 4 pode executar
+2. **Parse:** Valida sintaxe antes de executar
+3. **Parâmetros:** Valida tipos e ranges
+4. **Auditoria:** Todos os comandos geram logs
+5. **Server-Side:** Cliente não pode simular comandos
+
+### Feedback ao GM
+
+Todos os comandos retornam:
+- ✅ Mensagem de sucesso (verde)
+- ❌ Mensagem de erro (vermelho)
+- ⚠️ Avisos quando necessário (amarelo)
+
+### Exemplos de Erros
+
+```
+❌ Você não tem permissão para usar comandos GM.
+❌ Comando inválido.
+❌ Uso: /teleport x(coord) y(coord) z(floor)
+❌ Coordenadas inválidas.
+❌ Player com ID 999 não encontrado ou offline.
 ```
 
 ---
 
-**Última Atualização:** 20/12/2025
-**Versão do Sistema:** 1.0.0
+## 📊 Logs de Auditoria
+
+Todos os comandos geram logs no formato:
+
+```
+[GM] Teleport: AshKetchum (id=1) para x=100, y=200, z=7
+[GM] Spawn Pokémon: Pikachu id=10 level=25 em x=50, y=30, z=7 por GM AshKetchum
+[GM] Heal aplicado no player RedPlayer (id=3) pelo GM AshKetchum
+[GM] Player BluePlayer (id=5) foi kickado pelo GM AshKetchum
+[GM] Player id=7 banido por 3 dias pelo GM AshKetchum (id=1)
+[GM] Item potion x10 adicionado ao player id=2 pelo GM AshKetchum
+[GM] Level do player id=6 alterado para 50 pelo GM AshKetchum
+[GM] Broadcast enviado: "Servidor reiniciará em 10 minutos" por GM AshKetchum
+```
+
+---
+
+## 🔧 Comandos Legados (Mantidos para Compatibilidade)
+
+### /add goldcoin
+Adiciona gold coins ao saldo de um jogador.
