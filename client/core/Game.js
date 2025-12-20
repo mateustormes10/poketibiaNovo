@@ -6,6 +6,8 @@ import { Keyboard } from '../input/Keyboard.js';
 import { Mouse } from '../input/Mouse.js';
 import { Renderer } from '../render/Renderer.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { InventoryManager } from '../managers/InventoryManager.js';
+import { InventoryUI } from '../render/UI/InventoryUI.js';
 
 export class Game {
     constructor(canvas, config) {
@@ -38,6 +40,16 @@ export class Game {
         
         // Rendering
         this.renderer = new Renderer(canvas, this.camera, this.wsClient);
+        
+        // Inventory system
+        this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
+        this.inventoryManager = new InventoryManager(this.wsClient, this.inventoryUI);
+        
+        // Callback para bloquear movimento quando inventário aberto
+        this.inventoryManager.onToggle((isOpen) => {
+            this.isInventoryBlocking = isOpen;
+        });
+        this.isInventoryBlocking = false;
         
         this.lastFrameTime = 0;
         this.resizeTimeout = null;
@@ -223,6 +235,32 @@ export class Game {
             console.log('[Game] System message:', data.message);
             this.renderer.chatBox.addMessage('System', data.message, 'system');
         });
+        
+        // Inventory handlers
+        this.wsClient.on('inventory_data', (data) => {
+            console.log('[Game] Inventory data received:', data);
+            this.inventoryManager.receiveInventoryData(data);
+        });
+        
+        this.wsClient.on('inventory_update', (data) => {
+            console.log('[Game] Inventory update received:', data);
+            this.inventoryManager.receiveInventoryUpdate(data);
+        });
+        
+        this.wsClient.on('inventory_item_used', (data) => {
+            console.log('[Game] Item used:', data);
+            this.inventoryManager.receiveItemUsed(data);
+        });
+        
+        this.wsClient.on('inventory_item_added', (data) => {
+            console.log('[Game] Item added:', data);
+            this.inventoryManager.receiveItemAdded(data);
+        });
+        
+        this.wsClient.on('inventory_error', (data) => {
+            console.log('[Game] Inventory error:', data);
+            this.inventoryManager.receiveError(data);
+        });
     }
     
     sendLogin(username, playerId = 1) {
@@ -332,9 +370,19 @@ export class Game {
             this.renderer.uiManager.updateDrag(mousePos.x, mousePos.y);
         }
         
+        // Atualiza hover do inventário
+        const mousePos = this.mouse.getPosition();
+        this.inventoryManager.handleMouseMove(mousePos.x, mousePos.y);
+        
         // Detecta clique esquerdo do mouse
         if (this.mouse.isButtonPressed(0)) { // Botão esquerdo = 0
-            const mousePos = this.mouse.getPosition();
+            
+            // Verifica clique no inventário primeiro (se estiver aberto)
+            if (this.inventoryManager.isInventoryOpen()) {
+                if (this.inventoryManager.handleClick(mousePos.x, mousePos.y)) {
+                    return; // Clique no inventário processado
+                }
+            }
             
             // Verifica clique no modal de morte primeiro
             if (this.renderer.deathModal.checkClick(mousePos.x, mousePos.y)) {
@@ -419,6 +467,22 @@ export class Game {
                     this.renderer.npcDialog.handleKeyPress(key);
                     return;
                 }
+            }
+            return;
+        }
+        
+        // Toggle do inventário com tecla I
+        if (this.keyboard.isKeyPressed('i')) {
+            this.inventoryManager.toggle();
+            console.log('[Game] Inventário toggled');
+            return;
+        }
+        
+        // Se inventário estiver aberto, bloqueia movimento
+        if (this.isInventoryBlocking) {
+            // Permite fechar com ESC também
+            if (this.keyboard.isKeyPressed('Escape')) {
+                this.inventoryManager.close();
             }
             return;
         }
@@ -539,5 +603,8 @@ export class Game {
     render() {
         this.renderer.clear();
         this.renderer.render(this.gameState);
+        
+        // Renderiza inventário por último (acima de tudo)
+        this.inventoryManager.render();
     }
 }

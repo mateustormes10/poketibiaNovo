@@ -503,3 +503,29 @@ CREATE TABLE player_pokemons (
     FOREIGN KEY (pokemon_id) REFERENCES pokemons(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ======================
+-- PLAYER INVENTORY
+-- ======================
+-- Se a tabela já existe, remova primeiro
+DROP TABLE IF EXISTS player_inventory;
+
+-- Cria a tabela corretamente
+CREATE TABLE player_inventory (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    player_id INT NOT NULL,
+    item_type VARCHAR(50) NOT NULL DEFAULT 'consumable',
+    item_name VARCHAR(100) NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
+    INDEX idx_player_inventory (player_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Adiciona itens de teste para o player 1
+INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
+(1, 'consumable', 'Poção', 15),
+(1, 'consumable', 'Super Poção', 8),
+(1, 'battle', 'Pokébola', 25),
+(1, 'misc', 'Gold Coin', 10000);

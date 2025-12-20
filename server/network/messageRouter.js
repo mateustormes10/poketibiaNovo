@@ -1,9 +1,12 @@
 import { ClientEvents } from '../../shared/protocol/actions.js';
+import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
 import { AuthHandler } from '../handlers/authHandler.js';
 import { MovementHandler } from '../handlers/movementHandler.js';
 import { CombatHandler } from '../handlers/combatHandler.js';
 import { ChatHandler } from '../handlers/chatHandler.js';
 import { NpcHandler } from '../handlers/npcHandler.js';
+import { InventoryHandler } from '../handlers/inventoryHandler.js';
+import { InventoryService } from '../services/InventoryService.js';
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -26,6 +29,14 @@ export class MessageRouter {
             this.gameWorld.inventoryRepository
         );
         
+        // Inventory service e handler
+        const inventoryService = new InventoryService(
+            this.gameWorld.inventoryRepository,
+            this.gameWorld.playerRepository,
+            this.gameWorld.playerPokemonRepository
+        );
+        const inventoryHandler = new InventoryHandler(this.gameWorld, inventoryService);
+        
         this.handlers.set(ClientEvents.LOGIN, authHandler.handleLogin.bind(authHandler));
         this.handlers.set(ClientEvents.MOVE, movementHandler.handleMove.bind(movementHandler));
         this.handlers.set(ClientEvents.ATTACK, combatHandler.handleAttack.bind(combatHandler));
@@ -34,6 +45,11 @@ export class MessageRouter {
         // NPC handlers
         this.handlers.set('npc_interact', npcHandler.handleInteract.bind(npcHandler));
         this.handlers.set('npc_buy', npcHandler.handleBuy.bind(npcHandler));
+        
+        // Inventory handlers
+        this.handlers.set(InventoryClientEvents.REQUEST_INVENTORY, inventoryHandler.handleInventoryRequest.bind(inventoryHandler));
+        this.handlers.set(InventoryClientEvents.USE_ITEM, inventoryHandler.handleUseItem.bind(inventoryHandler));
+        this.handlers.set(InventoryClientEvents.DROP_ITEM, inventoryHandler.handleDropItem.bind(inventoryHandler));
         
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));

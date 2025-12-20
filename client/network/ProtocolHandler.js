@@ -1,9 +1,11 @@
 import { ClientEvents, ServerEvents } from '../../shared/protocol/actions.js';
+import { InventoryServerEvents } from '../../shared/protocol/InventoryProtocol.js';
 
 export class ProtocolHandler {
-    constructor(wsClient, gameState) {
+    constructor(wsClient, gameState, inventoryManager = null) {
         this.wsClient = wsClient;
         this.gameState = gameState;
+        this.inventoryManager = inventoryManager;
         this.setupHandlers();
     }
     
@@ -27,6 +29,35 @@ export class ProtocolHandler {
         this.wsClient.on(ServerEvents.CHAT_MESSAGE, (data) => {
             this.handleChatMessage(data);
         });
+        
+        // Inventory handlers
+        if (this.inventoryManager) {
+            this.wsClient.on(InventoryServerEvents.INVENTORY_DATA, (data) => {
+                this.inventoryManager.receiveInventoryData(data);
+            });
+            
+            this.wsClient.on(InventoryServerEvents.INVENTORY_UPDATE, (data) => {
+                this.inventoryManager.receiveInventoryUpdate(data);
+            });
+            
+            this.wsClient.on(InventoryServerEvents.ITEM_USED, (data) => {
+                this.inventoryManager.receiveItemUsed(data);
+            });
+            
+            this.wsClient.on(InventoryServerEvents.ITEM_ADDED, (data) => {
+                this.inventoryManager.receiveItemAdded(data);
+            });
+            
+            this.wsClient.on(InventoryServerEvents.INVENTORY_ERROR, (data) => {
+                this.inventoryManager.receiveError(data);
+            });
+        }
+    }
+    
+    setInventoryManager(inventoryManager) {
+        this.inventoryManager = inventoryManager;
+        // Re-setup handlers para incluir inventário
+        this.setupHandlers();
     }
     
     handleGameState(data) {
