@@ -177,12 +177,8 @@ export class Game {
         }
 
         goToMainMenu() {
-            // Simples: recarrega a página ou mostra o menu inicial
-            if (this._mainMenu) {
-                this._mainMenu.style.display = 'flex';
-            } else {
-                window.location.reload();
-            }
+            // Redireciona para o menu principal (menu.html)
+            window.location.href = 'menu.html';
         }
 
     hideConnectionLostUI() {

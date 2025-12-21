@@ -57,9 +57,9 @@ export class GmCommandsUI {
                 label: '/addgold',
                 fields: [
                     { name: 'player', type: 'number', placeholder: 'ID do Player' },
-                    { name: 'amount', type: 'number', placeholder: 'Quantidade de Ouro' }
+                    { name: 'quantity', type: 'number', placeholder: 'Quantidade de Ouro' }
                 ],
-                build: (vals) => `/addgold player(${vals.player}) amount(${vals.amount})`
+                build: (vals) => `/addgold player(${vals.player}) quantity(${vals.quantity})`
             },
             {
                 label: '/spawn',

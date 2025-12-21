@@ -114,6 +114,9 @@ export class GMCommandHandler {
                 case 'broadcast':
                     await this.handleBroadcast(client, params);
                     break;
+                case 'addgold':
+                    await this.handleAddGold(client, params);
+                    break;
                 default:
                     client.send('system_message', {
                         message: `❌ Comando desconhecido: /${command}`,
@@ -189,6 +192,79 @@ export class GMCommandHandler {
         // Log
         logger.info(`[GM] Teleport: ${client.player.name} (id=${client.player.id}) para x=${newX}, y=${newY}, z=${newZ}`);
     }
+
+     async handleAddGold(client, params) {
+                const { player: playerId, quantity } = params;
+                if (!playerId || !quantity) {
+                    client.send('system_message', {
+                        message: '❌ Uso: /addgold player(id) quantity(qtd)',
+                        color: 'red'
+                    });
+                    return;
+                }
+
+                const targetId = parseInt(playerId);
+                const amount = parseInt(quantity);
+                if (isNaN(targetId) || isNaN(amount) || amount <= 0) {
+                    client.send('system_message', {
+                        message: '❌ Parâmetros inválidos. Exemplo: /addgold player(1) quantity(100)',
+                        color: 'red'
+                    });
+                    return;
+                }
+
+                // Busca player pelo ID do banco (dbId)
+                let targetPlayer = null;
+                for (const player of this.gameWorld.players.values()) {
+                    if (player.dbId === targetId) {
+                        targetPlayer = player;
+                        break;
+                    }
+                }
+
+                if (!targetPlayer) {
+                    client.send('system_message', {
+                        message: `❌ Player com ID ${playerId} não encontrado ou offline.`,
+                        color: 'red'
+                    });
+                    return;
+                }
+
+                try {
+                    // Adiciona gold ao balance
+                    const newBalance = await this.gameWorld.balanceRepository.addGold(targetId, amount);
+                    // Atualiza goldCoin em tempo real se player estiver online
+                    targetPlayer.goldCoin = newBalance;
+
+                    // Notifica o player alvo
+                    const targetClient = this.getClientByPlayer(targetPlayer);
+                    if (targetClient) {
+                        targetClient.send('system_message', {
+                            message: `💰 Você recebeu ${amount} gold! Novo saldo: ${newBalance}`,
+                            color: 'yellow'
+                        });
+                    }
+
+                    if (targetClient) {
+                        targetClient.send('balance_update', { balance: newBalance });
+                    }
+
+                    // Feedback para o GM
+                    client.send('system_message', {
+                        message: `✅ ${amount} gold adicionados ao player ${targetPlayer.name} (ID ${playerId}). Novo saldo: ${newBalance}`,
+                        color: 'green'
+                    });
+
+                    // Log
+                    logger.info(`[GM] ${client.player.name} adicionou ${amount} gold ao player ${targetPlayer.name} (id=${playerId})`);
+                } catch (error) {
+                    logger.error(`[GM] Erro ao adicionar gold:`, error);
+                    client.send('system_message', {
+                        message: '❌ Erro ao adicionar gold.',
+                        color: 'red'
+                    });
+                }
+            }
 
     /**
      * /spawn pokemon(id) level(lvl)
