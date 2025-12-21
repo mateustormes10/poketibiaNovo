@@ -1,4 +1,5 @@
 import { TileSet } from './TileSet.js';
+import { resolveTileLayer } from '../utils/resolveTileLayer.js';
 
 /**
  * TileRenderer - Renderiza mapa baseado em matriz de tiles
@@ -29,42 +30,25 @@ export class TileRenderer {
      * @param {Map} map - Instância da classe Map
      * @param {Camera} camera - Câmera para transformação
      */
-    render(ctx, map, camera) {
+    // Renderiza apenas tiles ground
+    renderGround(ctx, map, camera) {
         if (!map) return;
-        
-        // Obtém viewport da câmera
         const viewport = camera.getViewport();
-        
-        // Calcula range de tiles visíveis
         const startX = Math.floor(viewport.x / this.tileSize);
         const startY = Math.floor(viewport.y / this.tileSize);
         const endX = Math.ceil((viewport.x + viewport.width) / this.tileSize);
         const endY = Math.ceil((viewport.y + viewport.height) / this.tileSize);
-        
         const currentZ = map.viewport.z;
-        
-        // Debug log (apenas uma vez)
-        if (!this._logged || map.updated) {
-            console.log(`[TileRenderer] Rendering tiles from (${startX},${startY}) to (${endX},${endY}) at z=${currentZ}`);
-            console.log('[TileRenderer] Camera viewport:', viewport);
-            console.log('[TileRenderer] Map has', map.tiles.size, 'tiles');
-            this._logged = true;
-            map.updated = false;
-        }
-        
-        let tilesRendered = 0;
-        
-        // Renderiza tiles visíveis começando de (0,0) na tela
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 const tile = map.getTile(x, y, currentZ);
-                
                 if (tile) {
-                    // Calcula posição NA TELA (não no mundo)
-                    const screenX = (x - startX) * this.tileSize;
-                    const screenY = (y - startY) * this.tileSize;
-                    this.renderTileAt(ctx, tile, screenX, screenY);
-                    tilesRendered++;
+                    const layer = resolveTileLayer(tile.spriteId);
+                    if (layer !== 'overlay') {
+                        const screenX = (x - startX) * this.tileSize;
+                        const screenY = (y - startY) * this.tileSize;
+                        this.renderTileAt(ctx, tile, screenX, screenY);
+                    }
                 } else if (this.debugMode) {
                     const screenX = (x - startX) * this.tileSize;
                     const screenY = (y - startY) * this.tileSize;
@@ -72,12 +56,31 @@ export class TileRenderer {
                 }
             }
         }
-        
-        if (!this._logged2 && tilesRendered === 0) {
-            console.warn('[TileRenderer] No tiles rendered! Checking first tile in map...');
-            const firstTile = Array.from(map.tiles.values())[0];
-            console.log('[TileRenderer] First tile in map:', firstTile);
-            this._logged2 = true;
+    }
+
+    // Renderiza apenas tiles overlay (qualquer spriteId overlay)
+    renderOverlay(ctx, map, camera) {
+        if (!map) return;
+        const viewport = camera.getViewport();
+        const startX = Math.floor(viewport.x / this.tileSize);
+        const startY = Math.floor(viewport.y / this.tileSize);
+        const endX = Math.ceil((viewport.x + viewport.width) / this.tileSize);
+        const endY = Math.ceil((viewport.y + viewport.height) / this.tileSize);
+        const currentZ = map.viewport.z;
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const tile = map.getTile(x, y, currentZ);
+                if (tile) {
+                    // Se QUALQUER spriteId do tile for overlay, desenha como overlay
+                    const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                    const hasOverlay = spriteIds.some(id => resolveTileLayer(id) === 'overlay');
+                    if (hasOverlay) {
+                        const screenX = (x - startX) * this.tileSize;
+                        const screenY = (y - startY) * this.tileSize;
+                        this.renderTileAt(ctx, tile, screenX, screenY);
+                    }
+                }
+            }
         }
     }
     
@@ -89,6 +92,7 @@ export class TileRenderer {
         if (tile.spriteIds && tile.spriteIds.length > 0) {
             // Múltiplas sprites empilhadas (como no map editor)
             tile.spriteIds.forEach(spriteId => {
+                // Certifique-se que drawTile NÃO desenha fundo sólido!
                 this.tileSet.drawTile(ctx, spriteId, screenX, screenY, this.tileSize);
             });
         } else if (tile.spriteId) {

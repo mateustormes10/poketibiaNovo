@@ -7,6 +7,7 @@ import { NpcDialog } from './UI/NpcDialog.js';
 import { OutfitSelector } from './UI/OutfitSelector.js';
 import { UIManager } from './UI/UIManager.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { resolveTileLayer } from '../utils/resolveTileLayer.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
@@ -57,28 +58,72 @@ export class Renderer {
     render(gameState) {
         // Limpa canvas
         this.clear();
-        
-        // 1. Renderiza mapa (PRIMEIRO - background)
-        if (gameState.map) {
-            this.tileRenderer.render(this.ctx, gameState.map, this.camera);
-            
-            // Grid opcional (debug)
-            if (this.showGrid) {
-                this.tileRenderer.renderGrid(this.ctx, gameState.map, this.camera);
+
+        // Parâmetros do viewport
+        const map = gameState.map;
+        if (!map) return;
+        const viewport = this.camera.getViewport();
+        const tileSize = this.tileRenderer.tileSize;
+        const startX = Math.floor(viewport.x / tileSize);
+        const startY = Math.floor(viewport.y / tileSize);
+        const endX = Math.ceil((viewport.x + viewport.width) / tileSize);
+        const endY = Math.ceil((viewport.y + viewport.height) / tileSize);
+        const currentZ = map.viewport.z;
+
+        // Organiza entidades por linha Y
+        const entities = gameState.getEntitiesInView(this.camera);
+        const entitiesByY = {};
+        entities.forEach(entity => {
+            const y = entity.y;
+            if (!entitiesByY[y]) entitiesByY[y] = [];
+            entitiesByY[y].push(entity);
+        });
+
+        // Ordem correta: ground, player, overlay
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const tile = map.getTile(x, y, currentZ);
+                const screenX = (x - startX) * tileSize;
+                const screenY = (y - startY) * tileSize;
+
+                // 1. Renderiza ground (sempre)
+                if (tile) {
+                    const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                    const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay');
+                    if (groundIds.length > 0) {
+                        // Renderiza apenas ground
+                        const groundTile = { ...tile, spriteIds: groundIds };
+                        this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
+                    }
+                }
+
+                // 2. Renderiza entidade (player, NPC, etc)
+                let entity = null;
+                if (entitiesByY[y]) {
+                    entity = entitiesByY[y].find(e => e.x === x);
+                    if (entity) {
+                        if (entity.type === 'player') {
+                            console.log('[Renderer] Renderizando player em', x, y, 'screen:', screenX, screenY);
+                        }
+                        this.spriteRenderer.renderEntity(entity, startX, startY);
+                    }
+                }
+
+                // 3. Renderiza overlay (sempre por cima do player)
+                if (tile) {
+                    const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                    const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
+                    if (overlayIds.length > 0) {
+                        // Renderiza apenas overlay
+                        const overlayTile = { ...tile, spriteIds: overlayIds };
+                        this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                    }
+                }
             }
         }
-        
-        // 2. Renderiza entidades (DEPOIS - sobre o mapa)
-        const entities = gameState.getEntitiesInView(this.camera);
-        
-        // Calcula startX/startY do viewport (mesmo que TileRenderer)
-        const viewport = this.camera.getViewport();
-        const startX = Math.floor(viewport.x / 64);
-        const startY = Math.floor(viewport.y / 64);
-        
-        entities.forEach(entity => {
-            this.spriteRenderer.renderEntity(entity, startX, startY);
-        });
+        if (this.showGrid) {
+            this.tileRenderer.renderGrid(this.ctx, map, this.camera);
+        }
         
         // 3. Renderiza UI (POR ÚLTIMO - sobre tudo)
         this.hud.render(gameState, this.wildPokemonManager);
