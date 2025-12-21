@@ -820,13 +820,6 @@ export class Game {
             // Permite apenas interação com os botões da UI
             return;
         }
-        // Debug geral
-        if (this.keyboard.isKeyPressed('c') || this.keyboard.isKeyPressed('C')) {
-            console.log('[Game] ===== TECLA C DETECTADA NO INÍCIO =====');
-            console.log('[Game] Modal morte visível?', this.renderer.deathModal.isVisible());
-            console.log('[Game] NPC dialog visível?', this.renderer.npcDialog.isVisible());
-            console.log('[Game] Chat input ativo?', this.renderer.chatBox.isInputActive());
-        }
         
         // Bloqueia input se modal de morte estiver visível
         if (this.renderer.deathModal.isVisible()) {
