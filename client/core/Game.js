@@ -11,6 +11,8 @@ import { InventoryUI } from '../render/UI/InventoryUI.js';
 import { WildPokemonManager } from '../managers/WildPokemonManager.js';
 import { WildPokemonRenderer } from '../render/WildPokemonRenderer.js';
 import { ControlConfigUI } from '../ui/ControlConfigUI.js';
+import { SoundConfigUI } from '../ui/SoundConfigUI.js';
+import { GraphicsConfigUI } from '../ui/GraphicsConfigUI.js';
 
 export class Game {
         _createMainMenu() {
@@ -33,6 +35,26 @@ export class Game {
                     if (window.showControlConfig) window.showControlConfig();
                 };
                 menu.appendChild(btnConfig);
+
+                // Botão de configurações de som
+                const btnSound = document.createElement('button');
+                btnSound.textContent = 'Configurações de Som';
+                btnSound.style = 'font-size:1.2em;padding:12px 32px;margin-bottom:12px;border-radius:8px;border:none;background:#444;color:#fff;cursor:pointer;';
+                btnSound.onclick = () => {
+                    menu.style.display = 'none';
+                    if (window.showSoundConfig) window.showSoundConfig();
+                };
+                menu.appendChild(btnSound);
+
+                // Botão de configurações gráficas
+                const btnGraphics = document.createElement('button');
+                btnGraphics.textContent = 'Configurações Gráficas';
+                btnGraphics.style = 'font-size:1.2em;padding:12px 32px;margin-bottom:12px;border-radius:8px;border:none;background:#444;color:#fff;cursor:pointer;';
+                btnGraphics.onclick = () => {
+                    menu.style.display = 'none';
+                    if (window.showGraphicsConfig) window.showGraphicsConfig();
+                };
+                menu.appendChild(btnGraphics);
                 // Botão de fechar
                 const btnClose = document.createElement('button');
                 btnClose.textContent = 'Fechar Menu';
@@ -149,13 +171,27 @@ export class Game {
     }
     
     async init() {
-                        // Garante que o botão do menu sempre funcione
-                        if (!this.controlConfigUI) {
-                            this.controlConfigUI = new ControlConfigUI();
-                        }
-                        window.showControlConfig = () => {
-                            this.controlConfigUI.render();
-                        };
+        // Garante que os botões do menu sempre funcionem
+        if (!this.controlConfigUI) {
+            this.controlConfigUI = new ControlConfigUI();
+        }
+        window.showControlConfig = () => {
+            this.controlConfigUI.render();
+        };
+
+        if (!this.soundConfigUI) {
+            this.soundConfigUI = new SoundConfigUI();
+        }
+        window.showSoundConfig = () => {
+            this.soundConfigUI.render();
+        };
+
+        if (!this.graphicsConfigUI) {
+            this.graphicsConfigUI = new GraphicsConfigUI();
+        }
+        window.showGraphicsConfig = () => {
+            this.graphicsConfigUI.render();
+        };
                 // Cria o menu principal
                 this._createMainMenu();
                 // Atalho ESC para abrir/fechar menu principal

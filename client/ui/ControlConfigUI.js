@@ -64,12 +64,24 @@ export class ControlConfigUI {
         container.innerHTML = '';
         container.style = 'position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#222;padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;';
 
-        // Botão de fechar
+        // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'Fechar';
-        closeBtn.style = 'position:absolute;top:12px;right:16px;font-size:1em;padding:4px 16px;border-radius:8px;border:none;background:#333;color:#fff;cursor:pointer;z-index:10001;';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', 'Fechar');
+        closeBtn.style = 'position:absolute;top:10px;right:10px;width:32px;height:32px;font-size:2em;line-height:28px;padding:0;border-radius:50%;border:none;background:#fff;color:#c00;cursor:pointer;z-index:10001;display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px #0003;';
+        closeBtn.onmouseenter = () => { closeBtn.style.background = '#fee'; };
+        closeBtn.onmouseleave = () => { closeBtn.style.background = '#fff'; };
         closeBtn.onclick = () => { container.style.display = 'none'; };
         container.appendChild(closeBtn);
+
+        // ESC fecha a UI
+        const escListener = (e) => {
+            if (e.key === 'Escape') {
+                container.style.display = 'none';
+                window.removeEventListener('keydown', escListener);
+            }
+        };
+        setTimeout(() => window.addEventListener('keydown', escListener), 0);
 
         const title = document.createElement('h2');
         title.textContent = 'Configuração de Controles';
