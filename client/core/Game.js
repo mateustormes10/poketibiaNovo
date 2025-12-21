@@ -1114,11 +1114,16 @@ export class Game {
     render() {
         this.renderer.clear();
         this.renderer.render(this.gameState);
-        
-        // Renderiza Pokémon selvagens
-        const wildPokemons = this.wildPokemonManager.getAll();
+
+        // Renderiza apenas pokémons selvagens do mesmo andar (z) do player local
+        let wildPokemons = this.wildPokemonManager.getAll();
+        const player = this.gameState.localPlayer;
+        if (player) {
+            // Filtra pokémons do mesmo z
+            wildPokemons = new Map(Array.from(wildPokemons.entries()).filter(([id, wp]) => wp.z === player.z));
+        }
         this.wildPokemonRenderer.render(this.renderer.ctx, wildPokemons, this.camera);
-        
+
         // Renderiza inventário por último (acima de tudo)
         this.inventoryManager.render();
     }
