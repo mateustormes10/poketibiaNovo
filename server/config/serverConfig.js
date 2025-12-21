@@ -1,6 +1,6 @@
 export const config = {
     port: 3000,
-    tickRate: 20, // 20 ticks por segundo
+    tickRate: 10, // 10 ticks por segundo
     
     game: {
         maxPlayers: 100,

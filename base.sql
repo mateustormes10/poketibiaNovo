@@ -17,6 +17,12 @@ CREATE TABLE accounts (
     UNIQUE KEY uk_account_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+INSERT INTO accounts (name, password)
+VALUES
+('teste', '123'),
+('teste2', '123');
+
+
 -- ======================
 -- PLAYERS
 -- ======================
@@ -82,7 +88,45 @@ ALTER TABLE players
 MODIFY COLUMN lookaddons VARCHAR(50) NOT NULL DEFAULT 'default';
 
 
-
+INSERT INTO players (
+    name, world_id, group_id, account_id,
+    level, vocation,
+    health, healthmax,
+    experience,
+    lookbody, lookfeet, lookhead, looklegs, looktype, lookaddons,
+    maglevel, mana, manamax, manaspent,
+    soul, town_id,
+    posx, posy, posz,
+    conditions,
+    cap, sex,
+    rank_id
+) VALUES
+(
+    'TormesBr', 0, 1, 1,
+    1, 0,
+    100, 100,
+    0,
+    10, 10, 10, 10, 136, 'default',
+    0, 100, 100, 0,
+    0, 1,
+    100, 100, 7,
+    '',
+    0, 0,
+    0
+),
+(
+    'AshKetchum', 0, 1, 2,
+    1, 0,
+    100, 100,
+    0,
+    10, 10, 10, 10, 136, 'default',
+    0, 100, 100, 0,
+    0, 1,
+    105, 100, 7,
+    '',
+    0, 0,
+    0
+);
 
 
 -- ======================
@@ -461,8 +505,8 @@ CREATE TABLE player_active_pokemons (
 
 INSERT INTO player_active_pokemons (player_id, pokemon_id, slot, direction)
 VALUES 
-(1, 4, 1, 'down'),  -- o pokemon_id aqui pode dar erro precisa ser um id correto de dentro de pokemon
-(1, 5, 2, 'down');  -- Raichu
+(1, 1, 1, 'down'),  -- o pokemon_id aqui pode dar erro precisa ser um id correto de dentro de pokemon
+(1, 2, 2, 'down');  -- Raichu
 
 CREATE TABLE wild_pokemons (
     id INT AUTO_INCREMENT PRIMARY KEY,

@@ -1,0 +1,30 @@
+config:
+  target: "ws://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 20
+scenarios:
+  - engine: ws
+    name: "Player Simulado"
+    flow:
+      - send:
+          text: '{"type":"login","username":"Player{{ $randomInt(1,100000) }}","playerId":{{ $randomInt(1,100000) }}}'
+      - think: 1
+      - loop:
+          - send:
+              text: '{"type":"move","direction":"up"}'
+          - think: 0.2
+          - send:
+              text: '{"type":"move","direction":"down"}'
+          - think: 0.2
+          - send:
+              text: '{"type":"move","direction":"left"}'
+          - think: 0.2
+          - send:
+              text: '{"type":"move","direction":"right"}'
+          - think: 0.2
+        count: 10
+      - think: 1
+      - send:
+          text: '{"type":"chat","message":"Teste de carga!"}'
+      - think: 1

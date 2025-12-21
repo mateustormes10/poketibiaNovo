@@ -6,7 +6,7 @@ import { SpatialGrid } from './systems/SpatialGrid.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
 import { WildPokemonManager } from './systems/WildPokemonManager.js';
-import { PlayerPokemonRepository } from '../persistence/PlayerPokemonRepository.js';
+import { PlayerActivePokemonRepository } from '../persistence/PlayerActivePokemonRepository.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { PlayerDeathRepository } from '../persistence/PlayerDeathRepository.js';
 import { NpcRepository } from '../persistence/NpcRepository.js';
@@ -30,7 +30,7 @@ export class GameWorld {
         this.wildPokemonManager = new WildPokemonManager(this);
         
         // Repositórios
-        this.playerPokemonRepository = new PlayerPokemonRepository(database);
+        this.playerActivePokemonRepository = new PlayerActivePokemonRepository(database);
         this.playerRepository = new PlayerRepository(database);
         this.playerDeathRepository = new PlayerDeathRepository(database);
         this.npcRepository = new NpcRepository(database);
@@ -55,24 +55,27 @@ export class GameWorld {
     async loadPlayerPokemons(player, dbPlayerId) {
         const playerIdToUse = dbPlayerId || player.dbId || player.id;
         try {
-            const pokemonData = await this.playerPokemonRepository.findByPlayerId(playerIdToUse);
-            
+            const pokemonData = await this.playerActivePokemonRepository.findByPlayerId(playerIdToUse);
             player.pokemons = pokemonData.map(p => ({
                 id: p.id,
                 pokemonId: p.pokemon_id,
                 name: p.pokemon_name,
                 nickname: p.nickname,
                 level: p.level,
-                hp: p.current_hp,
+                hp: p.hp || p.current_hp,
                 maxHp: p.max_hp,
                 mana: p.current_mana,
                 maxMana: p.max_mana,
-                experience: p.experience
+                experience: p.experience,
+                slot: p.slot,
+                sprite_up: p.sprite_up,
+                sprite_down: p.sprite_down,
+                sprite_left: p.sprite_left,
+                sprite_right: p.sprite_right
             }));
-            
-            logger.info(`Loaded ${player.pokemons.length} pokemons for player ${player.name}`);
+            logger.info(`Loaded ${player.pokemons.length} ACTIVE pokemons for player ${player.name}`);
         } catch (error) {
-            logger.error(`Error loading pokemons for player ${playerIdToUse}:`, error);
+            logger.error(`Error loading ACTIVE pokemons for player ${playerIdToUse}:`, error);
             player.pokemons = [];
         }
     }
