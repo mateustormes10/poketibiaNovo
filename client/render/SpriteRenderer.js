@@ -74,13 +74,15 @@ export class SpriteRenderer {
             y: (pos.y - startY) * this.tileSize
         };
         
-        // Se for player, usa sistema de 3 sprites
-        if (entity.type === 'player') {
-            this.renderPlayer(entity, screenPos);
+        // Se for player ou NPC, usa sistema de 3 sprites (lookaddons)
+        if (entity.type === 'player' || entity.type === 'npc') {
+            this.renderPlayer({
+                ...entity,
+                sprite: entity.lookaddons || entity.sprite || 'default'
+            }, screenPos);
         } else {
             // Outras entidades usam sprite única
             const sprite = this.sprites.get(entity.sprite);
-            
             if (sprite && sprite.complete) {
                 this.ctx.drawImage(
                     sprite,

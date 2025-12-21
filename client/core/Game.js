@@ -10,8 +10,44 @@ import { InventoryManager } from '../managers/InventoryManager.js';
 import { InventoryUI } from '../render/UI/InventoryUI.js';
 import { WildPokemonManager } from '../managers/WildPokemonManager.js';
 import { WildPokemonRenderer } from '../render/WildPokemonRenderer.js';
+import { ControlConfigUI } from '../ui/ControlConfigUI.js';
 
 export class Game {
+        _createMainMenu() {
+            let menu = document.getElementById('main-menu-ui');
+            if (!menu) {
+                menu = document.createElement('div');
+                menu.id = 'main-menu-ui';
+                menu.style = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#222d;padding:32px 48px;border-radius:16px;z-index:10001;color:#fff;box-shadow:0 0 32px #000a;display:none;flex-direction:column;align-items:center;min-width:320px;';
+                // Título
+                const title = document.createElement('h2');
+                title.textContent = 'Menu Principal';
+                title.style = 'margin-bottom:24px;';
+                menu.appendChild(title);
+                // Botão de configurações de controle
+                const btnConfig = document.createElement('button');
+                btnConfig.textContent = 'Configurações de Controle';
+                btnConfig.style = 'font-size:1.2em;padding:12px 32px;margin-bottom:12px;border-radius:8px;border:none;background:#444;color:#fff;cursor:pointer;';
+                btnConfig.onclick = () => {
+                    menu.style.display = 'none';
+                    if (window.showControlConfig) window.showControlConfig();
+                };
+                menu.appendChild(btnConfig);
+                // Botão de fechar
+                const btnClose = document.createElement('button');
+                btnClose.textContent = 'Fechar Menu';
+                btnClose.style = 'font-size:1em;padding:8px 24px;border-radius:8px;border:none;background:#333;color:#fff;cursor:pointer;';
+                btnClose.onclick = () => { menu.style.display = 'none'; };
+                menu.appendChild(btnClose);
+                document.body.appendChild(menu);
+            }
+            this._mainMenu = menu;
+        }
+
+        _toggleMainMenu() {
+            if (!this._mainMenu) return;
+            this._mainMenu.style.display = (this._mainMenu.style.display === 'none' ? 'flex' : 'none');
+        }
     constructor(canvas, config) {
         this.canvas = canvas;
         this.config = config;
@@ -113,6 +149,24 @@ export class Game {
     }
     
     async init() {
+                        // Garante que o botão do menu sempre funcione
+                        if (!this.controlConfigUI) {
+                            this.controlConfigUI = new ControlConfigUI();
+                        }
+                        window.showControlConfig = () => {
+                            this.controlConfigUI.render();
+                        };
+                // Cria o menu principal
+                this._createMainMenu();
+                // Atalho ESC para abrir/fechar menu principal
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        // Só abre se não estiver com chat ou modal aberto
+                        if (!this.renderer?.chatBox?.isInputActive() && !this.renderer?.deathModal?.isVisible()) {
+                            this._toggleMainMenu();
+                        }
+                    }
+                });
         // Setup canvas com tamanho da janela (apenas UMA vez)
         this.resizeCanvas();
         

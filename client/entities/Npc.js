@@ -2,38 +2,34 @@ export class Npc {
     constructor(data) {
         this.id = data.id;
         this.name = data.name;
-        
         // Posição autoritativa
         this.x = data.x;
         this.y = data.y;
         this.z = data.z;
-        
         // Posição renderizada
         this.renderX = data.x;
         this.renderY = data.y;
         this.prevX = data.x;
         this.prevY = data.y;
-        
         // Interpolação
         this.moveProgress = 1;
         this.moveSpeed = 0.25;
         this.isMoving = false;
-        
-        this.sprite = data.sprite || 'npc';
+        // lookaddons/outfit do NPC (usa mesmo sistema do player)
+        this.lookaddons = data.sprite || 'default';
         this.dialogue = data.dialogue || [];
         this.direction = data.direction || 'down';
     }
     
     update(data) {
         if (data.direction !== undefined) this.direction = data.direction;
-        
         if (data.x !== undefined && data.y !== undefined) {
             if (data.x !== this.x || data.y !== this.y) {
                 this.startMove(data.x, data.y);
             }
         }
-        
         if (data.z !== undefined) this.z = data.z;
+        if (data.sprite !== undefined) this.lookaddons = data.sprite;
     }
     
     startMove(newX, newY) {

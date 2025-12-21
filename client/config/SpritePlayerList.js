@@ -1,4 +1,29 @@
 /**
+ * Helper para obter sprites de um NPC
+ * @param {string} npcType - Tipo do NPC ('nurse', 'vendor', etc)
+ * @param {string} direction - Direção (up, down, left, right)
+ * @param {number} frameIndex - Frame da animação (0, 1, 2)
+ * @returns {Array<number>} Array com 3 IDs de sprites [central, esquerda, acima]
+ */
+export function getNpcSprites(npcType, direction, frameIndex) {
+    let lookaddons = 'default';
+    if (npcType === 'nurse') lookaddons = 'summonerMale';
+    if (npcType === 'vendor') lookaddons = 'maletaMale';
+    // Permite expandir para outros npcs no futuro
+    return getPlayerSprites(lookaddons, direction, frameIndex);
+}
+
+/**
+ * Helper para obter o tipo de sprite (outfit) fixa de um NPC
+ * @param {string} npcType - Tipo do NPC ('nurse', 'vendor', etc)
+ * @returns {string} lookaddons
+ */
+export function getNpcLookaddons(npcType) {
+    if (npcType === 'nurse') return 'summonerMale';
+    if (npcType === 'vendor') return 'maletaMale';
+    return 'default';
+}
+/**
  * SpritePlayerList
  * 
  * Catálogo centralizado de sprites de personagens
