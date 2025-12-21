@@ -179,13 +179,24 @@ export class SpriteRenderer {
     
     renderName(name, screenPos) {
         this.ctx.font = '10px Arial';
-        this.ctx.fillStyle = '#ffffff';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(
-            name,
-            screenPos.x + this.tileSize / 2,
-            screenPos.y - 5
-        );
+        const x = screenPos.x + this.tileSize / 2;
+        const y = screenPos.y - 5;
+        // Sombra preta mais sutil (contorno)
+        this.ctx.save();
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = '#000';
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx !== 0 || dy !== 0) {
+                    this.ctx.strokeText(name, x + dx, y + dy);
+                }
+            }
+        }
+        this.ctx.restore();
+        // Texto principal branco
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillText(name, x, y);
     }
     
     renderHealthBar(entity, screenPos) {

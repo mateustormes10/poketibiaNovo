@@ -92,11 +92,20 @@ export class WildPokemonRenderer {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // Sombra do texto
-        ctx.fillStyle = '#000000';
-        ctx.fillText(wildPokemon.name, centerX + 1, nameY + 1);
+        // Sombra preta mais sutil (contorno)
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000';
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx !== 0 || dy !== 0) {
+                    ctx.strokeText(wildPokemon.name, centerX + dx, nameY + dy);
+                }
+            }
+        }
+        ctx.restore();
 
-        // Texto principal
+        // Texto principal branco
         ctx.fillStyle = '#FFFFFF';
         ctx.fillText(wildPokemon.name, centerX, nameY);
     }

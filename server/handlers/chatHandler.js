@@ -1,3 +1,6 @@
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import path from 'path';
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { GMCommandHandler } from './gmCommandHandler.js';
@@ -7,24 +10,48 @@ export class ChatHandler {
         this.gameWorld = gameWorld;
         this.wsServer = wsServer;
         this.gmCommandHandler = new GMCommandHandler(gameWorld, wsServer);
+
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const badwordsPath = path.resolve(__dirname, '../config/badwords.json');
+
+        try {
+            this.badwords = JSON.parse(fs.readFileSync(badwordsPath, 'utf8'));
+        } catch (e) {
+            this.badwords = [];
+            console.warn('[ChatHandler] Não foi possível carregar badwords.json');
+        }
     }
     
     handleChat(client, data) {
         if (!client.player) return;
-        
+
         const { message, type } = data;
-        
+
         // Limita tamanho da mensagem
         if (message.length > GameConstants.MAX_CHAT_LENGTH) {
             return;
         }
-        
+
         // Comandos GM (intercepta mensagens que começam com /)
         if (message.startsWith('/')) {
             this.gmCommandHandler.handleCommand(client, message);
             return;
         }
-        
+
+        // Validação de palavras proibidas
+        const msgLower = message.toLowerCase();
+        if (this.badwords.some(bad => msgLower.includes(bad))) {
+            client.send('chatMessage', {
+                playerId: 0,
+                playerName: 'Sistema',
+                message: 'Mensagem bloqueada: linguagem inadequada.',
+                type: 'system',
+                timestamp: Date.now()
+            });
+            return;
+        }
+
         const chatMessage = {
             playerId: client.player.id,
             playerName: client.player.name,
@@ -32,7 +59,7 @@ export class ChatHandler {
             type: type || 'say',
             timestamp: Date.now()
         };
-        
+
         // Broadcast para jogadores próximos (chat de proximidade)
         const playersInRange = this.gameWorld.getPlayersInArea(
             client.player.x,
@@ -40,18 +67,18 @@ export class ChatHandler {
             client.player.z,
             GameConstants.CHAT_PROXIMITY_RANGE
         );
-        
+
         // Envia mensagem para todos os players em range
         playersInRange.forEach(player => {
             // Encontra o client do player
             const playerClient = Array.from(this.gameWorld.wsServer?.clients?.values() || [])
                 .find(c => c.player?.id === player.id);
-            
+
             if (playerClient) {
                 playerClient.send('chatMessage', chatMessage);
             }
         });
-        
+
         console.log(`[Chat] ${client.player.name}: ${message} (${playersInRange.length} players in range)`);
     }
     
