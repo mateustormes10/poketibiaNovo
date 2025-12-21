@@ -13,6 +13,7 @@ import { WildPokemonRenderer } from '../render/WildPokemonRenderer.js';
 import { ControlConfigUI } from '../ui/ControlConfigUI.js';
 import { SoundConfigUI } from '../ui/SoundConfigUI.js';
 import { GraphicsConfigUI } from '../ui/GraphicsConfigUI.js';
+import { GmCommandsUI } from '../ui/GmCommandsUI.js';
 
 export class Game {
         _createMainMenu() {
@@ -35,6 +36,8 @@ export class Game {
                     if (window.showControlConfig) window.showControlConfig();
                 };
                 menu.appendChild(btnConfig);
+
+                // (Removido: botão GM agora é criado dinamicamente em _toggleMainMenu e ao receber gameState)
 
                 // Botão de configurações de som
                 const btnSound = document.createElement('button');
@@ -67,10 +70,44 @@ export class Game {
         }
 
         _toggleMainMenu() {
-            if (!this._mainMenu) return;
-            this._mainMenu.style.display = (this._mainMenu.style.display === 'none' ? 'flex' : 'none');
+        if (!this._mainMenu) return;
+
+        // Só atualiza o menu se for abrir (display none -> flex)
+        const willOpen = this._mainMenu.style.display === 'none';
+
+        // Remove botão GM antigo se existir
+        const oldGmBtn = document.getElementById('gm-menu-btn');
+        if (oldGmBtn) oldGmBtn.remove();
+
+        if (willOpen) {
+            // Ao abrir o menu, requisita ao servidor o vocation do player (se ainda não sabemos)
+            if (typeof this._isGmVocation === 'undefined') {
+                this.wsClient.send('get_player_vocation', {});
+                // O botão GM será inserido no handler da resposta
+            } else if (this._isGmVocation) {
+                // Se já sabemos que é GM, mostra o botão
+                this._insertGmButton();
+            }
         }
+
+        this._mainMenu.style.display = (this._mainMenu.style.display === 'none' ? 'flex' : 'none');
+    }
+
+    _insertGmButton() {
+        // Cria e insere o botão GM no menu principal
+        if (!this._mainMenu) return;
+        const btnGm = document.createElement('button');
+        btnGm.id = 'gm-menu-btn';
+        btnGm.textContent = 'Comandos GM';
+        btnGm.style = 'font-size:1.2em;padding:12px 32px;margin-bottom:12px;border-radius:8px;border:none;background:#a22;color:#fff;cursor:pointer;';
+        btnGm.onclick = () => {
+            this._mainMenu.style.display = 'none';
+            if (window.showGmCommandsUI) window.showGmCommandsUI();
+        };
+        this._mainMenu.insertBefore(btnGm, this._mainMenu.lastChild);
+    }
     constructor(canvas, config) {
+        // Não define window.game globalmente
         this.canvas = canvas;
         this.config = config;
         this.running = false;
@@ -192,6 +229,14 @@ export class Game {
         window.showGraphicsConfig = () => {
             this.graphicsConfigUI.render();
         };
+
+        // GM Commands UI (só mostra se vocation 4)
+        if (!this.gmCommandsUI) {
+            this.gmCommandsUI = new GmCommandsUI(this);
+        }
+        window.showGmCommandsUI = () => {
+            this.gmCommandsUI.render();
+        };
                 // Cria o menu principal
                 this._createMainMenu();
                 // Atalho ESC para abrir/fechar menu principal
@@ -265,37 +310,29 @@ export class Game {
         });
         
         this.wsClient.on('loginSuccess', (data) => {
-            console.log('[Game] Login successful', data);
-            
+            console.log('[DEBUG][CLIENT] loginSuccess recebido:', data);
             // Inicia atualização periódica do mapa após login
             this.startMapUpdateLoop();
         });
         
         this.wsClient.on('gameState', (data) => {
             this.gameState.update(data);
-            
             // Libera flag após receber resposta
             if (this.isRequestingMap) {
                 this.isRequestingMap = false;
                 console.log('[Game] Map update received - flag reset');
             }
+            // Não faz mais nada relacionado ao menu ou GM aqui
         });
-        
-        this.wsClient.on('playerMove', (data) => {
-            this.gameState.updatePlayerPosition(data);
-        });
-        
-        this.wsClient.on('playerDeath', (data) => {
-            console.log('[Game] Player died:', data);
-            this.renderer.deathModal.show(data.message);
-            
-            // Atualiza posição do player para o respawn
-            if (this.gameState.localPlayer) {
-                this.gameState.localPlayer.x = data.respawnX;
-                this.gameState.localPlayer.y = data.respawnY;
-                this.gameState.localPlayer.z = data.respawnZ;
-                this.gameState.localPlayer.renderX = data.respawnX;
-                this.gameState.localPlayer.renderY = data.respawnY;
+
+        // Handler para resposta de vocation do player (registra só uma vez)
+        this.wsClient.on('player_vocation', (data) => {
+            // Remove botão GM antigo se existir
+            const oldGmBtn = document.getElementById('gm-menu-btn');
+            if (oldGmBtn) oldGmBtn.remove();
+            this._isGmVocation = (data && Number(data.vocation) === 4);
+            if (this._isGmVocation) {
+                this._insertGmButton();
             }
         });
         

@@ -1,5 +1,8 @@
 Já testado e funcionando tudo:
-/teleport x(15) y(19) z(3)
+/teleport x(60) y(24) z(3)
+
+
+/teleport x(65) y(24) z(3)
 /spawn pokemon(Rattata) level(5)
 /heal player(1)
 /kick player(1)

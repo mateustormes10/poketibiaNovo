@@ -21,6 +21,14 @@ export class MessageRouter {
     }
     
     setupHandlers() {
+                // Handler para consulta de vocation do player
+                this.handlers.set('get_player_vocation', (client, data) => {
+                    let vocation = 0;
+                    if (client.player && typeof client.player.vocation !== 'undefined') {
+                        vocation = client.player.vocation;
+                    }
+                    client.send('player_vocation', { vocation });
+                });
         const authHandler = new AuthHandler(this.gameWorld, this.wsServer);
         const movementHandler = new MovementHandler(this.gameWorld);
         const combatHandler = new CombatHandler(this.gameWorld);

@@ -41,16 +41,15 @@ export class GameState {
     updatePlayers(players) {
         players.forEach(playerData => {
             let player = this.players.get(playerData.id);
-            
             if (!player) {
                 player = new Player(playerData);
                 this.players.set(playerData.id, player);
             } else {
                 player.update(playerData);
             }
-            
             if (playerData.isLocal) {
                 this.localPlayer = player;
+                // Não força abrir/fechar menu, só atualiza quando realmente abrir
             }
         });
     }

@@ -2,30 +2,20 @@ export class Player {
     constructor(data) {
         this.id = data.id;
         this.name = data.name;
-        
-        // Posição autoritativa do servidor
+        // ...existing code...
         this.x = data.x;
         this.y = data.y;
         this.z = data.z;
-        
-        // Posição renderizada (interpolada)
         this.renderX = data.x;
         this.renderY = data.y;
-        
-        // Posição anterior (para interpolação)
         this.prevX = data.x;
         this.prevY = data.y;
-        
-        // Controle de interpolação
-        this.moveProgress = 1; // 0 a 1
-        this.moveSpeed = 0.2; // Velocidade de movimento (200ms por tile)
+        this.moveProgress = 1;
+        this.moveSpeed = 0.08; // 0.08s por tile (~200ms)
         this.isMoving = false;
-        
-        // Predição visual
         this.predictedDirection = null;
         this.predictionStartTime = 0;
         this.isPredicting = false;
-        
         this.hp = data.hp;
         this.maxHp = data.maxHp;
         this.level = data.level;
@@ -35,13 +25,9 @@ export class Player {
         this.pokemons = data.pokemons || [];
         this.goldCoin = data.goldCoin || 0;
         this.type = 'player';
-        
-        console.log(`[Player] Constructor - ${this.name} created with sprite: ${this.sprite}`);
-        
-        // Animação
         this.animationFrame = 0;
         this.animationTime = 0;
-        this.animationSpeed = 0.15; // 150ms por frame
+        this.animationSpeed = 0.15;
     }
     
     update(data) {

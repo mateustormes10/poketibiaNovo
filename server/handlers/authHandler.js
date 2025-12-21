@@ -47,6 +47,7 @@ export class AuthHandler {
             console.log(`[AuthHandler] Player ${playerData.name} - lookaddons: ${playerData.lookaddons}, direction: ${directionValue} -> ${directionString}`);
             
             // Usa dados do banco e aguarda carregamento dos chunks
+            // console.log('[DEBUG][SERVER] playerData recebido do banco:', playerData);
             const player = await this.gameWorld.addPlayer({
                 id: client.id,
                 dbId: playerIdToUse, // ID do banco de dados
@@ -86,6 +87,7 @@ export class AuthHandler {
             console.log('[AuthHandler] Player object before serialize - sprite:', player.sprite, 'direction:', player.direction);
             
             // Envia resposta
+            // console.log('[DEBUG][SERVER] player.serialize() enviado para o client:', player.serialize());
             client.send(ServerEvents.LOGIN_SUCCESS, {
                 playerId: player.id,
                 player: player.serialize()
