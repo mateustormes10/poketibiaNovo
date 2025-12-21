@@ -54,6 +54,14 @@ export class GmCommandsUI {
                 build: (vals) => `/teleport x(${vals.x}) y(${vals.y}) z(${vals.z})`
             },
             {
+                label: '/addgold',
+                fields: [
+                    { name: 'player', type: 'number', placeholder: 'ID do Player' },
+                    { name: 'amount', type: 'number', placeholder: 'Quantidade de Ouro' }
+                ],
+                build: (vals) => `/addgold player(${vals.player}) amount(${vals.amount})`
+            },
+            {
                 label: '/spawn',
                 fields: [
                     { name: 'pokemon', type: 'text', placeholder: 'Nome do Pokémon' },

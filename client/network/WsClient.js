@@ -57,9 +57,11 @@ export class WsClient {
     send(type, data) {
         if (!this.connected) {
             console.warn('Cannot send message: not connected');
+            if (window.game && typeof window.game.showConnectionLostUI === 'function') {
+                window.game.showConnectionLostUI({ allowReconnect: true });
+            }
             return;
         }
-        
         console.log(`[WsClient] Sending message: ${type}`, data);
         const message = JSON.stringify({ type, data });
         this.ws.send(message);
@@ -74,16 +76,7 @@ export class WsClient {
     }
     
     attemptReconnect() {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error('Max reconnect attempts reached');
-            return;
-        }
-        
-        this.reconnectAttempts++;
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-        
-        console.log(`Attempting to reconnect in ${delay}ms...`);
-        setTimeout(() => this.connect(), delay);
+        // Não tenta reconectar automaticamente, a lógica será controlada pela UI
     }
     
     disconnect() {

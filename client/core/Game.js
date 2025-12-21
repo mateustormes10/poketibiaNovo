@@ -1,3 +1,4 @@
+
 import { GameState } from './GameState.js';
 import { Camera } from './Camera.js';
 import { Time } from './Time.js';
@@ -91,6 +92,102 @@ export class Game {
         }
 
         this._mainMenu.style.display = (this._mainMenu.style.display === 'none' ? 'flex' : 'none');
+    }
+
+        showConnectionLostUI(options = {}) {
+            // Remove se já existir
+            const existing = document.getElementById('connection-lost-ui');
+            if (existing) existing.remove();
+            const div = document.createElement('div');
+            div.id = 'connection-lost-ui';
+            div.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #222d;
+                color: #fff;
+                padding: 40px 60px;
+                border-radius: 16px;
+                z-index: 10050;
+                font-size: 2em;
+                font-weight: bold;
+                text-align: center;
+                box-shadow: 0 0 32px #000a;
+            `;
+            div.innerHTML = '<div>Conexão perdida com o servidor.</div>';
+            if (options.allowReconnect) {
+                const btn = document.createElement('button');
+                btn.textContent = 'Reconectar';
+                btn.style = 'display:block;margin:32px auto 0 auto;padding:16px 48px;font-size:1em;border-radius:8px;border:none;background:#444;color:#fff;cursor:pointer;';
+                btn.onclick = () => {
+                    this.hideConnectionLostUI();
+                    this.tryReconnectWithUI();
+                };
+                div.appendChild(btn);
+            }
+            // Sempre mostra o botão cancelar se showCancel for true OU se allowReconnect estiver ativo (após falha de reconexão)
+            if (options.showCancel || options.allowReconnect) {
+                const btnCancel = document.createElement('button');
+                btnCancel.id = 'connection-lost-cancel';
+                btnCancel.textContent = 'Cancelar';
+                btnCancel.style = 'display:block;margin:16px auto 0 auto;padding:12px 36px;font-size:1em;border-radius:8px;border:none;background:#a22;color:#fff;cursor:pointer;';
+                btnCancel.onclick = () => {
+                    this.hideConnectionLostUI();
+                    this.goToMainMenu();
+                };
+                div.appendChild(btnCancel);
+            }
+            document.body.appendChild(div);
+        }
+
+        tryReconnectWithUI() {
+            let attempts = 0;
+            const maxAttempts = 3;
+            const tryConnect = () => {
+                attempts++;
+                this.wsClient.connect().then(() => {
+                    this.hideConnectionLostUI();
+                }).catch(() => {
+                    if (attempts < maxAttempts) {
+                        setTimeout(tryConnect, 1000);
+                    } else {
+                        this.showConnectionLostUI({ allowReconnect: true, showCancel: true });
+                    }
+                });
+            };
+            tryConnect();
+        }
+
+        addCancelToConnectionLostUI() {
+            const div = document.getElementById('connection-lost-ui');
+            if (!div) return;
+            let btn = document.getElementById('connection-lost-cancel');
+            if (!btn) {
+                btn = document.createElement('button');
+                btn.id = 'connection-lost-cancel';
+                btn.textContent = 'Cancelar';
+                btn.style = 'display:block;margin:16px auto 0 auto;padding:12px 36px;font-size:1em;border-radius:8px;border:none;background:#a22;color:#fff;cursor:pointer;';
+                btn.onclick = () => {
+                    this.hideConnectionLostUI();
+                    this.goToMainMenu();
+                };
+                div.appendChild(btn);
+            }
+        }
+
+        goToMainMenu() {
+            // Simples: recarrega a página ou mostra o menu inicial
+            if (this._mainMenu) {
+                this._mainMenu.style.display = 'flex';
+            } else {
+                window.location.reload();
+            }
+        }
+
+    hideConnectionLostUI() {
+        const existing = document.getElementById('connection-lost-ui');
+        if (existing) existing.remove();
     }
 
     _insertGmButton() {
@@ -208,6 +305,14 @@ export class Game {
     }
     
     async init() {
+        // Bloqueia ESC globalmente quando a UI de conexão perdida estiver aberta
+        window.addEventListener('keydown', (e) => {
+            const lostUi = document.getElementById('connection-lost-ui');
+            if (lostUi && lostUi.style.display !== 'none' && e.key === 'Escape') {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+            }
+        }, true);
         // Garante que os botões do menu sempre funcionem
         if (!this.controlConfigUI) {
             this.controlConfigUI = new ControlConfigUI();
@@ -307,7 +412,12 @@ export class Game {
     setupNetworkHandlers() {
         this.wsClient.on('connected', (data) => {
             console.log('[Game] Connected to server');
+            this.hideConnectionLostUI();
         });
+                this.wsClient.on('disconnected', () => {
+                    console.warn('[Game] Disconnected from server');
+                    this.showConnectionLostUI();
+                });
         
         this.wsClient.on('loginSuccess', (data) => {
             console.log('[DEBUG][CLIENT] loginSuccess recebido:', data);
@@ -700,6 +810,12 @@ export class Game {
     }
     
     processInput() {
+        // Bloqueia toda interação se a UI de conexão perdida estiver aberta
+        const lostUi = document.getElementById('connection-lost-ui');
+        if (lostUi && lostUi.style.display !== 'none') {
+            // Permite apenas interação com os botões da UI
+            return;
+        }
         // Debug geral
         if (this.keyboard.isKeyPressed('c') || this.keyboard.isKeyPressed('C')) {
             console.log('[Game] ===== TECLA C DETECTADA NO INÍCIO =====');
@@ -790,15 +906,17 @@ export class Game {
             return; // Bloqueia todos os outros comandos enquanto chat está ativo
         }
         
-        // Toggle do inventário com tecla I (só funciona quando chat NÃO está ativo)
-        if (this.keyboard.isKeyPressed('i')) {
+        // Bloqueia I e P se a UI de comandos GM estiver aberta
+        const gmUi = document.getElementById('gm-commands-ui');
+        const gmUiOpen = gmUi && gmUi.style.display !== 'none';
+        // Toggle do inventário com tecla I (só funciona quando chat NÃO está ativo e GM UI não está aberta)
+        if (this.keyboard.isKeyPressed('i') && !gmUiOpen) {
             this.inventoryManager.toggle();
             console.log('[Game] Inventário toggled');
             return;
         }
-        
-        // Toggle do seletor de outfit com tecla p (igual ao inventário e NPC)
-        if (this.keyboard.isKeyPressed('p')) {
+        // Toggle do seletor de outfit com tecla p (igual ao inventário e NPC, e GM UI não está aberta)
+        if (this.keyboard.isKeyPressed('p') && !gmUiOpen) {
             console.log('[Game] OutfitSelector toggled');
             this.renderer.outfitSelector.toggle();
             return;
