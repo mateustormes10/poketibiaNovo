@@ -5,7 +5,8 @@ export const ClientEvents = {
     ATTACK: 'attack',
     CHAT: 'chat',
     USE_ITEM: 'useItem',
-    INTERACT: 'interact'
+    INTERACT: 'interact',
+    CHANGE_FLOOR: 'changeFloor'
 };
 
 // Eventos enviados pelo SERVIDOR

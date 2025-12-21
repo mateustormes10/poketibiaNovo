@@ -68,7 +68,7 @@ export class InventoryRepository {
                 SET quantity = quantity + ?
                 WHERE player_id = ? AND item_name = ?
             `;
-            await this.db.execute(sql, [quantity, playerId, itemName]);
+            await this.db.update(sql, [quantity, playerId, itemName]);
         } else {
             // Insere novo item
             const sql = `
@@ -208,7 +208,7 @@ export class InventoryRepository {
      */
     async clearInventory(playerId) {
         const sql = `DELETE FROM player_inventory WHERE player_id = ?`;
-        await this.db.execute(sql, [playerId]);
+        await this.db.update(sql, [playerId]);
         return true;
     }
 

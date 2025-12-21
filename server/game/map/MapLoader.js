@@ -125,37 +125,45 @@ export class MapLoader {
         const content = await fs.readFile(filePath, 'utf-8');
         const lines = content.split('\n').filter(l => l.trim().length > 0);
         const tiles = [];
-        
+
         let maxX = 0;
         let maxY = lines.length;
-        
+
         lines.forEach((line, y) => {
             // Parse tiles no formato [ID1,ID2,...,modificador]
             const tileMatches = line.matchAll(/\[([^\]]+)\]/g);
             let x = 0;
-            
+
             for (const match of tileMatches) {
                 const parts = match[1].split(',');
                 const modifier = parts[parts.length - 1]; // Último elemento (S ou N)
-                const spriteIds = parts.slice(0, -1).map(id => parseInt(id)); // Todos exceto último
-                
-                // Sprite principal (primeiro ID)
-                const mainSpriteId = spriteIds[0];
-                
+                // Mantém UP(4)/DOWN(3) como string, outros como int
+                const spriteIds = parts.slice(0, -1).map(id => {
+                    if (/UP\(\d+\)/.test(id) || /DOWN\(\d+\)/.test(id)) {
+                        return id;
+                    }
+                    const n = parseInt(id);
+                    return isNaN(n) ? id : n;
+                });
+                // Sprite principal (primeiro ID numérico, ou string se não houver)
+                const mainSpriteId = spriteIds.find(sid => typeof sid === 'number') ?? spriteIds[0];
+
                 tiles.push({
                     x,
                     y,
                     z,
+                    localX: x,
+                    localY: y,
                     type: this.getTileTypeFromId(mainSpriteId),
                     walkable: modifier === 'S', // S = Sim, N = Não
                     spriteId: mainSpriteId,
                     spriteIds: spriteIds, // Array com todas as sprites (layers)
                     modifier: modifier
                 });
-                
+
                 x++;
             }
-            
+
             if (x > maxX) maxX = x;
         });
         

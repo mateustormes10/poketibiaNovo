@@ -357,6 +357,17 @@ export class GameWorld {
     forceFullUpdate(playerId) {
         // Força reenvio completo do estado
         this.deltaManager.forceFullUpdate(playerId);
+
+        // LOG: sprites do tile atual do player
+        const player = this.players.get(playerId);
+        if (player) {
+            const tile = this.mapManager.getTile(player.x, player.y, player.z);
+            if (tile && tile.spriteIds) {
+                console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
+            } else {
+                console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
+            }
+        }
     }
     
     getStats() {

@@ -70,6 +70,24 @@ export class Renderer {
         const endY = Math.ceil((viewport.y + viewport.height) / tileSize);
         const currentZ = map.viewport.z;
 
+        // Detecta tile especial sob o player e notifica o servidor
+        const player = gameState.player;
+        if (player && gameState.protocolHandler) {
+            const playerTile = map.getTile(player.x, player.y, player.z);
+            console.log('[Renderer] Tile completo sob o player:', playerTile, 'na posição', player.x, player.y, player.z);
+            if (playerTile && playerTile.spriteIds) {
+                console.log('[Renderer] Tile sob o player:', playerTile.spriteIds, 'na posição', player.x, player.y, player.z);
+                if (playerTile.spriteIds.some(id => typeof id === 'string' && id.includes('UP(4)'))) {
+                    console.log('[Renderer] Enviando evento CHANGE_FLOOR: up', player.x, player.y, player.z);
+                    gameState.protocolHandler.sendChangeFloor('up', player.x, player.y, player.z);
+                }
+                if (playerTile.spriteIds.some(id => typeof id === 'string' && id.includes('DOWN(3)'))) {
+                    console.log('[Renderer] Enviando evento CHANGE_FLOOR: down', player.x, player.y, player.z);
+                    gameState.protocolHandler.sendChangeFloor('down', player.x, player.y, player.z);
+                }
+            }
+        }
+
         // Organiza entidades por linha Y
         const entities = gameState.getEntitiesInView(this.camera);
         const entitiesByY = {};

@@ -26,8 +26,9 @@ export class GameMap {
         }
         
         // Log detalhado
-        console.log(`[GameMap] Received ${mapData.tiles.length} tiles from server at (${mapData.centerX}, ${mapData.centerY}, ${mapData.z})`);
+        console.log(`[GameMap] Received ${mapData.tiles.length} tiles from server at (${mapData.centerX}, ${mapData.centerY}, z=${mapData.z})`);
         console.log('[GameMap] First 3 tiles:', mapData.tiles.slice(0, 3));
+        console.log(`[GameMap] updateFromServer: z recebido = ${mapData.z}`);
         
         // Limpa tiles antigos
         this.tiles.clear();

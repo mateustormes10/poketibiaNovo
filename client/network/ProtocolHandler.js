@@ -2,6 +2,9 @@ import { ClientEvents, ServerEvents } from '../../shared/protocol/actions.js';
 import { InventoryServerEvents } from '../../shared/protocol/InventoryProtocol.js';
 
 export class ProtocolHandler {
+        sendChangeFloor(direction, x, y, z) {
+            this.wsClient.send(ClientEvents.CHANGE_FLOOR, { direction, x, y, z });
+        }
     constructor(wsClient, gameState, inventoryManager = null) {
         this.wsClient = wsClient;
         this.gameState = gameState;

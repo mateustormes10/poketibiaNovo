@@ -64,7 +64,16 @@ export class Player {
             }
         }
         
-        if (data.z !== undefined) this.z = data.z;
+        if (data.z !== undefined) {
+            this.z = data.z;
+            // Força requisição de mapa do novo andar imediatamente
+            setTimeout(() => {
+                if (window.game && window.game.wsClient) {
+                    window.game.requestMapUpdate && window.game.requestMapUpdate();
+                    console.log(`[Player] z atualizado para ${this.z}, requisitando novo mapa imediatamente...`);
+                }
+            }, 50); // pequeno delay para garantir que z foi atualizado
+        }
     }
     
     startMove(newX, newY) {

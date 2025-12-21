@@ -437,6 +437,53 @@ export class Game {
     }
     
     update(deltaTime) {
+                // Troca de andar automática se estiver sobre tile UP/DOWN, evitando envio repetido
+                if (!this._lastFloorTileKey) this._lastFloorTileKey = null;
+                // Usa player já declarado abaixo
+                if (this.gameState.localPlayer) {
+                    const map = window.game?.gameState?.map || this.gameState.map;
+                    const player = this.gameState.localPlayer;
+                    if (map) {
+                        const tile = map.getTile(player.x, player.y, player.z);
+                        const tileKey = tile ? `${player.x},${player.y},${player.z}` : null;
+                        let sent = false;
+                        if (tile && tile.spriteIds && tileKey !== this._lastFloorTileKey) {
+                            for (const sprite of tile.spriteIds) {
+                                if (typeof sprite === 'string' && sprite.startsWith('UP(')) {
+                                    if (this.wsClient && typeof this.wsClient.send === 'function') {
+                                        this.wsClient.send('changeFloor', {
+                                            direction: 'up',
+                                            x: player.x,
+                                            y: player.y,
+                                            z: player.z
+                                        });
+                                        console.log('[CLIENT] Enviando changeFloor UP para o servidor (auto)');
+                                    } else {
+                                        console.warn('[CLIENT] wsClient não está disponível ou método send ausente!');
+                                    }
+                                    sent = true;
+                                    break;
+                                }
+                                if (typeof sprite === 'string' && sprite.startsWith('DOWN(')) {
+                                    if (this.wsClient && typeof this.wsClient.send === 'function') {
+                                        this.wsClient.send('changeFloor', {
+                                            direction: 'down',
+                                            x: player.x,
+                                            y: player.y,
+                                            z: player.z
+                                        });
+                                        console.log('[CLIENT] Enviando changeFloor DOWN para o servidor (auto)');
+                                    } else {
+                                        console.warn('[CLIENT] wsClient não está disponível ou método send ausente!');
+                                    }
+                                    sent = true;
+                                    break;
+                                }
+                            }
+                        }
+                        this._lastFloorTileKey = sent ? tileKey : (tileKey !== this._lastFloorTileKey ? null : this._lastFloorTileKey);
+                    }
+                }
         this.time.update(deltaTime);
         this.processInput();
         this.gameState.interpolate(deltaTime);
@@ -695,10 +742,42 @@ export class Game {
     
     sendMoveCommand(direction) {
         const player = this.gameState.localPlayer;
-        
         // Envia comando ao servidor
         this.wsClient.send('move', { direction });
-        
+
+        // Após enviar movimento, verifica tile atual
+        const map = window.game?.gameState?.map || this.gameState.map;
+        if (map) {
+            const tile = map.getTile(player.x, player.y, player.z);
+            if (tile && tile.spriteIds) {
+                // Verifica UP(x) ou DOWN(x)
+                for (const sprite of tile.spriteIds) {
+                    if (typeof sprite === 'string' && sprite.startsWith('UP(')) {
+                        // Solicita troca de andar para cima
+                        window.game?.wsClient?.send('changeFloor', {
+                            direction: 'up',
+                            x: player.x,
+                            y: player.y,
+                            z: player.z
+                        });
+                        console.log('[CLIENT] Enviando changeFloor UP para o servidor');
+                        break;
+                    }
+                    if (typeof sprite === 'string' && sprite.startsWith('DOWN(')) {
+                        // Solicita troca de andar para baixo
+                        window.game?.wsClient?.send('changeFloor', {
+                            direction: 'down',
+                            x: player.x,
+                            y: player.y,
+                            z: player.z
+                        });
+                        console.log('[CLIENT] Enviando changeFloor DOWN para o servidor');
+                        break;
+                    }
+                }
+            }
+        }
+
         // Predição visual de ANIMAÇÃO (não de posição!)
         // Apenas muda direção e inicia animação
         if (player.startPrediction) {

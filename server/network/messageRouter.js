@@ -62,9 +62,75 @@ export class MessageRouter {
         
         // Outfit change handler
         this.handlers.set('change_outfit', handleChangeOutfit);
-        
+
+
+        // Handler para troca de andar
+        this.handlers.set(ClientEvents.CHANGE_FLOOR, this.handleChangeFloor.bind(this));
+
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));
+    }
+
+    handleChangeFloor(client, data) {
+        // Verifica player
+        const playerId = client.player?.id || client.playerId;
+        if (!playerId) {
+            console.warn('[MessageRouter] changeFloor: client has no player or playerId');
+            return;
+        }
+        const player = this.gameWorld.players.get(playerId);
+        if (!player) {
+            console.warn('[MessageRouter] changeFloor: player not found');
+            return;
+        }
+        // Atualiza posição do player primeiro
+        player.x = data.x;
+        player.y = data.y;
+
+        // Busca tile atual
+        const tile = this.gameWorld.mapManager.getTile(player.x, player.y, player.z);
+        let novoZ = player.z;
+        if (tile && tile.spriteIds) {
+            for (const sprite of tile.spriteIds) {
+                if (data.direction === 'up' && typeof sprite === 'string' && sprite.startsWith('UP(')) {
+                    const match = sprite.match(/UP\((\d+)\)/);
+                    if (match) {
+                        novoZ = parseInt(match[1]);
+                        break;
+                    }
+                }
+                if (data.direction === 'down' && typeof sprite === 'string' && sprite.startsWith('DOWN(')) {
+                    const match = sprite.match(/DOWN\((\d+)\)/);
+                    if (match) {
+                        novoZ = parseInt(match[1]);
+                        break;
+                    }
+                }
+            }
+            console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
+        } else {
+            console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
+        }
+
+        // Atualiza z do player conforme tile
+        player.z = novoZ;
+
+        // Garante que chunks do novo andar estão carregados antes de enviar o mapa
+        if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
+            this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
+        }
+
+        // Envia novo estado do jogo
+        const gameState = this.gameWorld.getGameState(player);
+        // Log detalhado do z do player e do mapa enviado
+        console.log(`[MessageRouter] changeFloor: z do player atualizado para ${player.z}`);
+        if (gameState && gameState.map) {
+            console.log(`[MessageRouter] Tiles enviados: z=${gameState.map.z}, total=${gameState.map.tiles.length}`);
+            if (gameState.map.tiles.length > 0) {
+                console.log('[MessageRouter] Exemplos de tiles:', gameState.map.tiles.slice(0, 3));
+            }
+        }
+        client.send('gameState', gameState);
     }
     
     handleMapUpdate(client, data) {
