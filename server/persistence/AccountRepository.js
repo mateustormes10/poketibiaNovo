@@ -1,8 +1,27 @@
+  
 export class AccountRepository {
     constructor(database) {
         this.db = database;
     }
-    
+
+    //http
+      // Retorna todos os personagens de uma conta
+    async getCharacters(accountId) {
+        const sql = 'SELECT * FROM players WHERE account_id = ?';
+        return await this.db.query(sql, [accountId]);
+    }
+
+    // Cria um novo personagem para a conta
+    async createCharacter(accountId, name) {
+        const sql = 'INSERT INTO players (account_id, name, level, experience) VALUES (?, ?, 1, 0)';
+        try {
+            await this.db.insert(sql, [accountId, name]);
+            return { success: true };
+        } catch (err) {
+            return { success: false, message: err.message };
+        }
+    }
+    //websocket
     async findById(id) {
         const sql = 'SELECT * FROM accounts WHERE id = ?';
         return await this.db.queryOne(sql, [id]);

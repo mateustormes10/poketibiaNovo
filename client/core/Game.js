@@ -397,9 +397,13 @@ export class Game {
     }
     
     promptPlayerIdAndLogin() {
-        // Cria modal para escolher player ID
-        const playerId = prompt('Digite o Player ID (1-10):', '1');
-        
+        // Lê playerId da query string, se existir
+        const urlParams = new URLSearchParams(window.location.search);
+        let playerId = urlParams.get('playerId');
+        if (!playerId) {
+            // Se não houver na URL, pede via prompt
+            playerId = prompt('Digite o Player ID (1-10):', '1');
+        }
         if (!playerId || isNaN(playerId)) {
             console.log('[Game] Player ID inválido, usando ID 1 por padrão');
             this.sendLogin('Player', 1);
