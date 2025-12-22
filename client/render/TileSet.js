@@ -18,6 +18,7 @@ const SPRITE_SUBFOLDERS = [
     'outfit_players',
     'paredes',
     'pokemons',
+    'pokeball',
     'pokemon_dead',
     'portas',
 ];
@@ -117,15 +118,17 @@ export class TileSet {
      * Desenha tile - tenta usar sprite, fallback para cor
      */
     drawTile(ctx, spriteId, x, y, size) {
+        // Não desenha nada se spriteId não for número válido
+        if (typeof spriteId !== 'number' || isNaN(spriteId)) {
+            return;
+        }
         const sprite = this.spriteCache.get(spriteId);
-        
         if (sprite) {
             // Desenha sprite
             ctx.drawImage(sprite, x, y, size, size);
         } else if (!this.failedSprites.has(spriteId) && !this.loadingSprites.has(spriteId)) {
             // Inicia carregamento em background
             this.loadSprite(spriteId);
-            
             // Desenha cor de fallback enquanto carrega
             this.drawFallbackColor(ctx, spriteId, x, y, size);
         } else {

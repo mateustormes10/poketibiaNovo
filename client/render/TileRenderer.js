@@ -90,14 +90,21 @@ export class TileRenderer {
     renderTileAt(ctx, tile, screenX, screenY) {
         // Desenha todas as sprites (layers) do tile - SUPORTA STACKED SPRITES
         if (tile.spriteIds && tile.spriteIds.length > 0) {
-            // Múltiplas sprites empilhadas (como no map editor)
-            tile.spriteIds.forEach(spriteId => {
-                // Certifique-se que drawTile NÃO desenha fundo sólido!
+            // Filtra valores 'up' e 'down' (string) e só permite números válidos
+            tile.spriteIds.filter(id => typeof id === 'number' && !isNaN(id)).forEach(spriteId => {
                 this.tileSet.drawTile(ctx, spriteId, screenX, screenY, this.tileSize);
             });
-        } else if (tile.spriteId) {
+        } else if (
+            typeof tile.spriteId === 'number' && !isNaN(tile.spriteId)
+        ) {
             // Sprite única (fallback)
             this.tileSet.drawTile(ctx, tile.spriteId, screenX, screenY, this.tileSize);
+        } else if (
+            typeof tile.spriteId === 'string' &&
+            (tile.spriteId === 'up' || tile.spriteId === 'down')
+        ) {
+            // Não renderiza nada para 'up' ou 'down'
+            // (mantém o espaço vazio)
         }
         
         // OVERLAY: Non-walkable tiles (vermelho transparente)

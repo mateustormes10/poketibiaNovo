@@ -16,6 +16,7 @@ const SPRITE_SUBFOLDERS = [
     'outfit_players',
     'paredes',
     'pokemons',
+    'pokeball',
     'pokemon_dead',
     'portas',
 ];
