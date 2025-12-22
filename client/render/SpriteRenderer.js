@@ -1,6 +1,25 @@
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { SpritePlayerList, getPlayerSprites } from '../config/SpritePlayerList.js';
 
+
+// Lista de subpastas conhecidas em assets/sprites
+const SPRITE_SUBFOLDERS = [
+    '', // root
+    'animacoes_damage',
+    'cenario',
+    'chao',
+    'items',
+    'liquidos_chao',
+    'monstros_tibia',
+    'monstro_tibia_dead',
+    'objetos_com_actions',
+    'outfit_players',
+    'paredes',
+    'pokemons',
+    'pokemon_dead',
+    'portas',
+];
+
 export class SpriteRenderer {
     constructor(ctx, camera) {
         this.ctx = ctx;
@@ -8,12 +27,35 @@ export class SpriteRenderer {
         this.tileSize = GameConstants.TILE_SIZE;
         this.sprites = new Map();
     }
-    
-    loadSprite(name, path) {
-        const img = new Image();
-        img.src = path;
-        this.sprites.set(name, img);
-        return img;
+
+    // Busca a sprite em todas as subpastas conhecidas
+    loadSpriteFromSubfolders(spriteId, onLoad, onError) {
+        let found = false;
+        let img = new Image();
+        let tryIndex = 0;
+        const tryNext = () => {
+            if (tryIndex >= SPRITE_SUBFOLDERS.length) {
+                // Não encontrou
+                if (onError) onError();
+                return;
+            }
+            const folder = SPRITE_SUBFOLDERS[tryIndex];
+            tryIndex++;
+            let path = '../assets/sprites/';
+            if (folder) path += folder + '/';
+            path += spriteId + '.png';
+            img = new Image();
+            img.onload = () => {
+                found = true;
+                if (onLoad) onLoad(img);
+            };
+            img.onerror = () => {
+                // Tenta próxima subpasta
+                tryNext();
+            };
+            img.src = path;
+        };
+        tryNext();
     }
     
     /**
@@ -23,7 +65,6 @@ export class SpriteRenderer {
     async preloadPlayerSprites() {
         try {
             const spritesToLoad = new Set();
-            
             // Coleta todos os IDs únicos de sprites
             for (const lookType in SpritePlayerList) {
                 const directions = SpritePlayerList[lookType];
@@ -38,21 +79,23 @@ export class SpriteRenderer {
                     }
                 }
             }
-            
             // Carrega todas as sprites (não bloqueia se falhar)
             const loadPromises = Array.from(spritesToLoad).map(spriteId => {
                 return new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => resolve();
-                    img.onerror = () => {
-                        console.warn(`[SpriteRenderer] Failed to load sprite: ${spriteId}.png`);
-                        resolve(); // Continua mesmo se falhar
-                    };
-                    img.src = `../assets/sprites/${spriteId}.png`;
-                    this.sprites.set(spriteId.toString(), img);
+                    this.loadSpriteFromSubfolders(
+                        spriteId,
+                        (img) => {
+                            this.sprites.set(spriteId.toString(), img);
+                            resolve();
+                        },
+                        () => {
+                            // Falhou em todas as subpastas
+                            console.warn(`[SpriteRenderer] Failed to load sprite: ${spriteId}.png in any subfolder`);
+                            resolve();
+                        }
+                    );
                 });
             });
-            
             await Promise.all(loadPromises);
             console.log(`[SpriteRenderer] Loaded ${spritesToLoad.size} player sprites`);
         } catch (error) {

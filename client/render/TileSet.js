@@ -3,6 +3,25 @@ import { GameConstants } from '../../shared/constants/GameConstants.js';
 /**
  * TileSet - Carrega sprites individuais do Tibia
  */
+
+// Lista de subpastas conhecidas em assets/sprites
+const SPRITE_SUBFOLDERS = [
+    '', // root
+    'animacoes_damage',
+    'cenario',
+    'chao',
+    'items',
+    'liquidos_chao',
+    'monstros_tibia',
+    'monstro_tibia_dead',
+    'objetos_com_actions',
+    'outfit_players',
+    'paredes',
+    'pokemons',
+    'pokemon_dead',
+    'portas',
+];
+
 export class TileSet {
     constructor() {
         this.spriteCache = new Map(); // Cache de sprites carregadas
@@ -10,9 +29,39 @@ export class TileSet {
         this.spritePath = '/projetos/novo_poketibia/assets/sprites/';
         this.tileSize = GameConstants.TILE_SIZE;
         this.failedSprites = new Set(); // Sprites que falharam ao carregar
-        
         // Cores de fallback para quando a sprite não existe
         this.fallbackColors = this.createFallbackColors();
+    }
+
+    // Busca a sprite em todas as subpastas conhecidas
+    loadSpriteFromSubfolders(spriteId, onLoad, onError) {
+        let found = false;
+        let img = new Image();
+        let tryIndex = 0;
+        const tryNext = () => {
+            if (tryIndex >= SPRITE_SUBFOLDERS.length) {
+                // Não encontrou
+                if (onError) onError();
+                return;
+            }
+            const folder = SPRITE_SUBFOLDERS[tryIndex];
+            tryIndex++;
+            let path = this.spritePath;
+            if (folder) path += folder + '/';
+            path += spriteId + '.png';
+            img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                found = true;
+                if (onLoad) onLoad(img);
+            };
+            img.onerror = () => {
+                // Tenta próxima subpasta
+                tryNext();
+            };
+            img.src = path;
+        };
+        tryNext();
     }
     
     /**
@@ -36,37 +85,30 @@ export class TileSet {
         if (this.spriteCache.has(spriteId)) {
             return this.spriteCache.get(spriteId);
         }
-        
         // Já falhou antes
         if (this.failedSprites.has(spriteId)) {
             return null;
         }
-        
         // Já está carregando
         if (this.loadingSprites.has(spriteId)) {
             return this.loadingSprites.get(spriteId);
         }
-        
         // Inicia carregamento
         const loadPromise = new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            
-            img.onload = () => {
-                this.spriteCache.set(spriteId, img);
-                this.loadingSprites.delete(spriteId);
-                resolve(img);
-            };
-            
-            img.onerror = () => {
-                this.failedSprites.add(spriteId);
-                this.loadingSprites.delete(spriteId);
-                resolve(null);
-            };
-            
-            img.src = `${this.spritePath}${spriteId}.png`;
+            this.loadSpriteFromSubfolders(
+                spriteId,
+                (img) => {
+                    this.spriteCache.set(spriteId, img);
+                    this.loadingSprites.delete(spriteId);
+                    resolve(img);
+                },
+                () => {
+                    this.failedSprites.add(spriteId);
+                    this.loadingSprites.delete(spriteId);
+                    resolve(null);
+                }
+            );
         });
-        
         this.loadingSprites.set(spriteId, loadPromise);
         return loadPromise;
     }
