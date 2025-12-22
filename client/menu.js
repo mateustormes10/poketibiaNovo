@@ -62,7 +62,7 @@ function createInputField(x, y, placeholder, type = "text") {
     inputFields.push({ x, y, value: "", placeholder, type });
 }
 const background = new Image();
-background.src = "../assets/wallpaper.png";
+background.src = "assets/wallpaper.png";
 
 let backgroundLoaded = false;
 background.onload = () => {

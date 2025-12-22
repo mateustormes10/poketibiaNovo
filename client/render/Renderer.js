@@ -34,7 +34,7 @@ export class Renderer {
         
         // Inicializa tile renderer
         // Pode carregar tileset de imagem aqui se disponível
-        // await this.tileRenderer.init('./assets/tileset.png');
+        // await this.tileRenderer.init('assets/tileset.png');
         await this.tileRenderer.init(); // Usa fallback de cores
         
         // Pré-carrega sprites de players em background (não bloqueia renderização)

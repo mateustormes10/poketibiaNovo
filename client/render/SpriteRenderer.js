@@ -42,7 +42,7 @@ export class SpriteRenderer {
             }
             const folder = SPRITE_SUBFOLDERS[tryIndex];
             tryIndex++;
-            let path = '../assets/sprites/';
+            let path = 'assets/sprites/';
             if (folder) path += folder + '/';
             path += spriteId + '.png';
             img = new Image();

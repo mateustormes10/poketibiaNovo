@@ -11,7 +11,7 @@ const logger = new Logger('MapLoader');
  */
 export class MapLoader {
     constructor() {
-        this.mapPath = path.join(process.cwd(), '..', 'assets');
+        this.mapPath = path.join(process.cwd(), '..', 'client/assets');
         this.mapCache = new Map(); // Cache de mapas completos
     }
     
