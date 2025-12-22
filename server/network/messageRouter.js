@@ -5,6 +5,7 @@ import { AuthHandler } from '../handlers/authHandler.js';
 import { MovementHandler } from '../handlers/movementHandler.js';
 import { CombatHandler } from '../handlers/combatHandler.js';
 import { ChatHandler } from '../handlers/chatHandler.js';
+import { PortalHandler } from '../handlers/portalHandler.js';
 import { NpcHandler } from '../handlers/npcHandler.js';
 import { InventoryHandler } from '../handlers/inventoryHandler.js';
 import { setupWildPokemonHandler } from '../handlers/wildPokemonHandler.js';
@@ -21,7 +22,7 @@ export class MessageRouter {
     }
     
     setupHandlers() {
-                // Handler para consulta de vocation do player
+                    // Handler para consulta de vocation do player
                 this.handlers.set('get_player_vocation', (client, data) => {
                     let vocation = 0;
                     if (client.player && typeof client.player.vocation !== 'undefined') {
@@ -29,6 +30,10 @@ export class MessageRouter {
                     }
                     client.send('player_vocation', { vocation });
                 });
+                    
+              
+                
+        const portalHandler = new PortalHandler(this.gameWorld, this.wsServer);
         const authHandler = new AuthHandler(this.gameWorld, this.wsServer);
         const movementHandler = new MovementHandler(this.gameWorld);
         const combatHandler = new CombatHandler(this.gameWorld);
@@ -48,6 +53,8 @@ export class MessageRouter {
         );
         const inventoryHandler = new InventoryHandler(this.gameWorld, inventoryService);
         
+        
+        this.handlers.set(ClientEvents.PORTAL, portalHandler.handlePortal.bind(portalHandler));
         this.handlers.set(ClientEvents.LOGIN, authHandler.handleLogin.bind(authHandler));
         this.handlers.set(ClientEvents.MOVE, movementHandler.handleMove.bind(movementHandler));
         this.handlers.set(ClientEvents.ATTACK, combatHandler.handleAttack.bind(combatHandler));
@@ -77,7 +84,7 @@ export class MessageRouter {
 
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));
-    }
+    }    
 
     handleChangeFloor(client, data) {
         // Verifica player

@@ -1,0 +1,13 @@
+{
+  "name": "poketibia-desktop",
+  "version": "1.0.0",
+  "description": "Poketibia menu desktop app",
+  "main": "abrirExe.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@electron/packager": "^19.0.1",
+    "electron": "^28.2.3"
+  }
+}

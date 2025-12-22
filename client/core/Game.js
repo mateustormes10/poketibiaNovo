@@ -1,3 +1,4 @@
+import { TileActions } from '../utils/TileActions.js';
 
 import { GameState } from './GameState.js';
 import { Camera } from './Camera.js';
@@ -716,6 +717,23 @@ export class Game {
                                     sent = true;
                                     break;
                                 }
+                                    // PORTAL: verifica se há portal definido no tile atual
+                                    if (typeof sprite === 'number' && sprite === 197) {
+                                        // Busca instância do portal para a coordenada atual usando referência local
+                                        const portalInstances = TileActions?.[197]?.instances;
+                                        const portalDef = portalInstances?.find(inst => inst.x === player.x && inst.y === player.y && inst.z === player.z);
+                                        if (portalDef && Array.isArray(portalDef.teleportTo)) {
+                                            if (this.wsClient && typeof this.wsClient.send === 'function') {
+                                                this.wsClient.send('portal', {
+                                                    from: { x: player.x, y: player.y, z: player.z },
+                                                    to: { x: portalDef.teleportTo[0], y: portalDef.teleportTo[1], z: portalDef.teleportTo[2] }
+                                                });
+                                                console.log('[PORTAL] Enviando evento PORTAL para o servidor:', portalDef.teleportTo);
+                                            }
+                                            sent = true;
+                                            break;
+                                        }
+                                    }
                             }
                         }
                         this._lastFloorTileKey = sent ? tileKey : (tileKey !== this._lastFloorTileKey ? null : this._lastFloorTileKey);

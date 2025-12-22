@@ -1,5 +1,6 @@
 // Eventos enviados pelo CLIENTE
 export const ClientEvents = {
+    PORTAL: 'portal',
     LOGIN: 'login',
     MOVE: 'move',
     ATTACK: 'attack',
