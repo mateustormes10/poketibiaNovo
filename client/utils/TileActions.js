@@ -30,8 +30,11 @@ export const TileActions = {
   197: {
     layer: "overlay",
     instances: [
-      { x: 1, y: 1, z: 3, look: () => "Portal para a cidade.", teleportTo: [73, 34, 3] },
-      { x: 2, y: 1, z: 3, look: () => "Portal para a arena.", teleportTo: [50, 50, 2] }
+      { x: 81, y: 25, z: 3, look: () => "Portal para a cidade.", teleportTo: [73, 34, 3] },
+      { x: 81, y: 27, z: 3, look: () => "Portal para a arena 2.", teleportTo: [50, 50, 3] },
+      { x: 81, y: 29, z: 3, look: () => "Portal para a arena 3.", teleportTo: [50, 54, 2] },
+      { x: 81, y: 31, z: 3, look: () => "Portal para a arena 4.", teleportTo: [50, 58, 3] },
+      { x: 81, y: 33, z: 3, look: () => "Portal para a arena 5.", teleportTo: [50, 62, 1] },
     ]
   },
   198: {

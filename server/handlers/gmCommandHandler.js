@@ -7,7 +7,7 @@
  */
 
 import { Logger } from '../utils/Logger.js';
-
+import { GameConstants } from '../../shared/constants/GameConstants.js';
 const logger = new Logger('GMCommandHandler');
 
 export class GMCommandHandler {
@@ -636,6 +636,9 @@ export class GMCommandHandler {
 
         // Atualiza level
         targetPlayer.level = newLevel;
+            // Recalcula HP dinâmico baseado no novo level
+            targetPlayer.maxHp = GameConstants.PLAYER_HP_INITIAL + GameConstants.PLAYER_HP_INCREASE_PER_LEVEL * targetPlayer.level;
+            targetPlayer.hp = targetPlayer.maxHp;
         await this.gameWorld.playerRepository.update(parseInt(playerId), {
             x: targetPlayer.x || 0,
             y: targetPlayer.y || 0,

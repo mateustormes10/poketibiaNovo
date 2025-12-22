@@ -21,6 +21,15 @@ export const GameConstants = {
         CAPTURE_CHANCE_NORMAL_POKEMONS: 5,
         CAPTURE_CHANCE_STRONGER_POKEMONS: 2.5,
         CAPTURE_CHANCE_LEGENDARY_POKEMONS_: 1,
+
+        //player data
+        PLAYER_HP_INITIAL:100,
+        PLAYER_HP_INCREASE_PER_LEVEL: 10,
+        
+        //pokemon data
+        POKEMON_HP_INCREASE_PER_LEVEL: 20,
+        POKEMON_ATTACK_INCREASE_PER_LEVEL: 2,
+        POKEMON_DEFENSE_INCREASE_PER_LEVEL: 2,
     // Tamanhos
     TILE_SIZE: 64,
     CHUNK_SIZE: 64,

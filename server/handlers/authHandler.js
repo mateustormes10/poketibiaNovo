@@ -2,6 +2,7 @@ import { ServerEvents } from '../../shared/protocol/actions.js';
 import { WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { Logger } from '../utils/Logger.js';
+import { GameConstants } from '../../shared/constants/GameConstants.js';
 
 const logger = new Logger('AuthHandler');
 
@@ -66,6 +67,12 @@ export class AuthHandler {
                 direction: directionString,
                 // Adiciona mais campos conforme necessário
             });
+
+                // Calcula HP dinâmico baseado no level do player
+                if (typeof player.level === 'number' && !isNaN(player.level)) {
+                    player.maxHp = GameConstants.PLAYER_HP_INITIAL + GameConstants.PLAYER_HP_INCREASE_PER_LEVEL * player.level;
+                    player.hp = player.maxHp;
+                }
             
             client.setPlayer(player);
             client.authenticate();

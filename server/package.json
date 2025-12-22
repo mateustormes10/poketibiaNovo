@@ -16,10 +16,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "mysql2": "^3.16.0",
-    "ws": "^8.14.2",
-    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "body-parser": "^1.20.2"
+    "express": "^4.18.2",
+    "mysql2": "^3.16.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7"
   }
 }
