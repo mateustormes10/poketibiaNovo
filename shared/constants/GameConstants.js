@@ -1,4 +1,26 @@
 export const GameConstants = {
+        // Progressão de XP por faixa de level
+        XP_MULTIPLIERS: [
+            { min: 1, max: 99, multiplier: 4 },
+            { min: 100, max: 199, multiplier: 2 },
+            { min: 200, max: 299, multiplier: 1.5 },
+            { min: 300, max: 399, multiplier: 1 },
+            { min: 400, max: 9999, multiplier: 1 }
+        ],
+        DEFAULT_XP_MULTIPLIER: 1,
+        EVENT_XP_MULTIPLIER: 2,
+
+        //in percents
+        DROP_CHANCE_NORMAL_ITEMS: 10,
+        DROP_CHANCE_RARE_ITEMS: 5,
+        DROP_CHANCE_EPIC_ITEMS: 2.5,
+        DROP_CHANCE_LEGENDARY_ITEMS: 1,
+
+        //in percents
+        CAPTURE_CHANCE_WEAK_POKEMONS: 10,
+        CAPTURE_CHANCE_NORMAL_POKEMONS: 5,
+        CAPTURE_CHANCE_STRONGER_POKEMONS: 2.5,
+        CAPTURE_CHANCE_LEGENDARY_POKEMONS_: 1,
     // Tamanhos
     TILE_SIZE: 64,
     CHUNK_SIZE: 64,
