@@ -286,7 +286,7 @@ export class GameWorld {
         );
         
         // Obtém tiles visíveis (28 tiles largura x 15 tiles altura)
-        const mapData = this.visionSystem.getVisibleTiles(player, 30, 16);
+        const mapData = this.visionSystem.getVisibleTiles(player, 32, 17);
         
         // Serializa players e marca o player local
         const serializedPlayers = playersInView.map(p => {

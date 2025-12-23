@@ -1,27 +1,19 @@
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 
+// Carregamento dinâmico do índice de sprites
+let spritesIndex = null;
+async function loadSpritesIndex() {
+    if (spritesIndex) return spritesIndex;
+    const res = await fetch('assets/sprites/sprites_index.json');
+    spritesIndex = await res.json();
+    return spritesIndex;
+}
+
 /**
  * TileSet - Carrega sprites individuais do Tibia
  */
 
-// Lista de subpastas conhecidas em assets/sprites
-const SPRITE_SUBFOLDERS = [
-    '', // root
-    'animacoes_damage',
-    'cenario',
-    'chao',
-    'items',
-    'liquidos_chao',
-    'monstros_tibia',
-    'monstro_tibia_dead',
-    'objetos_com_actions',
-    'outfit_players',
-    'paredes',
-    'pokemons',
-    'pokeball',
-    'pokemon_dead',
-    'portas',
-];
+
 
 export class TileSet {
     constructor() {
@@ -34,35 +26,22 @@ export class TileSet {
         this.fallbackColors = this.createFallbackColors();
     }
 
-    // Busca a sprite em todas as subpastas conhecidas
-    loadSpriteFromSubfolders(spriteId, onLoad, onError) {
-        let found = false;
+    // Busca a sprite usando o índice de subpastas (assíncrono)
+    async loadSpriteFromIndex(spriteId, onLoad, onError) {
+        const index = await loadSpritesIndex();
         let img = new Image();
-        let tryIndex = 0;
-        const tryNext = () => {
-            if (tryIndex >= SPRITE_SUBFOLDERS.length) {
-                // Não encontrou
-                if (onError) onError();
-                return;
-            }
-            const folder = SPRITE_SUBFOLDERS[tryIndex];
-            tryIndex++;
-            let path = this.spritePath;
-            if (folder) path += folder + '/';
-            path += spriteId + '.png';
-            img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-                found = true;
-                if (onLoad) onLoad(img);
-            };
-            img.onerror = () => {
-                // Tenta próxima subpasta
-                tryNext();
-            };
-            img.src = path;
+        let folder = index[spriteId] !== undefined ? index[spriteId] : '';
+        let path = this.spritePath;
+        if (folder) path += folder + '/';
+        path += spriteId + '.png';
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            if (onLoad) onLoad(img);
         };
-        tryNext();
+        img.onerror = () => {
+            if (onError) onError();
+        };
+        img.src = path;
     }
     
     /**
@@ -96,7 +75,7 @@ export class TileSet {
         }
         // Inicia carregamento
         const loadPromise = new Promise((resolve) => {
-            this.loadSpriteFromSubfolders(
+            this.loadSpriteFromIndex(
                 spriteId,
                 (img) => {
                     this.spriteCache.set(spriteId, img);

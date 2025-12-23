@@ -1,25 +1,17 @@
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+
+// Carregamento dinâmico do índice de sprites
+let spritesIndex = null;
+async function loadSpritesIndex() {
+    if (spritesIndex) return spritesIndex;
+    const res = await fetch('assets/sprites/sprites_index.json');
+    spritesIndex = await res.json();
+    return spritesIndex;
+}
 import { SpritePlayerList, getPlayerSprites } from '../config/SpritePlayerList.js';
 
 
-// Lista de subpastas conhecidas em assets/sprites
-const SPRITE_SUBFOLDERS = [
-    '', // root
-    'animacoes_damage',
-    'cenario',
-    'chao',
-    'items',
-    'liquidos_chao',
-    'monstros_tibia',
-    'monstro_tibia_dead',
-    'objetos_com_actions',
-    'outfit_players',
-    'paredes',
-    'pokemons',
-    'pokeball',
-    'pokemon_dead',
-    'portas',
-];
+
 
 export class SpriteRenderer {
     constructor(ctx, camera) {
@@ -29,34 +21,21 @@ export class SpriteRenderer {
         this.sprites = new Map();
     }
 
-    // Busca a sprite em todas as subpastas conhecidas
-    loadSpriteFromSubfolders(spriteId, onLoad, onError) {
-        let found = false;
+    // Busca a sprite usando o índice de subpastas (assíncrono)
+    async loadSpriteFromIndex(spriteId, onLoad, onError) {
+        const index = await loadSpritesIndex();
         let img = new Image();
-        let tryIndex = 0;
-        const tryNext = () => {
-            if (tryIndex >= SPRITE_SUBFOLDERS.length) {
-                // Não encontrou
-                if (onError) onError();
-                return;
-            }
-            const folder = SPRITE_SUBFOLDERS[tryIndex];
-            tryIndex++;
-            let path = 'assets/sprites/';
-            if (folder) path += folder + '/';
-            path += spriteId + '.png';
-            img = new Image();
-            img.onload = () => {
-                found = true;
-                if (onLoad) onLoad(img);
-            };
-            img.onerror = () => {
-                // Tenta próxima subpasta
-                tryNext();
-            };
-            img.src = path;
+        let folder = index[spriteId] !== undefined ? index[spriteId] : '';
+        let path = 'assets/sprites/';
+        if (folder) path += folder + '/';
+        path += spriteId + '.png';
+        img.onload = () => {
+            if (onLoad) onLoad(img);
         };
-        tryNext();
+        img.onerror = () => {
+            if (onError) onError();
+        };
+        img.src = path;
     }
     
     /**
@@ -80,18 +59,18 @@ export class SpriteRenderer {
                     }
                 }
             }
-            // Carrega todas as sprites (não bloqueia se falhar)
+            // Carrega todas as sprites usando o índice
             const loadPromises = Array.from(spritesToLoad).map(spriteId => {
                 return new Promise((resolve) => {
-                    this.loadSpriteFromSubfolders(
+                    this.loadSpriteFromIndex(
                         spriteId,
                         (img) => {
                             this.sprites.set(spriteId.toString(), img);
                             resolve();
                         },
                         () => {
-                            // Falhou em todas as subpastas
-                            console.warn(`[SpriteRenderer] Failed to load sprite: ${spriteId}.png in any subfolder`);
+                            // Falhou
+                            console.warn(`[SpriteRenderer] Failed to load sprite: ${spriteId}.png`);
                             resolve();
                         }
                     );
@@ -165,29 +144,16 @@ export class SpriteRenderer {
         // Renderiza cada camada: [central, esquerda, acima]
         for (let i = 0; i < sprites.length; i++) {
             const spriteId = sprites[i];
-            
-            // Ignora sprites vazias (0)
             if (spriteId === 0) continue;
-            
             const spriteImg = this.sprites.get(spriteId.toString());
-            
-            // Só renderiza se a imagem carregou com sucesso
-            // complete = true significa que terminou de carregar (sucesso ou erro)
-            // naturalWidth > 0 significa que carregou com sucesso
             if (spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0) {
                 let posX = screenPos.x;
                 let posY = screenPos.y;
-                
-                // Define posição de cada sprite:
-                // i=0 (central): posição base (x, y)
-                // i=1 (esquerda): uma tile à esquerda (x - tileSize, y)
-                // i=2 (acima): uma tile acima (x, y - tileSize)
                 if (i === 1) {
-                    posX -= this.tileSize; // Esquerda
+                    posX -= this.tileSize;
                 } else if (i === 2) {
-                    posY -= this.tileSize; // Acima
+                    posY -= this.tileSize;
                 }
-                
                 this.ctx.drawImage(
                     spriteImg,
                     posX,
@@ -196,6 +162,18 @@ export class SpriteRenderer {
                     this.tileSize
                 );
                 rendered = true;
+            } else if (!this.sprites.has(spriteId.toString())) {
+                // Se não está no cache, tenta carregar na hora usando o índice
+                this.loadSpriteFromIndex(
+                    spriteId,
+                    (img) => {
+                        this.sprites.set(spriteId.toString(), img);
+                        // Não redesenha agora, será desenhado no próximo frame
+                    },
+                    () => {
+                        // Falhou, não faz nada
+                    }
+                );
             }
         }
         

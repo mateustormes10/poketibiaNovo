@@ -66,8 +66,8 @@ export class Renderer {
         const tileSize = this.tileRenderer.tileSize;
         const startX = Math.floor(viewport.x / tileSize);
         const startY = Math.floor(viewport.y / tileSize);
-        const endX = Math.ceil((viewport.x + viewport.width) / tileSize);
-        const endY = Math.ceil((viewport.y + viewport.height) / tileSize);
+        const endX = startX + Math.ceil(viewport.width / tileSize) - 1;
+        const endY = startY + Math.ceil(viewport.height / tileSize) - 1;
         const currentZ = map.viewport.z;
 
         // Detecta tile especial sob o player e notifica o servidor

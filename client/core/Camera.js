@@ -15,19 +15,21 @@ export class Camera {
         
         // Usa posição renderizada (interpolada) para câmera suave
         const pos = target.getRenderPosition ? target.getRenderPosition() : target;
-        
-        const targetX = pos.x * this.tileSize - this.width / 2;
-        const targetY = pos.y * this.tileSize - this.height / 2;
-        
+
+        // Centraliza a câmera no centro do tile do player, alinhando sempre ao grid
+        const centerTileX = Math.round(pos.x);
+        const centerTileY = Math.round(pos.y);
+        const targetX = centerTileX * this.tileSize - Math.floor(this.width / 2) + Math.floor(this.tileSize / 2);
+        const targetY = centerTileY * this.tileSize - Math.floor(this.height / 2) + Math.floor(this.tileSize / 2);
+
         if (this.smooth) {
-            // Suavização da câmera (segue o player interpolado)
             this.x += (targetX - this.x) * 0.15;
             this.y += (targetY - this.y) * 0.15;
         } else {
             this.x = targetX;
             this.y = targetY;
         }
-        
+
         this.z = pos.z || target.z || 1;
     }
     

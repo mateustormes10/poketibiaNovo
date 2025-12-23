@@ -47,20 +47,24 @@ export class VisionSystem {
     /**
      * Obtém tiles visíveis ao redor do player
      */
-    getVisibleTiles(player, width = 28, height = 15) {
-        const halfWidth = Math.floor(width / 2);
-        const halfHeight = Math.floor(height / 2);
-        const startX = player.x - halfWidth;
-        const startY = player.y - halfHeight;
-        
+    getVisibleTiles(player, width = 30, height = 15) {
+        // Centralização precisa: garante player no centro para width/height pares e ímpares
+        const halfW = Math.floor((width - 1) / 2);
+        const halfH = Math.floor((height - 1) / 2);
+        // Para width par, o player fica 1 tile mais à esquerda (corrige somando +1 ao startX)
+        const startX = player.x - halfW - (width % 2 === 0 ? 1 : 0);
+        const startY = player.y - halfH - (height % 2 === 0 ? 1 : 0);
+        const areaWidth = width;
+        const areaHeight = height;
+
         // Log detalhado
         // Obtém tiles do ChunkManager
         const tiles = this.gameWorld.mapManager.chunkManager.getTilesInArea(
             startX,
             startY,
             player.z,
-            width,
-            height
+            areaWidth,
+            areaHeight
         );
         
         console.log(`[VisionSystem] Got ${tiles.length} tiles from ChunkManager`);
