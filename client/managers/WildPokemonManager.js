@@ -45,6 +45,11 @@ export class WildPokemonManager {
         
         // console.log(`[WildPokemonManager] ${this.wildPokemons.size} Pokémon selvagens carregados`);
         // logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens carregados`);
+        console.log('[WildPokemonManager] receiveWildPokemonList:', JSON.stringify(data, null, 2));
+        this.wildPokemons.clear();
+        for (const wildPokemon of data.wildPokemons) {
+            this.wildPokemons.set(wildPokemon.id, wildPokemon);
+        }
     }
 
     /**
@@ -54,6 +59,7 @@ export class WildPokemonManager {
     receiveSpawn(data) {
         this.wildPokemons.set(data.id, data);
         logger.info(`[WILD] Novo Pokémon spawned: ${data.name} (id=${data.id}) em (${data.x}, ${data.y}, ${data.z})`);
+        console.log('[WildPokemonManager] receiveSpawn:', JSON.stringify(data, null, 2));
     }
 
     /**
@@ -78,6 +84,7 @@ export class WildPokemonManager {
             this.wildPokemons.set(data.id, data);
             logger.warn(`[WILD] Recebeu update de Pokémon desconhecido: ${data.name} (id=${data.id})`);
         }
+        console.log('[WildPokemonManager] receiveUpdate:', JSON.stringify(data, null, 2));
     }
 
     /**

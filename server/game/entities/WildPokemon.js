@@ -17,29 +17,35 @@ export class WildPokemon {
         this.level = data.level || 5;
         this.hp = data.hp;
         this.maxHp = data.maxHp || data.hp;
-        
+
+        // Sprites (podem vir do banco ou ser undefined)
+        this.sprite_up = data.sprite_up ?? ['black'];
+        this.sprite_down = data.sprite_down ?? ['black'];
+        this.sprite_left = data.sprite_left ?? ['black'];
+        this.sprite_right = data.sprite_right ?? ['black'];
+
         // Posição
         this.x = data.x;
         this.y = data.y;
         this.z = data.z;
-        
+
         // Comportamento
         this.attackRange = data.attackRange || WildPokemonConfig.ATTACK_RANGE_DEFAULT;
         this.moveRange = this.attackRange * WildPokemonConfig.MOVE_RANGE_MULTIPLIER;
         this.state = WildPokemonState.IDLE;
-        
+
         // Controle de movimento
         this.lastMoveTime = 0;
         this.movementSpeed = WildPokemonConfig.MOVEMENT_SPEED;
-        
+
         // Posição de spawn (para voltar)
         this.spawnX = this.x;
         this.spawnY = this.y;
         this.spawnZ = this.z;
-        
+
         // Referência ao GameWorld (será setada pelo manager)
         this.gameWorld = null;
-        
+
         // Log de spawn
         logger.info(`[WILD] Pokémon spawnado: ${this.name} (id=${this.id}) em x=${this.x}, y=${this.y}, z=${this.z} | HP=${this.hp}`);
     }
@@ -184,22 +190,26 @@ export class WildPokemon {
     moveTowards(target) {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
-        
+
         // Calcula nova posição
         let newX = this.x;
         let newY = this.y;
-        
-        // Move um tile por vez
+        let newDirection = this.direction || 'down';
+
+        // Move um tile por vez e define direção
         if (Math.abs(dx) > Math.abs(dy)) {
             newX += dx > 0 ? 1 : -1;
+            newDirection = dx > 0 ? 'right' : 'left';
         } else if (dy !== 0) {
             newY += dy > 0 ? 1 : -1;
+            newDirection = dy > 0 ? 'down' : 'up';
         }
-        
+
         // Só move se não houver colisão
         if (!this.isPositionOccupied(newX, newY, this.z)) {
             this.x = newX;
             this.y = newY;
+            this.direction = newDirection;
         }
     }
 
@@ -226,7 +236,12 @@ export class WildPokemon {
             maxHp: this.maxHp,
             x: this.x,
             y: this.y,
-            z: this.z
+            z: this.z,
+            direction: this.direction || 'down',
+            sprite_up: this.sprite_up,
+            sprite_down: this.sprite_down,
+            sprite_left: this.sprite_left,
+            sprite_right: this.sprite_right
         };
     }
 }

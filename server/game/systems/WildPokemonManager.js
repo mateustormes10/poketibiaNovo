@@ -25,21 +25,18 @@ export class WildPokemonManager {
      */
     async initialize() {
         logger.info('[WILD] Iniciando spawn de Pokémon selvagens...');
-        
-        // Por enquanto, spawn hardcoded para teste - próximo ao spawn do player (15, 19, 3)
-        // Depois pode carregar do banco de dados
         const spawnData = [
-            { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 18, y: 19, z: 3 },
-            { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 16, y: 19, z: 3 },
-            { name: 'Pidgey', level: 4, hp: 22, maxHp: 22, x: 20, y: 21, z: 3 },
-            { name: 'Caterpie', level: 2, hp: 15, maxHp: 15, x: 17, y: 16, z: 3 },
-            { name: 'Weedle', level: 2, hp: 16, maxHp: 16, x: 12, y: 18, z: 3 }
+            { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 18, y: 19, z: 3, "sprite_up": ["33533"], "sprite_down": [ "33535"],  "sprite_left": [ "33536"], "sprite_right": ["33534"] },
+            { name: 'Horsea', level: 3, hp: 20, maxHp: 20, x: 16, y: 19, z: 3, "sprite_up": ["33412"], "sprite_down": [ "33414"],  "sprite_left": [ "33415"], "sprite_right": ["33417"] },
+            { name: 'Pidgey', level: 4, hp: 22, maxHp: 22, x: 20, y: 21, z: 3, "sprite_up": ["33368"], "sprite_down": [ "33370"],  "sprite_left": [ "33371"], "sprite_right": ["33369"] },
+            { name: 'Caterpie', level: 2, hp: 15, maxHp: 15, x: 17, y: 16, z: 3, "sprite_up": ["33400"], "sprite_down": [ "33402"],  "sprite_left": [ "33403"], "sprite_right": ["33401"] },
+            { name: 'Charmander', level: 2, hp: 16, maxHp: 16, x: 12, y: 18, z: 3, "sprite_up": ["33356"], "sprite_down": [ "33358"],  "sprite_left": [ "33359"], "sprite_right": ["33357"] },
+            { name: 'Venusaur', level: 20, hp: 160, maxHp: 160, x: 20, y: 18, z: 3, "sprite_up": ["33170","33171","33172","33173"], "sprite_down": [ "33178","33179","33180","33181"],  "sprite_left": [ "33182","33183","33184","33185"], "sprite_right": ["33174","33175","33176","33177"] }
         ];
-        
         for (const data of spawnData) {
-            this.spawnPokemon(data, false); // Não envia broadcast no spawn inicial
+            let spriteData = {};
+            this.spawnPokemon({ ...data, ...spriteData }, false);
         }
-        
         logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens spawned`);
     }
 
@@ -51,9 +48,24 @@ export class WildPokemonManager {
      */
     spawnPokemon(data, broadcast = true) {
         const id = this.nextId++;
+        // Parse dos campos de sprite se vierem como string JSON
+        const parseSprite = (val) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return ['black'];
+                }
+            }
+            return val ?? ['black'];
+        };
         const wildPokemon = new WildPokemon({
             id,
-            ...data
+            ...data,
+            sprite_up: parseSprite(data.sprite_up),
+            sprite_down: parseSprite(data.sprite_down),
+            sprite_left: parseSprite(data.sprite_left),
+            sprite_right: parseSprite(data.sprite_right)
         });
         
         // Seta referência ao GameWorld para verificação de colisão
@@ -162,7 +174,7 @@ export class WildPokemonManager {
      */
     broadcastSpawn(wildPokemon) {
         const data = wildPokemon.toDTO();
-        
+        console.log('[WildPokemonManager] broadcastSpawn DTO:', JSON.stringify(data, null, 2));
         for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
                 client.send(WildPokemonServerEvents.WILD_POKEMON_SPAWN, data);
@@ -176,7 +188,7 @@ export class WildPokemonManager {
      */
     broadcastUpdate(wildPokemon) {
         const data = wildPokemon.toDTO();
-        
+        console.log('[WildPokemonManager] broadcastUpdate DTO:', JSON.stringify(data, null, 2));
         let clientCount = 0;
         for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
@@ -185,7 +197,6 @@ export class WildPokemonManager {
                 clientCount++;
             }
         }
-        
         if (clientCount === 0) {
             console.log(`[WildPokemonManager] AVISO: Nenhum cliente conectado para receber update de ${wildPokemon.name}`);
         }

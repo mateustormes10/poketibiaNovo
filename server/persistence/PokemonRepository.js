@@ -10,7 +10,24 @@ export class PokemonRepository {
     
     async findByName(name) {
         const sql = 'SELECT * FROM pokemons WHERE name = ?';
-        return await this.db.queryOne(sql, [name]);
+        const result = await this.db.queryOne(sql, [name]);
+        if (result) {
+            const parseSprite = (val) => {
+                if (typeof val === 'string') {
+                    try {
+                        return JSON.parse(val);
+                    } catch {
+                        return ['black'];
+                    }
+                }
+                return val ?? ['black'];
+            };
+            result.sprite_up = parseSprite(result.sprite_up);
+            result.sprite_down = parseSprite(result.sprite_down);
+            result.sprite_left = parseSprite(result.sprite_left);
+            result.sprite_right = parseSprite(result.sprite_right);
+        }
+        return result;
     }
     
     async findAll() {
