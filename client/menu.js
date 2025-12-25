@@ -84,31 +84,52 @@ function drawOverlay() {
 
 function initLoginFields() {
     inputFields = [];
-    createInputField(canvas.width/2 - 100, canvas.height/2 - 50, "Username");
-    createInputField(canvas.width/2 - 100, canvas.height/2, "Password", "password");
+    // Box login centralizado (ainda maior e inputs centralizados)
+    const boxW = 360, boxH = 340;
+    const boxX = canvas.width/2 - boxW/2;
+    const boxY = canvas.height/2 - boxH/2;
+    // Inputs centralizados dentro do box
+    const inputW = 240;
+    const inputX = boxX + (boxW - inputW) / 2;
+    createInputField(inputX, boxY + 150, "Username");
+    createInputField(inputX, boxY + 200, "Password", "password");
 }
 
 function drawLogin() {
     drawBackground();
     drawOverlay();
     ctx.save();
+    // Box branco ao redor do bloco de login, preenchido
+    const boxW = 260, boxH = 220;
+    const boxX = canvas.width/2 - boxW/2;
+    const boxY = canvas.height/2 - 70;
+    ctx.save();
+    ctx.fillStyle = "rgba(73, 18, 18, 0.1)";
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+    ctx.restore();
+    // Título dentro do box, mais próximo do topo
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Login", canvas.width/2, canvas.height/2 - 100);
+    ctx.fillText("Login", boxX + boxW/2, boxY+30);
     ctx.font = "14px Arial";
     inputFields.forEach((field, i) => {
-        ctx.strokeStyle = i === currentInput ? "yellow" : "white";
+        ctx.strokeStyle = i === currentInput ? "#FFD700" : "white";
         ctx.lineWidth = 2;
-        ctx.strokeRect(field.x, field.y, 200, 30);
+        ctx.strokeRect(field.x, field.y, 240, 34);
         ctx.fillStyle = "white";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         const txt = field.value.length ? field.value : field.placeholder;
-        ctx.fillText(txt, field.x + 8, field.y + 15);
+        ctx.fillText(txt, field.x + 8, field.y + 17);
     });
     ctx.textAlign = "center";
-    ctx.fillText("Press Enter to submit", canvas.width/2, canvas.height/2 + 100);
+    ctx.fillStyle = "#fff";
+    ctx.font = "14px Arial";
+    ctx.fillText("Press Enter to submit", boxX + boxW/2, boxY + boxH - 36);
     ctx.restore();
 }
 
@@ -119,21 +140,61 @@ function drawCharacterSelect(playerData) {
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Select Character", canvas.width/2, 50);
+    ctx.fillText("Select Character", canvas.width/2, 170);
     const chars = accountData.characters || [];
+    // Box config
+    const boxWidth = 340;
+    const boxHeight = 8 * 44 + 20; // 8 chars, 44px cada, padding
+    const boxX = canvas.width/2 - boxWidth/2;
+    const boxY = canvas.height/2 - boxHeight/2 + 20;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+    // Scroll logic
+    let startIdx = 0;
+    if (chars.length > 8) {
+        if (selectedCharacter < 4) startIdx = 0;
+        else if (selectedCharacter > chars.length - 5) startIdx = chars.length - 8;
+        else startIdx = selectedCharacter - 4;
+    }
     if (chars.length > 0) {
         ctx.font = "18px Arial";
-        chars.forEach((c, i) => {
-            ctx.fillStyle = selectedCharacter === i ? "yellow" : "white";
-            ctx.textAlign = "center";
-            ctx.fillText(c.name, canvas.width/2, 150 + i * 40);
-        });
+        for (let i = 0; i < Math.min(8, chars.length); i++) {
+            const idx = startIdx + i;
+            const c = chars[idx];
+            const itemY = boxY + 10 + i * 44;
+            // Fundo do item
+            ctx.fillStyle = idx === selectedCharacter ? "rgba(255,215,0,0.13)" : "rgba(255,255,255,0.04)";
+            ctx.fillRect(boxX + 8, itemY, boxWidth - 16, 38);
+            // Borda amarela se selecionado
+            if (idx === selectedCharacter) {
+                ctx.strokeStyle = "#FFD700";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(boxX + 8, itemY, boxWidth - 16, 38);
+            }
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "left";
+            ctx.font = "18px Arial";
+            ctx.fillText(c.name, boxX + 28, itemY + 24);
+        }
+        // Indicadores de scroll
+        if (chars.length > 8 && startIdx > 0) {
+            ctx.fillStyle = "#fff";
+            ctx.font = "20px Arial";
+            ctx.fillText("▲", canvas.width/2, boxY + 0);
+        }
+        if (chars.length > 8 && startIdx + 8 < chars.length) {
+            ctx.fillStyle = "#fff";
+            ctx.font = "20px Arial";
+            ctx.fillText("▼", canvas.width/2, boxY + boxHeight - 8);
+        }
     } else {
         ctx.font = "16px Arial";
         ctx.fillText("No characters found. Press Enter to create!", canvas.width/2, canvas.height/2);
     }
     ctx.font = "14px Arial";
-    ctx.fillText("Press Enter to play / C to create new", canvas.width/2, canvas.height - 50);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Press Enter to play / C to create new", canvas.width/2 -100, canvas.height - 180);
     ctx.restore();
 }
 
@@ -296,7 +357,7 @@ function drawRegister() {
     ctx.fillText("Register", canvas.width/2, canvas.height/2 - 120);
     ctx.font = "14px Arial";
     inputFields.forEach((field, i) => {
-        ctx.strokeStyle = i === currentInput ? "yellow" : "white";
+        ctx.strokeStyle = i === currentInput ? "#FFD700" : "white";
         ctx.lineWidth = 2;
         ctx.strokeRect(field.x, field.y, 200, 30);
         ctx.fillStyle = "white";
@@ -314,12 +375,19 @@ function drawCharacterCreate() {
     drawBackground();
     drawOverlay();
     ctx.save();
+    // Box amarelo ao redor do bloco de criação
+    const boxW = 260, boxH = 220;
+    const boxX = canvas.width/2 - boxW/2;
+    const boxY = canvas.height/2 - 130;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
     ctx.fillStyle = "white";
     ctx.font = "24px Arial";
     ctx.textAlign = "center";
     ctx.fillText("Create New Character", canvas.width/2, canvas.height/2 - 100);
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#FFD700";
+    ctx.lineWidth = 3;
     ctx.strokeRect(canvas.width/2 - 100, canvas.height/2 - 50, 200, 30);
     ctx.fillStyle = "white";
     ctx.textAlign = "left";

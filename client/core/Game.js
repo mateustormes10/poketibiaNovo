@@ -20,7 +20,7 @@ import { GmCommandsUI } from '../ui/GmCommandsUI.js';
 import { MapUI } from '../render/UI/MapUI.js';
 
 export class Game {
-        _createMainMenu() {
+    _createMainMenu() {
             let menu = document.getElementById('main-menu-ui');
             if (!menu) {
                 menu = document.createElement('div');
@@ -31,6 +31,15 @@ export class Game {
                 title.textContent = 'Menu Principal';
                 title.style = 'margin-bottom:24px;';
                 menu.appendChild(title);
+
+                // Botão Sair do Jogo
+                const btnExit = document.createElement('button');
+                btnExit.textContent = 'Sair do Jogo';
+                btnExit.style = 'font-size:1.2em;padding:12px 32px;margin-bottom:12px;border-radius:8px;border:none;background:#a22;color:#fff;cursor:pointer;';
+                btnExit.onclick = () => {
+                    this._showExitGameModal();
+                };
+                menu.appendChild(btnExit);
                 // Botão de configurações de controle
                 const btnConfig = document.createElement('button');
                 btnConfig.textContent = 'Configurações de Controle';
@@ -62,6 +71,8 @@ export class Game {
                     if (window.showGraphicsConfig) window.showGraphicsConfig();
                 };
                 menu.appendChild(btnGraphics);
+                
+
                 // Botão de fechar
                 const btnClose = document.createElement('button');
                 btnClose.textContent = 'Fechar Menu';
@@ -72,6 +83,41 @@ export class Game {
             }
             this._mainMenu = menu;
         }
+
+    _showExitGameModal() {
+        let modal = document.getElementById('exit-game-modal');
+        if (modal) modal.remove();
+        modal = document.createElement('div');
+        modal.id = 'exit-game-modal';
+        modal.style = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.55);z-index:10010;display:flex;align-items:center;justify-content:center;';
+        const box = document.createElement('div');
+        box.style = 'background:#222;padding:32px 48px;border-radius:16px;box-shadow:0 0 32px #000a;display:flex;flex-direction:column;align-items:center;min-width:320px;';
+        const msg = document.createElement('div');
+        msg.textContent = 'Você deseja sair do jogo?';
+        msg.style = 'font-size:1.3em;color:#fff;margin-bottom:24px;';
+        box.appendChild(msg);
+        const btns = document.createElement('div');
+        btns.style = 'display:flex;gap:24px;';
+        // Botão Sim
+        const btnYes = document.createElement('button');
+        btnYes.textContent = 'Sim';
+        btnYes.style = 'font-size:1.1em;padding:10px 32px;border-radius:8px;border:none;background:#a22;color:#fff;cursor:pointer;';
+        btnYes.onclick = () => {
+            window.location.href = 'menu.html';
+        };
+        btns.appendChild(btnYes);
+        // Botão Cancelar
+        const btnCancel = document.createElement('button');
+        btnCancel.textContent = 'Cancelar';
+        btnCancel.style = 'font-size:1.1em;padding:10px 32px;border-radius:8px;border:none;background:#444;color:#fff;cursor:pointer;';
+        btnCancel.onclick = () => {
+            modal.remove();
+        };
+        btns.appendChild(btnCancel);
+        box.appendChild(btns);
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+    }
 
         _toggleMainMenu() {
         if (!this._mainMenu) return;
@@ -869,23 +915,28 @@ export class Game {
         // Detecta clique esquerdo do mouse
         if (this.mouse.isButtonPressed(0)) { // Botão esquerdo = 0
             
+            // Verifica clique nos botões do Battle View SEMPRE
+            if (this.renderer.hud.handleBattleViewClick(mousePos.x, mousePos.y)) {
+                return; // Clique em filtro do Battle View
+            }
+
             // Verifica clique no inventário primeiro (se estiver aberto)
             if (this.inventoryManager.isInventoryOpen()) {
                 if (this.inventoryManager.handleClick(mousePos.x, mousePos.y)) {
                     return; // Clique no inventário processado
                 }
             }
-            
+
             // Verifica clique no modal de morte primeiro
             if (this.renderer.deathModal.checkClick(mousePos.x, mousePos.y)) {
                 return; // Modal foi fechado, não processa outros cliques
             }
-            
+
             // Verifica clique no diálogo de NPC
             if (this.renderer.npcDialog.checkClick(mousePos.x, mousePos.y)) {
                 return; // Clique no diálogo processado
             }
-            
+
             // Em modo de edição, verifica drag nos elementos UI
             if (this.renderer.uiManager.isEditMode()) {
                 if (this.renderer.hud.handleMouseDown(mousePos.x, mousePos.y)) {
@@ -1444,18 +1495,21 @@ export class Game {
     
     render() {
         this.renderer.clear();
+        // 1. Renderiza mapa, entidades e HUD (HUD inclui lista de pokémons do player)
         this.renderer.render(this.gameState);
 
-        // Renderiza apenas pokémons selvagens do mesmo andar (z) do player local
+        // 2. Renderiza pokémons selvagens (apenas do mesmo andar)
         let wildPokemons = this.wildPokemonManager.getAll();
         const player = this.gameState.localPlayer;
         if (player) {
-            // Filtra pokémons do mesmo z
             wildPokemons = new Map(Array.from(wildPokemons.entries()).filter(([id, wp]) => wp.z === player.z));
         }
         this.wildPokemonRenderer.render(this.renderer.ctx, wildPokemons, this.camera);
 
-        // Renderiza inventário por último (acima de tudo)
+        // 3. Renderiza HUD novamente para garantir que a UI fique acima dos sprites (caso algum sprite sobrescreva)
+        this.renderer.hud.render(this.gameState, this.wildPokemonManager);
+
+        // 4. Renderiza inventário por último (acima de tudo)
         this.inventoryManager.render();
     }
 }

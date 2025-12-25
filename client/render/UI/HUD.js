@@ -15,6 +15,20 @@ export class HUD {
         this.pokemonSelectionActive = false;
         this.selectedPokemonIndex = 0;
     }
+                handleBattleViewClick(mouseX, mouseY) {
+                if (!this.battleViewFilterButtons) return false;
+                for (const btn of this.battleViewFilterButtons) {
+                    if (
+                        mouseX >= btn.x && mouseX <= btn.x + btn.width &&
+                        mouseY >= btn.y && mouseY <= btn.y + btn.height
+                    ) {
+                        this.battleViewFilter = btn.value;
+                        this.battleViewScrollOffset = 0; // Reseta scroll ao trocar filtro
+                        return true;
+                    }
+                }
+                return false;
+            }
 
     activatePokemonSelection() {
         this.pokemonSelectionActive = true;
@@ -56,23 +70,26 @@ export class HUD {
     }
     
     handleMouseDown(mouseX, mouseY) {
+        // Permite clique nos filtros do Battle View mesmo fora do modo de edição
+        if (this.handleBattleViewClick(mouseX, mouseY)) return true;
+
         if (!this.uiManager.isEditMode()) return false;
-        
+
         // Tenta arrastar playerInfo
         if (this.playerInfoBounds && this.uiManager.startDrag('playerInfo', mouseX, mouseY, this.playerInfoBounds)) {
             return true;
         }
-        
+
         // Tenta arrastar pokemonList
         if (this.pokemonListFullBounds && this.uiManager.startDrag('pokemonList', mouseX, mouseY, this.pokemonListFullBounds)) {
             return true;
         }
-        
+
         // Tenta arrastar battleView
         if (this.battleViewBounds && this.uiManager.startDrag('battleView', mouseX, mouseY, this.battleViewBounds)) {
             return true;
         }
-        
+
         return false;
     }
     
@@ -287,27 +304,46 @@ export class HUD {
     
     renderBattleView(gameState, wildPokemonManager = null) {
         if (!gameState.localPlayer) return;
-        
         const pos = this.uiManager.getPosition('battleView');
         const width = 250;
         const x = pos.x !== null ? pos.x : this.canvas.width - width - 10;
         const y = pos.y !== null ? pos.y : 100;
         const itemHeight = 40;
-        const maxVisible = 10; // Máximo de entidades visíveis
-        const maxDistance = 15; // Distância máxima em tiles para aparecer no Battle View
-        
+        const maxVisible = 10;
+        const maxDistance = 15;
+
+        // Filtro de entidades
+        const filterTypes = [
+            { label: 'Todos', value: 'all' },
+            { label: 'Monstros', value: 'Monster' },
+            { label: 'NPCs', value: 'NPC' },
+            { label: 'Players', value: 'Player' }
+        ];
+        this.battleViewFilterButtons = [];
+        const buttonWidth = 60;
+        const buttonHeight = 22;
+        const buttonSpacing = 8;
+        let bx = x + 10;
+        let by = y + 2;
+        filterTypes.forEach((ft, idx) => {
+            this.battleViewFilterButtons.push({
+                x: bx,
+                y: by,
+                width: buttonWidth,
+                height: buttonHeight,
+                value: ft.value
+            });
+            bx += buttonWidth + buttonSpacing;
+        });
+
         // Coleta entidades próximas (exceto o próprio player)
-        const nearbyEntities = [];
-        
+        let nearbyEntities = [];
         // Players próximos
         gameState.players.forEach(player => {
             if (player.id !== gameState.localPlayer.id) {
-                // Usa distância Chebyshev (mesma do sistema de wild Pokémon)
                 const dx = Math.abs(gameState.localPlayer.x - player.x);
                 const dy = Math.abs(gameState.localPlayer.y - player.y);
                 const distance = Math.max(dx, dy);
-                
-                // Só adiciona se estiver dentro do raio E no mesmo andar
                 if (distance <= maxDistance && gameState.localPlayer.z === player.z) {
                     nearbyEntities.push({
                         type: 'Player',
@@ -322,13 +358,11 @@ export class HUD {
                 }
             }
         });
-        
         // Monsters/Pokémons próximos
         gameState.monsters.forEach(monster => {
             const dx = Math.abs(gameState.localPlayer.x - monster.x);
             const dy = Math.abs(gameState.localPlayer.y - monster.y);
             const distance = Math.max(dx, dy);
-            
             if (distance <= maxDistance && gameState.localPlayer.z === monster.z) {
                 nearbyEntities.push({
                     type: 'Monster',
@@ -342,27 +376,24 @@ export class HUD {
                 });
             }
         });
-        
         // NPCs próximos
         gameState.npcs.forEach(npc => {
             const dx = Math.abs(gameState.localPlayer.x - npc.x);
             const dy = Math.abs(gameState.localPlayer.y - npc.y);
             const distance = Math.max(dx, dy);
-            
             if (distance <= maxDistance && gameState.localPlayer.z === npc.z) {
                 nearbyEntities.push({
-                type: 'NPC',
-                name: npc.name || 'NPC',
-                level: npc.level || 1,
-                hp: npc.hp,
-                maxHp: npc.maxHp,
-                distance: distance.toFixed(1),
-                x: npc.x,
-                y: npc.y
-            });
-        }
+                    type: 'NPC',
+                    name: npc.name || 'NPC',
+                    level: npc.level || 1,
+                    hp: npc.hp,
+                    maxHp: npc.maxHp,
+                    distance: distance.toFixed(1),
+                    x: npc.x,
+                    y: npc.y
+                });
+            }
         });
-        
         // Wild Pokémon próximos
         if (wildPokemonManager) {
             const wildPokemons = wildPokemonManager.getAll();
@@ -370,7 +401,6 @@ export class HUD {
                 const dx = Math.abs(gameState.localPlayer.x - wildPokemon.x);
                 const dy = Math.abs(gameState.localPlayer.y - wildPokemon.y);
                 const distance = Math.max(dx, dy);
-                
                 if (distance <= maxDistance && gameState.localPlayer.z === wildPokemon.z) {
                     nearbyEntities.push({
                         type: 'Monster',
@@ -385,48 +415,72 @@ export class HUD {
                 }
             });
         }
-        
+        // Aplica filtro
+        if (this.battleViewFilter !== 'all') {
+            nearbyEntities = nearbyEntities.filter(e => e.type === this.battleViewFilter);
+        }
         // Ordena por distância
         nearbyEntities.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
         
         // Configurações de scroll
-        const maxVisibleItems = 4; // Máximo de itens visíveis sem scroll
-        const headerHeight = 30; // Altura do cabeçalho
-        const maxViewportHeight = maxVisibleItems * itemHeight; // 4 * 40 = 160px
+        const maxVisibleItems = 4;
+        const headerHeight = 38;
+        const maxViewportHeight = maxVisibleItems * itemHeight;
         const contentHeight = nearbyEntities.length * itemHeight;
         const viewportHeight = Math.min(maxViewportHeight, contentHeight);
         const totalHeight = headerHeight + viewportHeight;
         const scrollbarWidth = 10;
-        
-        // Calcula scroll máximo
-        this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);
-        
-        // Limita o scroll atual
-        this.battleViewScrollOffset = Math.max(0, Math.min(this.battleViewScrollOffset, this.battleViewMaxScroll));
-        
-        // Calcula quais itens são visíveis
-        const startIndex = Math.floor(this.battleViewScrollOffset / itemHeight);
-        const endIndex = Math.min(nearbyEntities.length, Math.ceil((this.battleViewScrollOffset + viewportHeight) / itemHeight));
-        const visibleEntities = nearbyEntities.slice(startIndex, endIndex);
-        
+
         // Salva bounds para drag e scroll
         this.battleViewBounds = { x, y, width, height: totalHeight };
-        
+
         // Borda de edição
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, width, totalHeight);
         }
-        
+
         // Background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(x, y, width, totalHeight);
-        
+
+        // Botões de filtro visuais
+        filterTypes.forEach((ft, idx) => {
+            const btn = this.battleViewFilterButtons[idx];
+            // Fundo do botão
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.roundRect(btn.x, btn.y, btn.width, btn.height, 7);
+            this.ctx.fillStyle = (this.battleViewFilter === ft.value) ? '#ff6600' : '#222';
+            this.ctx.shadowColor = (this.battleViewFilter === ft.value) ? '#ff6600' : '#000';
+            this.ctx.shadowBlur = (this.battleViewFilter === ft.value) ? 8 : 2;
+            this.ctx.fill();
+            this.ctx.shadowBlur = 0;
+            // Borda
+            this.ctx.lineWidth = (this.battleViewFilter === ft.value) ? 2 : 1;
+            this.ctx.strokeStyle = (this.battleViewFilter === ft.value) ? '#fff' : '#444';
+            this.ctx.stroke();
+            this.ctx.restore();
+            // Texto
+            this.ctx.font = 'bold 12px Arial';
+            this.ctx.fillStyle = (this.battleViewFilter === ft.value) ? '#fff' : '#aaa';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(ft.label, btn.x + btn.width / 2, btn.y + btn.height / 2 + 5);
+        });
+        this.ctx.textAlign = 'left';
+
         // Título
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ff6600';
-        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 20);
+        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 34);
+
+        // Scroll
+        this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);
+        this.battleViewScrollOffset = Math.max(0, Math.min(this.battleViewScrollOffset, this.battleViewMaxScroll));
+        const startIndex = Math.floor(this.battleViewScrollOffset / itemHeight);
+        const endIndex = Math.min(nearbyEntities.length, Math.ceil((this.battleViewScrollOffset + viewportHeight) / itemHeight));
+        const visibleEntities = nearbyEntities.slice(startIndex, endIndex);
         
         // Área de conteúdo com clipping
         this.ctx.save();
