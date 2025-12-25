@@ -75,7 +75,21 @@ floorDownBtn.addEventListener("click", () => {
 });
 
 
-let sprites = new Map();
+// Removido: let sprites = new Map();
+// Carrega o índice de sprites para mapear número -> pasta
+const spriteIndex = (() => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        const indexPath = path.join(__dirname, '../client/assets/sprites/sprites_index.json');
+        if (fs.existsSync(indexPath)) {
+            return JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+        }
+    } catch (e) {
+        console.error('Erro ao carregar sprites_index.json:', e);
+    }
+    return {};
+})();
 let selectedSpriteId = null;
 let spritePage = 0;
 const spritesPerPage = 250;
@@ -146,6 +160,42 @@ spriteGroupSearch.addEventListener("input", () => {
 
 let loadedSprites = new Map(); // cache de sprites já carregadas
 
+// --- Pastas de sprites ---
+const spriteFolderSelect = document.getElementById("spriteFolderSelect");
+let spriteFolders = [
+    "animacoes_damage",
+    "cenario",
+    "chao",
+    "items",
+    "liquidos_chao",
+    "monstros_tibia",
+    "monstro_tibia_dead",
+    "objetos_com_actions",
+    "outfit_players",
+    "paredes",
+    "pokeball",
+    "pokemons",
+    "pokemon_dead",
+    "portas"
+];
+let selectedSpriteFolder = spriteFolders[0];
+
+function populateSpriteFolderSelect() {
+    spriteFolderSelect.innerHTML = "";
+    spriteFolders.forEach(folder => {
+        const option = document.createElement("option");
+        option.value = folder;
+        option.textContent = folder;
+        spriteFolderSelect.appendChild(option);
+    });
+    spriteFolderSelect.value = selectedSpriteFolder;
+}
+
+spriteFolderSelect.addEventListener("change", () => {
+    selectedSpriteFolder = spriteFolderSelect.value;
+    renderSpriteList();
+});
+
 async function loadSpritesPage(page) {
     const start = page * spritesPerPage + 1;
     const end = Math.min(start + spritesPerPage - 1, 65000); // limite total
@@ -205,13 +255,23 @@ canvas.addEventListener("click", async (e) => {
             });
 
             if (selectedSpriteId) {
-                if (!ntile.ground.includes(selectedSpriteId)) {
+                if (typeof selectedSpriteId === 'number' && !ntile.ground.includes(selectedSpriteId)) {
                     ntile.ground.push(selectedSpriteId);
-                    if(!sprites.has(selectedSpriteId)) {
-                        const img = new Image();
-                        img.src = `../assets/sprites/${selectedSpriteId}.png`;
-                        await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
-                        sprites.set(selectedSpriteId, img);
+                    // Limpa cache da sprite para garantir recarregamento
+                    let spritePath = null;
+                    const folder = spriteIndex[selectedSpriteId];
+                    if (folder !== undefined && folder !== null && folder !== "") {
+                        spritePath = `${folder}/${selectedSpriteId}.png`;
+                        loadedSprites.delete(spritePath);
+                    } else if (folder === "") {
+                        spritePath = `${selectedSpriteId}.png`;
+                        loadedSprites.delete(spritePath);
+                    } else {
+                        // Tenta buscar em todas as pastas
+                        for (const f of spriteFolders) {
+                            const testPath = `${f}/${selectedSpriteId}.png`;
+                            loadedSprites.delete(testPath);
+                        }
                     }
                 }
             }
@@ -240,60 +300,38 @@ canvas.addEventListener("click", async (e) => {
 async function renderSpriteList() {
     spriteListDiv.innerHTML = '';
 
-    let filteredIds = [];
-
-    // Se tiver filtro por ID
-    if (spriteFilter) {
-        const id = parseInt(spriteFilter);
-        if (!isNaN(id) && id >= 1 && id <= totalSprites) {
-            filteredIds.push(id);
-            // Calcula a página automaticamente
-            spritePage = Math.floor((id - 1) / spritesPerPage);
-        }
-    } else if (spriteGroupFilter) {
-        // Se houver filtro por grupo
-        const startId = (spriteGroupFilter - 1) * spritesPerPage + 1;
-        const endId = Math.min(spriteGroupFilter * spritesPerPage, totalSprites);
-        for (let i = startId; i <= endId; i++) filteredIds.push(i);
-        spritePage = spriteGroupFilter - 1;
-    } else {
-        // Nenhum filtro: pega todos os sprites da página atual
-        const startId = spritePage * spritesPerPage + 1;
-        const endId = Math.min(startId + spritesPerPage - 1, totalSprites);
-        for (let i = startId; i <= endId; i++) filteredIds.push(i);
+    // Busca arquivos da pasta selecionada
+    const folder = selectedSpriteFolder;
+    const fs = require('fs');
+    const path = require('path');
+    const folderPath = path.join(__dirname, '../client/assets/sprites', folder);
+    let files = [];
+    try {
+        files = fs.readdirSync(folderPath).filter(f => f.endsWith('.png'));
+    } catch (err) {
+        console.error('Erro ao ler pasta de sprites:', folderPath, err);
     }
 
-    // carrega sprites que ainda não estão no cache
-    const promises = [];
-    for (let id of filteredIds) {
-        if (!loadedSprites.has(id)) {
-            const img = new Image();
-            img.src = `../assets/sprites/${id}.png`;
-            const p = new Promise(resolve => {
-                img.onload = resolve;
-                img.onerror = resolve;
-            });
-            promises.push(p);
-            loadedSprites.set(id, img);
-        }
-    }
-    await Promise.all(promises);
-
-    // renderiza sprites
-    for (let id of filteredIds) {
-        const img = loadedSprites.get(id);
-        if (!img) continue;
-        const div = document.createElement("img");
-        div.src = img.src;
-        div.title = id;
-        div.classList.add("sprite");
-        div.addEventListener("click", () => {
+    files.forEach(file => {
+        const img = document.createElement("img");
+        // Corrige o caminho para ser relativo ao HTML
+        img.src = `../client/assets/sprites/${folder}/${file}`;
+        img.title = file;
+        img.classList.add("sprite");
+        img.addEventListener("click", () => {
             document.querySelectorAll(".sprite").forEach(s => s.classList.remove("selected"));
-            div.classList.add("selected");
-            selectedSpriteId = id;
+            img.classList.add("selected");
+            // Extrai apenas o número do arquivo (ex: 123.png -> 123)
+            const match = file.match(/^(\d+)\.png$/);
+            if (match) {
+                selectedSpriteId = parseInt(match[1], 10);
+            } else {
+                selectedSpriteId = null;
+            }
+            render(); // Atualiza o canvas ao selecionar sprite
         });
-        spriteListDiv.appendChild(div);
-    }
+        spriteListDiv.appendChild(img);
+    });
 }
 
 
@@ -318,7 +356,9 @@ function parseCell(cell) {
 
     for (let item of raw) {
         item = item.trim();
-        if (!isNaN(parseInt(item))) tile.ground.push(parseInt(item));
+        // Aceita números como spriteId
+        if (/^\d+$/.test(item)) tile.ground.push(Number(item));
+        else if (item.includes("/") && item.endsWith(".png")) tile.ground.push(item);
         else if (item === "S") tile.walkable = true;
         else if (item === "N") tile.walkable = false;
         else if (item.startsWith("SPAWN(") && item.endsWith(")")) 
@@ -384,9 +424,53 @@ function render() {
 
             // DESENHA SPRITES EMPILHADAS
             tile.ground.forEach(id => {
-                const img = sprites.get(id);
-                if (img && img.complete && img.naturalWidth > 0) {
-                    ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
+                let spritePath = null;
+                let found = false;
+                if (typeof id === 'number' || (/^\d+$/.test(id))) {
+                    const folder = spriteIndex[id];
+                    if (folder !== undefined && folder !== null && folder !== "") {
+                        spritePath = `${folder}/${id}.png`;
+                        found = true;
+                    } else if (folder === "") {
+                        spritePath = `${id}.png`;
+                        found = true;
+                    } else {
+                        // Tenta buscar em todas as pastas
+                        for (const f of spriteFolders) {
+                            const testPath = `${f}/${id}.png`;
+                            let img = loadedSprites.get(testPath);
+                            if (!img) {
+                                img = new Image();
+                                img.src = `../client/assets/sprites/${testPath}`;
+                                img.onload = () => render();
+                                loadedSprites.set(testPath, img);
+                            }
+                            if (img.complete && img.naturalWidth > 0) {
+                                ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (found && spritePath) {
+                    let img = loadedSprites.get(spritePath);
+                    if (!img) {
+                        img = new Image();
+                        img.src = `../client/assets/sprites/${spritePath}`;
+                        img.onload = () => render();
+                        loadedSprites.set(spritePath, img);
+                    }
+                    if (img.complete && img.naturalWidth > 0) {
+                        ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
+                    }
+                } else if (!found) {
+                    // id não existe, mostra placeholder
+                    ctx.save();
+                    ctx.strokeStyle = "red";
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                    ctx.restore();
                 }
             });
 
@@ -405,6 +489,26 @@ function render() {
 
             ctx.strokeStyle = "gray";
             ctx.strokeRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+        }
+    }
+
+    // PREVIEW DA SPRITE SELECIONADA SOB O CURSOR
+    if (typeof selectedSpriteId === 'number') {
+        const folder = spriteIndex[selectedSpriteId];
+        if (folder) {
+            const spritePath = `${folder}/${selectedSpriteId}.png`;
+            let img = loadedSprites.get(spritePath);
+            if (!img) {
+                img = new Image();
+                img.src = `../client/assets/sprites/${spritePath}`;
+                img.onload = () => render();
+                loadedSprites.set(spritePath, img);
+            }
+            if (img.complete && img.naturalWidth > 0) {
+                ctx.globalAlpha = 0.7;
+                ctx.drawImage(img, (cursorX-cameraX)*tileSize, (cursorY-cameraY)*tileSize, tileSize, tileSize);
+                ctx.globalAlpha = 1.0;
+            }
         }
     }
 
@@ -433,21 +537,22 @@ canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / tileSize) + cameraX;
   const y = Math.floor((e.clientY - rect.top) / tileSize) + cameraY;
-  const tile = mapData[y][x];
+    const tile = mapData[y][x];
 
-  if (selectedSpriteId) {
-    if (!tile.ground.includes(selectedSpriteId)) tile.ground.push(selectedSpriteId);
-  }
-  tile.walkable = walkableCheckbox.checked;
-  tile.spawn = spawnCheckbox.checked ? spawnNameInput.value.trim() || "POKEMON" : null;
+    // Só permite sprites numéricos
+    if (typeof selectedSpriteId === 'number' && !tile.ground.includes(selectedSpriteId)) {
+        tile.ground.push(selectedSpriteId);
+    }
+    tile.walkable = walkableCheckbox.checked;
+    tile.spawn = spawnCheckbox.checked ? spawnNameInput.value.trim() || "POKEMON" : null;
 
-  cursorX = x; cursorY = y;
-  // Atualiza display da célula
-    tileXSpan.textContent = x;
-    tileYSpan.textContent = y;
-    tileContentSpan.textContent = `[${tile.ground.join(",")},${tile.walkable ? "S" : "N"}${tile.spawn ? ",SPAWN(" + tile.spawn + ")" : ""}]`;
+    cursorX = x; cursorY = y;
+    // Atualiza display da célula
+        tileXSpan.textContent = x;
+        tileYSpan.textContent = y;
+        tileContentSpan.textContent = `[${tile.ground.join(",")},${tile.walkable ? "S" : "N"}${tile.spawn ? ",SPAWN(" + tile.spawn + ")" : ""}]`;
 
-  render();
+    render();
 });
 
 // -------------------- TECLADO --------------------
@@ -616,8 +721,8 @@ async function initialize() {
     await loadAllFloors();
 
 
-    // Carrega todas as sprites para a lista lateral
-    await loadSpritesPage(spritePage); // carrega a primeira página
+    // Inicializa select box de pastas
+    populateSpriteFolderSelect();
     renderSpriteList();
 
     // Descobre todas as sprites usadas em TODOS os andares
@@ -636,7 +741,7 @@ async function initialize() {
     spriteIds.forEach(id => {
         if (!sprites.has(id)) {
             const img = new Image();
-            img.src = `../assets/sprites/${id}.png`;
+            img.src = `../client/assets/sprites/${id}`;
             const p = new Promise(resolve => {
                 img.onload = resolve;
                 img.onerror = resolve;
