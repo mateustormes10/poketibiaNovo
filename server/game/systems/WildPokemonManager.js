@@ -6,6 +6,7 @@
  */
 
 import { WildPokemon } from '../entities/WildPokemon.js';
+import { PokemonEntities } from '../entities/PokemonEntities.js';
 import { WildPokemonServerEvents } from '../../../shared/protocol/WildPokemonProtocol.js';
 import { Logger } from '../../utils/Logger.js';
 
@@ -25,17 +26,22 @@ export class WildPokemonManager {
      */
     async initialize() {
         logger.info('[WILD] Iniciando spawn de Pokémon selvagens...');
-        const spawnData = [
-            { name: 'Rattata', level: 3, hp: 20, maxHp: 20, x: 18, y: 19, z: 3, "sprite_up": ["33533"], "sprite_down": [ "33535"],  "sprite_left": [ "33536"], "sprite_right": ["33534"] },
-            { name: 'Horsea', level: 3, hp: 20, maxHp: 20, x: 16, y: 19, z: 3, "sprite_up": ["33412"], "sprite_down": [ "33414"],  "sprite_left": [ "33415"], "sprite_right": ["33417"] },
-            { name: 'Pidgey', level: 4, hp: 22, maxHp: 22, x: 20, y: 21, z: 3, "sprite_up": ["33368"], "sprite_down": [ "33370"],  "sprite_left": [ "33371"], "sprite_right": ["33369"] },
-            { name: 'Caterpie', level: 2, hp: 15, maxHp: 15, x: 17, y: 16, z: 3, "sprite_up": ["33400"], "sprite_down": [ "33402"],  "sprite_left": [ "33403"], "sprite_right": ["33401"] },
-            { name: 'Charmander', level: 2, hp: 16, maxHp: 16, x: 12, y: 18, z: 3, "sprite_up": ["33356"], "sprite_down": [ "33358"],  "sprite_left": [ "33359"], "sprite_right": ["33357"] },
-            { name: 'Venusaur', level: 20, hp: 160, maxHp: 160, x: 20, y: 18, z: 3, "sprite_up": ["33170","33171","33172","33173"], "sprite_down": [ "33178","33179","33180","33181"],  "sprite_left": [ "33182","33183","33184","33185"], "sprite_right": ["33174","33175","33176","33177"] }
+        // Lista de nomes dos pokémons iniciais para spawnar
+        const initialPokemonNames = [
+            'Rattata',
+            'Horsea',
+            'Pidgey',
+            'Caterpie',
+            'Charmander',
+            'Venusaur'
         ];
-        for (const data of spawnData) {
-            let spriteData = {};
-            this.spawnPokemon({ ...data, ...spriteData }, false);
+        for (const name of initialPokemonNames) {
+            const data = PokemonEntities[name];
+            if (data) {
+                this.spawnPokemon({ ...data }, false);
+            } else {
+                logger.warn(`[WILD] Dados não encontrados para o Pokémon: ${name}`);
+            }
         }
         logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens spawned`);
     }

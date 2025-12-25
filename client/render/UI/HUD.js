@@ -10,6 +10,29 @@ export class HUD {
         this.battleViewBounds = null;
         this.battleViewScrollOffset = 0; // Offset do scroll
         this.battleViewMaxScroll = 0; // Máximo que pode scrollar
+
+        // Estado de seleção de pokémon
+        this.pokemonSelectionActive = false;
+        this.selectedPokemonIndex = 0;
+    }
+
+    activatePokemonSelection() {
+        this.pokemonSelectionActive = true;
+        this.selectedPokemonIndex = 0;
+    }
+    deactivatePokemonSelection() {
+        this.pokemonSelectionActive = false;
+    }
+    movePokemonSelection(delta, max) {
+        if (!this.pokemonSelectionActive) return;
+        this.selectedPokemonIndex += delta;
+        if (this.selectedPokemonIndex < 0) this.selectedPokemonIndex = 0;
+        if (this.selectedPokemonIndex >= max) this.selectedPokemonIndex = max - 1;
+    }
+    getSelectedPokemon(player) {
+        if (!this.pokemonSelectionActive) return null;
+        const pokemons = player.pokemons || [];
+        return pokemons[this.selectedPokemonIndex] || null;
     }
     
     render(gameState, wildPokemonManager = null) {
@@ -170,45 +193,54 @@ export class HUD {
             const pokemon = pokemons[i];
             const itemY = y + 30 + (i * itemHeight);
             const itemX = x + 5;
-            
+
             // Background do item
             this.ctx.fillStyle = pokemon ? 'rgba(50, 50, 50, 0.5)' : 'rgba(30, 30, 30, 0.3)';
             this.ctx.fillRect(itemX, itemY, listWidth - 10, itemHeight - 5);
-            
+
+            // Quadrado vermelho se selecionado
+            if (this.pokemonSelectionActive && this.selectedPokemonIndex === i) {
+                this.ctx.save();
+                this.ctx.strokeStyle = '#ff2222';
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(itemX + 1.5, itemY + 1.5, listWidth - 13, itemHeight - 8);
+                this.ctx.restore();
+            }
+
             if (pokemon) {
                 // Pokémon existente
                 // Nome do pokémon
                 this.ctx.font = 'bold 12px Arial';
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.fillText(pokemon.name || 'Unknown', itemX + 10, itemY + 15);
-                
+
                 // HP do pokémon
                 const hpBarX = itemX + 10;
                 const hpBarY = itemY + 25;
                 const hpBarWidth = listWidth - 30;
                 const hpBarHeight = 15;
                 const hpPercent = (pokemon.hp || 0) / (pokemon.maxHp || 1);
-                
+
                 // Borda
                 this.ctx.strokeStyle = '#333333';
                 this.ctx.lineWidth = 1;
                 this.ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
-                
+
                 // Fundo vermelho
                 this.ctx.fillStyle = '#cc0000';
                 this.ctx.fillRect(hpBarX + 1, hpBarY + 1, hpBarWidth - 2, hpBarHeight - 2);
-                
+
                 // HP atual verde
                 this.ctx.fillStyle = '#00ff00';
                 this.ctx.fillRect(hpBarX + 1, hpBarY + 1, (hpBarWidth - 2) * hpPercent, hpBarHeight - 2);
-                
+
                 // Texto HP
                 this.ctx.font = '10px Arial';
                 this.ctx.fillStyle = '#ffffff';
                 this.ctx.textAlign = 'center';
                 this.ctx.fillText(`${pokemon.hp || 0}/${pokemon.maxHp || 0}`, hpBarX + hpBarWidth / 2, hpBarY + hpBarHeight / 2 + 3);
                 this.ctx.textAlign = 'left';
-                
+
                 // Salva bounds para detecção de clique
                 this.pokemonListBounds.push({
                     x: itemX,

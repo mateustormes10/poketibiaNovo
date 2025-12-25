@@ -121,8 +121,11 @@ export class TileSet {
      */
     drawFallbackColor(ctx, spriteId, x, y, size) {
         let color;
-        
-        if (spriteId >= 9900 && spriteId <= 9920) {
+        // SpriteIds que devem ser tratados como grama (grass)
+        const grassSpriteIds = [9912, 10358];
+        if (grassSpriteIds.includes(spriteId)) {
+            color = this.fallbackColors.grass;
+        } else if (spriteId >= 9900 && spriteId <= 9920) {
             color = this.fallbackColors.sand;
         } else if (spriteId >= 4500 && spriteId <= 4600) {
             color = this.fallbackColors.water;
@@ -133,7 +136,6 @@ export class TileSet {
         } else {
             color = this.fallbackColors.unknown;
         }
-        
         ctx.fillStyle = color;
         ctx.fillRect(x, y, size, size);
     }

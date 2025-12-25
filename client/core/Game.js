@@ -1,4 +1,5 @@
 import { TileActions } from '../utils/TileActions.js';
+import { InfoPanelUI } from '../ui/InfoPanelUI.js';
 
 import { GameState } from './GameState.js';
 import { Camera } from './Camera.js';
@@ -16,6 +17,7 @@ import { ControlConfigUI } from '../ui/ControlConfigUI.js';
 import { SoundConfigUI } from '../ui/SoundConfigUI.js';
 import { GraphicsConfigUI } from '../ui/GraphicsConfigUI.js';
 import { GmCommandsUI } from '../ui/GmCommandsUI.js';
+import { MapUI } from '../render/UI/MapUI.js';
 
 export class Game {
         _createMainMenu() {
@@ -205,6 +207,7 @@ export class Game {
         this.canvas = canvas;
         this.config = config;
         this.running = false;
+        this.infoPanelUI = new InfoPanelUI();
         
         // Inicializa dimensões dinâmicas
         const width = window.innerWidth;
@@ -259,6 +262,78 @@ export class Game {
         this.mapUpdateInterval = null;
         this.mapUpdateFrequency = GameConstants.MAP_UPDATE_FREQUENCY;
         this.isRequestingMap = false;
+
+        // Mapa UI
+        this.mapUI = null;
+    }
+
+    showInfoInFrontOfPlayer() {
+        const player = this.gameState.localPlayer;
+        if (!player) return;
+        // Calcula posição à frente
+        let dx = 0, dy = 0;
+        switch (player.direction) {
+            case 'up': dy = -1; break;
+            case 'down': dy = 1; break;
+            case 'left': dx = -1; break;
+            case 'right': dx = 1; break;
+        }
+        const x = player.x + dx;
+        const y = player.y + dy;
+        const z = player.z;
+        // Busca entidade à frente: NPC
+        let found = null;
+        for (const [id, npc] of this.gameState.npcs) {
+            if (npc.x === x && npc.y === y && npc.z === z) {
+                found = { type: 'npc', data: npc };
+                break;
+            }
+        }
+        // Player
+        if (!found) {
+            for (const [id, p] of this.gameState.players) {
+                if (p.x === x && p.y === y && p.z === z && p.id !== player.id) {
+                    found = { type: 'player', data: p };
+                    break;
+                }
+            }
+        }
+        // Pokémon selvagem
+        if (!found && this.wildPokemonManager) {
+            for (const [id, poke] of this.wildPokemonManager.getAll()) {
+                if (poke.x === x && poke.y === y && poke.z === z) {
+                    found = { type: 'pokemon', data: poke };
+                    break;
+                }
+            }
+        }
+        // Tile/cenário
+        let tile = null;
+        if (!found && this.gameState.map) {
+            tile = this.gameState.map.getTile(x, y, z);
+            if (tile) {
+                found = { type: 'tile', data: tile };
+            }
+        }
+        // Monta info
+        let html = '';
+        if (found) {
+            if (found.type === 'npc') {
+                html = `<b>NPC:</b> ${found.data.name || 'Desconhecido'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'player') {
+                html = `<b>Player:</b> ${found.data.name || 'Desconhecido'}<br>Level: ${found.data.level || '?'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'pokemon') {
+                html = `<b>Pokémon:</b> ${found.data.name || 'Desconhecido'}<br>Level: ${found.data.level || '?'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'tile') {
+                html = `<b>Tile:</b> [${x},${y},${z}]<br>Sprites: ${(found.data.spriteIds || []).join(', ')}`;
+            }
+        } else {
+            html = 'Nada encontrado à frente.';
+        }
+        this.infoPanelUI.show(html);
+        // Esconde painel após 2.5s
+        clearTimeout(this._infoPanelTimeout);
+        this._infoPanelTimeout = setTimeout(() => this.infoPanelUI.hide(), 2500);
     }
     
     resizeCanvas() {
@@ -339,17 +414,31 @@ export class Game {
         window.showGmCommandsUI = () => {
             this.gmCommandsUI.render();
         };
-                // Cria o menu principal
-                this._createMainMenu();
-                // Atalho ESC para abrir/fechar menu principal
-                window.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        // Só abre se não estiver com chat ou modal aberto
-                        if (!this.renderer?.chatBox?.isInputActive() && !this.renderer?.deathModal?.isVisible()) {
-                            this._toggleMainMenu();
-                        }
-                    }
-                });
+        // Cria o menu principal
+        this._createMainMenu();
+        // Atalho ESC para abrir/fechar menu principal
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Se o mapa está aberto, só fecha o mapa
+                if (this.mapUI && this.mapUI.visible) {
+                    this.mapUI.hide();
+                    return;
+                }
+                // Só abre/fecha menu se NENHUM outro menu/modal/seleção estiver ativo
+                const chatActive = this.renderer?.chatBox?.isInputActive();
+                const deathModal = this.renderer?.deathModal?.isVisible();
+                const inventoryOpen = this.inventoryManager?.isInventoryOpen?.();
+                const outfitSelectorOpen = this.renderer?.outfitSelector?.isOpen;
+                const npcDialogOpen = this.renderer?.npcDialog?.isVisible();
+                const gmUi = document.getElementById('gm-commands-ui');
+                const gmUiOpen = gmUi && gmUi.style.display !== 'none';
+                const hud = this.renderer?.hud;
+                const pokemonSelection = hud?.pokemonSelectionActive;
+                if (!chatActive && !deathModal && !inventoryOpen && !outfitSelectorOpen && !npcDialogOpen && !gmUiOpen && !pokemonSelection) {
+                    this._toggleMainMenu();
+                }
+            }
+        });
         // Setup canvas com tamanho da janela (apenas UMA vez)
         this.resizeCanvas();
         
@@ -391,6 +480,30 @@ export class Game {
         
         // Pergunta qual player ID usar antes de fazer login
         this.promptPlayerIdAndLogin();
+
+        // Instancia MapUI após renderer e gameState estarem prontos
+        this.mapUI = new MapUI(this.canvas, this.gameState, this.gameState.map);
+
+        // Atalho para abrir/fechar o mapa com M
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'm' || e.key === 'M') {
+                // Só abre se nenhum outro menu/modal estiver aberto
+                const chatActive = this.renderer?.chatBox?.isInputActive();
+                const deathModal = this.renderer?.deathModal?.isVisible();
+                const inventoryOpen = this.inventoryManager?.isInventoryOpen?.();
+                const outfitSelectorOpen = this.renderer?.outfitSelector?.isOpen;
+                const npcDialogOpen = this.renderer?.npcDialog?.isVisible();
+                const gmUi = document.getElementById('gm-commands-ui');
+                const gmUiOpen = gmUi && gmUi.style.display !== 'none';
+                const hud = this.renderer?.hud;
+                const pokemonSelection = hud?.pokemonSelectionActive;
+                const mainMenuOpen = this._mainMenu && this._mainMenu.style.display !== 'none';
+                if (!chatActive && !deathModal && !inventoryOpen && !outfitSelectorOpen && !npcDialogOpen && !gmUiOpen && !pokemonSelection && !mainMenuOpen) {
+                    this.mapUI.toggle();
+                }
+            }
+            // ESC fecha o mapa se estiver aberto (removido, agora tratado no listener global acima)
+        });
     }
     
     promptPlayerIdAndLogin() {
@@ -828,6 +941,20 @@ export class Game {
     }
     
     processInput() {
+                // BLOQUEIA TUDO SE O MAPA ESTÁ ABERTO
+                if (this.mapUI && this.mapUI.visible) {
+                    // Se tentar mover, mostrar alerta e fechar o mapa
+                    const moveKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'];
+                    for (const key of moveKeys) {
+                        if (this.keyboard.isKeyPressed(key)) {
+                            this.showMapBlockAlert();
+                            this.mapUI.hide();
+                            return;
+                        }
+                    }
+                    // Bloqueia qualquer ação
+                    return;
+                }
         // Bloqueia toda interação se a UI de conexão perdida estiver aberta
         const lostUi = document.getElementById('connection-lost-ui');
         if (lostUi && lostUi.style.display !== 'none') {
@@ -976,24 +1103,221 @@ export class Game {
         const player = this.gameState.localPlayer;
         if (!player) return;
         
+        // Sempre atualiza isWalking ANTES do cooldown de movimento
+        // Considere "andando" se qualquer tecla de movimento está pressionada OU foi pressionada neste frame
+        // ...nenhuma lógica de isWalking aqui...
+
         // Previne input durante movimento (cooldown natural)
         if (player.isMoving && player.moveProgress < 0.7) {
             return;
         }
         
-        // Movimento via teclado com predição visual
-        if (this.keyboard.isKeyPressed('ArrowUp') || this.keyboard.isKeyPressed('w')) {
-            this.sendMoveCommand('up');
+        // Navegação na lista de pokémons do player
+        const hud = this.renderer.hud;
+        const pokemons = player.pokemons || [];
+        // Use isKeyPressed para consumir o evento corretamente
+        if (this.keyboard.isKeyPressed('o')) {
+            if (!hud.pokemonSelectionActive) {
+                hud.activatePokemonSelection();
+                return;
+            } else {
+                hud.deactivatePokemonSelection();
+                // Ao sair do modo seleção, libera movimento imediatamente
+                // (não faz return aqui, permite cair no bloco de movimento abaixo)
+            }
         }
-        else if (this.keyboard.isKeyPressed('ArrowDown') || this.keyboard.isKeyPressed('s')) {
-            this.sendMoveCommand('down');
+        if (hud.pokemonSelectionActive && pokemons.length > 0) {
+            if (this.keyboard.isKeyPressed('Escape')) {
+                hud.deactivatePokemonSelection();
+                // Sai do modo seleção e libera movimento
+                return;
+            }
+            if (this.keyboard.isKeyPressed('ArrowUp')) {
+                hud.movePokemonSelection(-1, pokemons.length);
+                return;
+            }
+            if (this.keyboard.isKeyPressed('ArrowDown')) {
+                hud.movePokemonSelection(1, pokemons.length);
+                return;
+            }
+            // Selecionar pokémon com Enter
+            if (this.keyboard.isKeyPressed('Enter')) {
+                const selected = hud.getSelectedPokemon(player);
+                if (selected && selected.sprite) {
+                    // Troca o sprite do player local
+                    this.wsClient.send('change_outfit', { lookaddons: selected.sprite });
+                    hud.deactivatePokemonSelection();
+                    // Ao sair do modo seleção, libera movimento imediatamente
+                }
+                // Só retorna se ainda está em seleção, se saiu deixa seguir para o movimento
+                if (hud.pokemonSelectionActive) return;
+            } else {
+                return;
+            }
         }
-        else if (this.keyboard.isKeyPressed('ArrowLeft') || this.keyboard.isKeyPressed('a')) {
-            this.sendMoveCommand('left');
+
+        // Movimento via teclado com predição visual (só se não estiver selecionando pokémon)
+        if (!hud.pokemonSelectionActive) {
+            // Suporte a Ctrl+Seta para virar sem mover
+            let direction = null;
+            let ctrlPressed = this.keyboard.isKeyDown('Control') || this.keyboard.isKeyDown('control');
+            if ((this.keyboard.isKeyPressed('ArrowUp') || this.keyboard.isKeyPressed('w'))) direction = 'up';
+            else if ((this.keyboard.isKeyPressed('ArrowDown') || this.keyboard.isKeyPressed('s'))) direction = 'down';
+            else if ((this.keyboard.isKeyPressed('ArrowLeft') || this.keyboard.isKeyPressed('a'))) direction = 'left';
+            else if ((this.keyboard.isKeyPressed('ArrowRight') || this.keyboard.isKeyPressed('d'))) direction = 'right';
+
+            if (direction) {
+                if (ctrlPressed) {
+                    // Apenas vira o player, envia evento TURN para o servidor
+                    this.wsClient.send('turn', { direction });
+                    if (player.startPrediction) player.startPrediction(direction);
+                } else {
+                    // Checa colisão para tentar andar
+                    const map = this.gameState.map;
+                    let dx = 0, dy = 0;
+                    if (direction === 'up') dy = -1;
+                    else if (direction === 'down') dy = 1;
+                    else if (direction === 'left') dx = -1;
+                    else if (direction === 'right') dx = 1;
+                    const x = player.x + dx;
+                    const y = player.y + dy;
+                    const z = player.z;
+                    let blocked = false;
+                    if (map && map.isBlocked) {
+                        blocked = map.isBlocked(x, y, z);
+                    }
+                    // Só anda se não estiver bloqueado e não estiver em cooldown
+                    if (!blocked && !player.isMoving && !this._moveBuffer) {
+                        if (player.startPrediction) player.startPrediction(direction);
+                        this._moveBuffer = {
+                            direction,
+                            frameCount: 0
+                        };
+                    } else if (blocked) {
+                        // Se bloqueado, envia evento TURN para o servidor
+                        this.wsClient.send('turn', { direction });
+                        if (player.startPrediction) player.startPrediction(direction);
+                    }
+                }
+            }
+            // MoveBuffer: espera ciclo de animação
+            if (this._moveBuffer) {
+                this._moveBuffer.frameCount++;
+                if (this._moveBuffer.frameCount >= 3) {
+                    this.sendMoveCommand(this._moveBuffer.direction);
+                    if (player.cancelPrediction) player.cancelPrediction();
+                    this._moveBuffer = null;
+                }
+            }
+            // Detecta tecla V para exibir informações contextuais
+            if (this.keyboard.isKeyPressed('v')) {
+                this.showInfoInFrontOfPlayer();
+            }
+            // Atualiza isWalking para animar enquanto espera
+            const moveKeyDown = this.keyboard.isKeyDown('ArrowUp') || this.keyboard.isKeyDown('w') ||
+                                this.keyboard.isKeyDown('ArrowDown') || this.keyboard.isKeyDown('s') ||
+                                this.keyboard.isKeyDown('ArrowLeft') || this.keyboard.isKeyDown('a') ||
+                                this.keyboard.isKeyDown('ArrowRight') || this.keyboard.isKeyDown('d');
+            player.isWalking = moveKeyDown || !!this._moveBuffer;
+        } else {
+            player.isWalking = false;
         }
-        else if (this.keyboard.isKeyPressed('ArrowRight') || this.keyboard.isKeyPressed('d')) {
-            this.sendMoveCommand('right');
+
+    }
+
+    showInfoInFrontOfPlayer() {
+        const player = this.gameState.localPlayer;
+        if (!player) return;
+        // Calcula posição à frente
+        let dx = 0, dy = 0;
+        switch (player.direction) {
+            case 'up': dy = -1; break;
+            case 'down': dy = 1; break;
+            case 'left': dx = -1; break;
+            case 'right': dx = 1; break;
         }
+        const x = player.x + dx;
+        const y = player.y + dy;
+        const z = player.z;
+        // Busca entidade à frente: NPC
+        let found = null;
+        for (const [id, npc] of this.gameState.npcs) {
+            if (npc.x === x && npc.y === y && npc.z === z) {
+                found = { type: 'npc', data: npc };
+                break;
+            }
+        }
+        // Player
+        if (!found) {
+            for (const [id, p] of this.gameState.players) {
+                if (p.x === x && p.y === y && p.z === z && p.id !== player.id) {
+                    found = { type: 'player', data: p };
+                    break;
+                }
+            }
+        }
+        // Pokémon selvagem
+        if (!found && this.wildPokemonManager) {
+            for (const [id, poke] of this.wildPokemonManager.getAll()) {
+                if (poke.x === x && poke.y === y && poke.z === z) {
+                    found = { type: 'pokemon', data: poke };
+                    break;
+                }
+            }
+        }
+        // Tile/cenário
+        let tile = null;
+        if (!found && this.gameState.map) {
+            tile = this.gameState.map.getTile(x, y, z);
+            if (tile) {
+                found = { type: 'tile', data: tile };
+            }
+        }
+        // Monta info
+        let html = '';
+        if (found) {
+            if (found.type === 'npc') {
+                html = `<b>NPC:</b> ${found.data.name || 'Desconhecido'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'player') {
+                html = `<b>Player:</b> ${found.data.name || 'Desconhecido'}<br>Level: ${found.data.level || '?'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'pokemon') {
+                html = `<b>Pokémon:</b> ${found.data.name || 'Desconhecido'}<br>Level: ${found.data.level || '?'}<br>ID: ${found.data.id}`;
+            } else if (found.type === 'tile') {
+                html = `<b>Tile:</b> [${x},${y},${z}]<br>Sprites: ${(found.data.spriteIds || []).join(', ')}`;
+            }
+        } else {
+            html = 'Nada encontrado à frente.';
+        }
+        this.infoPanelUI.show(html);
+        // Esconde painel após 2.5s
+        clearTimeout(this._infoPanelTimeout);
+		this._infoPanelTimeout = setTimeout(() => this.infoPanelUI.hide(), 2500);
+        }
+
+    showMapBlockAlert() {
+        // Cria alerta pequeno no centro/topo
+        let alert = document.getElementById('map-block-alert');
+        if (!alert) {
+            alert = document.createElement('div');
+            alert.id = 'map-block-alert';
+            alert.style.position = 'fixed';
+            alert.style.top = '12%';
+            alert.style.left = '50%';
+            alert.style.transform = 'translate(-50%, 0)';
+            alert.style.background = 'rgba(30,30,30,0.95)';
+            alert.style.color = '#FFD700';
+            alert.style.padding = '12px 32px';
+            alert.style.borderRadius = '10px';
+            alert.style.fontSize = '1.2em';
+            alert.style.zIndex = '10020';
+            alert.style.boxShadow = '0 2px 16px #000a';
+            alert.textContent = 'Feche o mapa para se locomover!';
+            document.body.appendChild(alert);
+        }
+        alert.style.display = 'block';
+        setTimeout(() => {
+            alert.style.display = 'none';
+        }, 1600);
     }
     
     sendMoveCommand(direction) {

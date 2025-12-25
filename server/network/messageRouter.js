@@ -11,6 +11,7 @@ import { InventoryHandler } from '../handlers/inventoryHandler.js';
 import { setupWildPokemonHandler } from '../handlers/wildPokemonHandler.js';
 import { InventoryService } from '../services/InventoryService.js';
 import { handleChangeOutfit } from '../handlers/outfitHandler.js';
+import { TurnHandler } from '../handlers/turnHandler.js';
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -84,6 +85,9 @@ export class MessageRouter {
 
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));
+
+        const turnHandler = new TurnHandler(this.gameWorld);
+        this.handlers.set(ClientEvents.TURN, turnHandler.handleTurn.bind(turnHandler));
     }    
 
     handleChangeFloor(client, data) {

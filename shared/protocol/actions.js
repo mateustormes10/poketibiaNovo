@@ -3,6 +3,7 @@ export const ClientEvents = {
     PORTAL: 'portal',
     LOGIN: 'login',
     MOVE: 'move',
+    TURN: 'turn',
     ATTACK: 'attack',
     CHAT: 'chat',
     USE_ITEM: 'useItem',
