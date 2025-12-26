@@ -1,4 +1,5 @@
 import { GameConstants } from '../../../shared/constants/GameConstants.js';
+import { PokemonSkillsUI } from './PokemonSkillsUI.js';
 
 export class HUD {
     constructor(ctx, canvas, uiManager) {
@@ -14,6 +15,9 @@ export class HUD {
         // Estado de seleção de pokémon
         this.pokemonSelectionActive = false;
         this.selectedPokemonIndex = 0;
+
+        this.pokemonSkillsUI = new PokemonSkillsUI(ctx, uiManager);
+        this.pokemonSkillsPanelBounds = null;
     }
                 handleBattleViewClick(mouseX, mouseY) {
                 if (!this.battleViewFilterButtons) return false;
@@ -54,6 +58,23 @@ export class HUD {
         this.renderPokemonList(gameState.localPlayer);
         this.renderBattleView(gameState, wildPokemonManager);
         this.renderDebugInfo(gameState, wildPokemonManager);
+        // Renderiza painel de skills se estiver transformado em pokémon
+        const player = gameState.localPlayer;
+        if (player && player.pokemonName) {
+            // Exemplo: skills fixas, pode buscar de uma tabela
+            const skills = [
+                'Tackle', 'Growl', 'Tail Whip', 'Quick Attack',
+                'Thunderbolt', 'Flamethrower', 'Water Gun',
+                'Vine Whip', 'Razor Leaf', 'Ember', 'Bubble', 'Scratch'
+            ];
+            this.pokemonSkillsUI.show(skills.slice(0, 12));
+        } else {
+            this.pokemonSkillsUI.hide();
+        }
+        this.pokemonSkillsUI.render();
+        // Atualiza bounds para drag
+        const pos = this.uiManager.getPosition('pokemonSkillsPanel');
+        this.pokemonSkillsPanelBounds = { x: pos.x, y: pos.y, width: 320, height: 180 };
     }
     
     checkPokemonClick(mouseX, mouseY) {
@@ -69,13 +90,16 @@ export class HUD {
         return null;
     }
     checkPokemonClick(mouseX, mouseY, player, wsClient) {
-        // Não permite clicar em pokémons se estiver em modo de edição
-        if (this.uiManager.isEditMode()) return null;
         for (const bound of this.pokemonListBounds) {
             if (mouseX >= bound.x && mouseX <= bound.x + bound.width &&
                 mouseY >= bound.y && mouseY <= bound.y + bound.height) {
+                if (bound.isReturnPlayer) {
+                    // Voltar a ser player
+                    if (wsClient) wsClient.send('request_transform_pokemon', { pokemonName: null });
+                    return null;
+                }
                 // Ao clicar, solicita ao servidor a transformação do player nesse pokémon
-                if (player && wsClient && bound.pokemon.name) {
+                if (player && wsClient && bound.pokemon && bound.pokemon.name) {
                     wsClient.send('request_transform_pokemon', { pokemonName: bound.pokemon.name });
                 }
                 return bound.pokemon;
@@ -102,6 +126,11 @@ export class HUD {
 
         // Tenta arrastar battleView
         if (this.battleViewBounds && this.uiManager.startDrag('battleView', mouseX, mouseY, this.battleViewBounds)) {
+            return true;
+        }
+
+        // Tenta arrastar painel de skills do Pokémon
+        if (this.pokemonSkillsPanelBounds && this.uiManager.startDrag('pokemonSkillsPanel', mouseX, mouseY, this.pokemonSkillsPanelBounds)) {
             return true;
         }
 
@@ -188,9 +217,7 @@ export class HUD {
     
     renderPokemonList(player) {
         if (!player) return;
-        
         this.pokemonListBounds = []; // Reset bounds
-        
         const pos = this.uiManager.getPosition('pokemonList');
         const x = pos.x !== null ? pos.x : 10;
         const y = pos.y !== null ? pos.y : 120;
@@ -198,28 +225,22 @@ export class HUD {
         const listWidth = 200;
         const maxSlots = 6; // Máximo de 6 pokémons
         const totalHeight = maxSlots * itemHeight + 30;
-        
         const pokemons = player.pokemons || [];
-        
         // Salva bounds completos para drag
         this.pokemonListFullBounds = { x, y, width: listWidth, height: totalHeight };
-        
         // Borda de edição
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, listWidth, totalHeight);
         }
-        
         // Background da lista
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(x, y, listWidth, totalHeight);
-        
         // Título
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ffff00';
         this.ctx.fillText(`Pokémons (${pokemons.length}/${maxSlots}):`, x + 10, y + 20);
-        
         // Renderiza 6 slots (preenchidos ou vazios)
         for (let i = 0; i < maxSlots; i++) {
             const pokemon = pokemons[i];
@@ -289,6 +310,20 @@ export class HUD {
                 this.ctx.fillText('Slot vazio', itemX + (listWidth - 10) / 2, itemY + itemHeight / 2);
                 this.ctx.textAlign = 'left';
             }
+        }
+        // Adiciona botão 'Voltar a ser player' se estiver transformado
+        if (player && player.pokemonName) {
+            const bx = x + 10, by = y + totalHeight + 10, bwidth = listWidth - 20, bheight = 32;
+            this.ctx.save();
+            this.ctx.fillStyle = '#d33';
+            this.ctx.fillRect(bx, by, bwidth, bheight);
+            this.ctx.font = '16px Arial';
+            this.ctx.fillStyle = '#fff';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('Voltar a ser player', bx + bwidth / 2, by + 22);
+            this.ctx.restore();
+            // Salva bounds para clique
+            this.pokemonListBounds.push({ x: bx, y: by, width: bwidth, height: bheight, isReturnPlayer: true });
         }
     }
     

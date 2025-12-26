@@ -106,7 +106,8 @@ export class Player extends Entity {
             sprite: this.sprite,
             direction: this.direction,
             goldCoin: this.goldCoin || 0,
-            pokemons: this.pokemons || []
+            pokemons: this.pokemons || [],
+            pokemonName: this.pokemonName || null // Adiciona pokemonName para o cliente
         };
     }
 }

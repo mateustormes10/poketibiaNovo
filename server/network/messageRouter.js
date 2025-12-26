@@ -31,7 +31,15 @@ export class MessageRouter {
             if (!playerId) return;
             const player = this.gameWorld.players.get(playerId);
             if (!player) return;
-            if (!data.pokemonName) return;
+            if (!data.pokemonName) {
+                // Voltar a ser player normal
+                player.pokemonName = null;
+                player.sprite = 'default';
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: 'default' });
+                const gameState = this.gameWorld.getGameState(player);
+                client.send('gameState', gameState);
+                return;
+            }
             try {
                 player.pokemonName = data.pokemonName;
                 const pokeData = PokemonEntities[data.pokemonName];
