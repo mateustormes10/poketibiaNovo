@@ -1,3 +1,4 @@
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { MovementSystem } from '../game/systems/MovementSystem.js';
 import { ServerEvents } from '../../shared/protocol/actions.js';
 
@@ -12,6 +13,18 @@ export class MovementHandler {
 
         const { direction } = data;
         const success = this.movementSystem.moveEntity(client.player, direction);
+
+        // Se o player está transformado em pokémon, atualiza a sprite conforme a direção
+        if (client.player && client.player.sprite && Array.isArray(client.player.sprite)) {
+            // Descobre o nome do pokémon atual
+            const pokeName = client.player.pokemonName || client.player.name;
+            const pokeData = PokemonEntities[pokeName];
+            if (pokeData) {
+                let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
+                client.player.sprite = spriteArr;
+                client.send('player_outfit_update', { playerId: client.player.id, lookaddons: spriteArr });
+            }
+        }
 
         if (success) {
             // LOG: sprites do tile atual do player

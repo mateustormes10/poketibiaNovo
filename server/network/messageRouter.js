@@ -1,4 +1,5 @@
 import { ClientEvents } from '../../shared/protocol/actions.js';
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
 import { WildPokemonClientEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { AuthHandler } from '../handlers/authHandler.js';
@@ -23,6 +24,60 @@ export class MessageRouter {
     }
     
     setupHandlers() {
+
+        // Handler para transformação do player em Pokémon
+        this.handlers.set('request_transform_pokemon', (client, data) => {
+            const playerId = client.player?.id || client.playerId;
+            if (!playerId) return;
+            const player = this.gameWorld.players.get(playerId);
+            if (!player) return;
+            if (!data.pokemonName) return;
+            try {
+                player.pokemonName = data.pokemonName;
+                const pokeData = PokemonEntities[data.pokemonName];
+                if (!pokeData) return;
+                let direction = player.direction || 'down';
+                let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
+                player.sprite = spriteArr;
+                // Envia atualização de outfit para o próprio player
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
+                // Envia novo estado do jogo
+                const gameState = this.gameWorld.getGameState(player);
+                client.send('gameState', gameState);
+            } catch (e) {
+                console.error('Erro ao transformar player em Pokémon:', e);
+            }
+        });
+
+                            // Handler for GM/ADM manual z-level change
+                            this.handlers.set('gm_change_z', (client, data) => {
+                                const playerId = client.player?.id || client.playerId;
+                                if (!playerId) {
+                                    console.warn('[GM_CHANGE_Z] client has no player or playerId');
+                                    return;
+                                }
+                                const player = this.gameWorld.players.get(playerId);
+                                if (!player) {
+                                    console.warn('[GM_CHANGE_Z] player not found');
+                                    return;
+                                }
+                                if (player.vocation !== 4) {
+                                    client.send('system_message', { message: 'Apenas GM/ADM pode trocar o andar manualmente.', color: 'red' });
+                                    return;
+                                }
+                                let newZ = player.z;
+                                if (data.direction === 'up') newZ = player.z + 1;
+                                if (data.direction === 'down') newZ = player.z - 1;
+                                // Clamp z to valid range if needed (optional)
+                                player.z = newZ;
+                                if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
+                                    this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
+                                }
+                                const gameState = this.gameWorld.getGameState(player);
+                                client.send('gameState', gameState);
+                                client.send('system_message', { message: `Andar alterado para z=${player.z}`, color: 'yellow' });
+                                console.log(`[GM_CHANGE_Z] Player ${player.name} mudou para z=${player.z}`);
+                            });
                     // Handler para consulta de vocation do player
                 this.handlers.set('get_player_vocation', (client, data) => {
                     let vocation = 0;

@@ -946,26 +946,8 @@ export class Game {
                     return; // Começou drag no ChatBox
                 }
             } else {
-                // Modo normal: verifica clique nos pokémons
-                const clickedPokemon = this.renderer.hud.checkPokemonClick(mousePos.x, mousePos.y);
-                
-                if (clickedPokemon && this.gameState.localPlayer) {
-                    const player = this.gameState.localPlayer;
-                    // Calcula posição ao lado do player
-                    const spawnX = player.x + 1;
-                    const spawnY = player.y;
-                    const spawnZ = player.z;
-                    
-                    console.log(`[Game] ${player.name} spawnou ${clickedPokemon.name} na coordenada (${spawnX}, ${spawnY}, ${spawnZ})`);
-                    
-                    // Envia comando para servidor spawnar o pokemon
-                    this.wsClient.send('spawnPokemon', {
-                        pokemonId: clickedPokemon.id,
-                        x: spawnX,
-                        y: spawnY,
-                        z: spawnZ
-                    });
-                }
+                // Modo normal: verifica clique nos pokémons e transforma o player
+                this.renderer.hud.checkPokemonClick(mousePos.x, mousePos.y, this.gameState.localPlayer, this.wsClient);
             }
         }
         
@@ -1098,6 +1080,24 @@ export class Game {
         // Bloqueia I e P se a UI de comandos GM estiver aberta
         const gmUi = document.getElementById('gm-commands-ui');
         const gmUiOpen = gmUi && gmUi.style.display !== 'none';
+
+        // GM/ADM (vocation 4) z-level change with + and -
+        const playerLoc = this.gameState.localPlayer;
+        if (playerLoc && playerLoc.vocation === 4 && !gmUiOpen) {
+            // Accept both numpad and main +/-, and ignore if inventory/chat/other UI is open
+            if (this.keyboard.isKeyPressed('+') || this.keyboard.isKeyPressed('numpadadd')) {
+                // Increase z (go up)
+                this.wsClient.send('gm_change_z', { direction: 'up', x: playerLoc.x, y: playerLoc.y, z: playerLoc.z });
+                this.renderer.chatBox.addMessage('System', 'Solicitado: subir andar (z+1)', 'system');
+                return;
+            }
+            if (this.keyboard.isKeyPressed('-') || this.keyboard.isKeyPressed('numpadsubtract')) {
+                // Decrease z (go down)
+                this.wsClient.send('gm_change_z', { direction: 'down', x: playerLoc.x, y: playerLoc.y, z: playerLoc.z });
+                this.renderer.chatBox.addMessage('System', 'Solicitado: descer andar (z-1)', 'system');
+                return;
+            }
+        }
         // Toggle do inventário com tecla I (só funciona quando chat NÃO está ativo e GM UI não está aberta)
         if (this.keyboard.isKeyPressed('i') && !gmUiOpen) {
             this.inventoryManager.toggle();

@@ -27,7 +27,9 @@ export class SpriteRenderer {
         let img = new Image();
         let folder = index[spriteId] !== undefined ? index[spriteId] : '';
         let path = 'assets/sprites/';
-        if (folder) path += folder + '/';
+        if (folder && folder.length > 0) {
+            path += folder + '/';
+        }
         path += spriteId + '.png';
         img.onload = () => {
             if (onLoad) onLoad(img);
@@ -138,7 +140,10 @@ export class SpriteRenderer {
             player.direction || 'down',
             player.animationFrame || 0
         );
-    
+
+        // LOG: Mostra os spriteIds recebidos para debug
+        console.log('[SpriteRenderer] Renderizando player:', player.name, 'sprite:', player.sprite, 'direction:', player.direction, 'animationFrame:', player.animationFrame, 'sprites usados:', sprites);
+
         let rendered = false;
         
         // Renderiza cada camada: [central, esquerda, acima]

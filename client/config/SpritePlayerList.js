@@ -187,10 +187,23 @@ export const SpritePlayerList = {
  * @returns {Array<number>} Array com 3 IDs de sprites [central, esquerda, acima]
  */
 export function getPlayerSprites(lookaddons, direction, frameIndex) {
-    const spriteType = SpritePlayerList[lookaddons] || SpritePlayerList.default;
-    const directionSprites = spriteType[direction] || spriteType.down;
-    const frame = directionSprites[frameIndex % 3] || directionSprites[0];
-    return frame;
+    // Se for array de spriteIds (Pokémon), retorna como [central, 0, 0]
+    if (Array.isArray(lookaddons) && lookaddons.length > 0) {
+        // Para animação, sempre retorna o mesmo frame
+        return [parseInt(lookaddons[0]), 0, 0];
+    }
+    const type = SpritePlayerList[lookaddons] ? lookaddons : 'default';
+    const dir = direction || 'down';
+    const frame = frameIndex || 0;
+    if (
+        SpritePlayerList[type] &&
+        SpritePlayerList[type][dir] &&
+        SpritePlayerList[type][dir][frame]
+    ) {
+        return SpritePlayerList[type][dir][frame];
+    }
+    // Fallback
+    return SpritePlayerList['default']['down'][0];
 }
 
 /**

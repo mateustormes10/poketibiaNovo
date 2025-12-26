@@ -68,6 +68,21 @@ export class HUD {
         }
         return null;
     }
+    checkPokemonClick(mouseX, mouseY, player, wsClient) {
+        // Não permite clicar em pokémons se estiver em modo de edição
+        if (this.uiManager.isEditMode()) return null;
+        for (const bound of this.pokemonListBounds) {
+            if (mouseX >= bound.x && mouseX <= bound.x + bound.width &&
+                mouseY >= bound.y && mouseY <= bound.y + bound.height) {
+                // Ao clicar, solicita ao servidor a transformação do player nesse pokémon
+                if (player && wsClient && bound.pokemon.name) {
+                    wsClient.send('request_transform_pokemon', { pokemonName: bound.pokemon.name });
+                }
+                return bound.pokemon;
+            }
+        }
+        return null;
+    }
     
     handleMouseDown(mouseX, mouseY) {
         // Permite clique nos filtros do Battle View mesmo fora do modo de edição
@@ -305,10 +320,10 @@ export class HUD {
     renderBattleView(gameState, wildPokemonManager = null) {
         if (!gameState.localPlayer) return;
         const pos = this.uiManager.getPosition('battleView');
-        const width = 250;
+        const width = 220; // reduced width
         const x = pos.x !== null ? pos.x : this.canvas.width - width - 10;
         const y = pos.y !== null ? pos.y : 100;
-        const itemHeight = 40;
+        const itemHeight = 28; // reduced height for each entity row
         const maxVisible = 10;
         const maxDistance = 15;
 
@@ -320,9 +335,9 @@ export class HUD {
             { label: 'Players', value: 'Player' }
         ];
         this.battleViewFilterButtons = [];
-        const buttonWidth = 60;
-        const buttonHeight = 22;
-        const buttonSpacing = 8;
+        const buttonWidth = 44; // smaller filter buttons
+        const buttonHeight = 16;
+        const buttonSpacing = 5;
         let bx = x + 10;
         let by = y + 2;
         filterTypes.forEach((ft, idx) => {
@@ -423,13 +438,13 @@ export class HUD {
         nearbyEntities.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
         
         // Configurações de scroll
-        const maxVisibleItems = 4;
-        const headerHeight = 38;
+        const maxVisibleItems = 6; // show more entities at once
+        const headerHeight = 30; // reduced header
         const maxViewportHeight = maxVisibleItems * itemHeight;
         const contentHeight = nearbyEntities.length * itemHeight;
         const viewportHeight = Math.min(maxViewportHeight, contentHeight);
         const totalHeight = headerHeight + viewportHeight;
-        const scrollbarWidth = 10;
+        const scrollbarWidth = 8;
 
         // Salva bounds para drag e scroll
         this.battleViewBounds = { x, y, width, height: totalHeight };
@@ -473,7 +488,7 @@ export class HUD {
         // Título
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ff6600';
-        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 34);
+        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 24);
 
         // Scroll
         this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);
@@ -497,53 +512,45 @@ export class HUD {
             visibleEntities.forEach((entity, index) => {
                 const actualIndex = startIndex + index;
                 const itemY = y + headerHeight + (actualIndex * itemHeight) - this.battleViewScrollOffset;
-                const itemX = x + 5;
-                
+                const itemX = x + 4;
                 // Background do item
                 const bgColor = entity.type === 'Player' ? 'rgba(0, 100, 0, 0.3)' : 
                                entity.type === 'Monster' ? 'rgba(100, 0, 0, 0.3)' : 
                                'rgba(0, 0, 100, 0.3)';
                 this.ctx.fillStyle = bgColor;
-                this.ctx.fillRect(itemX, itemY, width - 10, itemHeight - 5);
-                
+                this.ctx.fillRect(itemX, itemY, width - 8, itemHeight - 3);
                 // Tipo e Nome
-                this.ctx.font = 'bold 11px Arial';
+                this.ctx.font = 'bold 10px Arial';
                 this.ctx.fillStyle = entity.type === 'Player' ? '#00ff00' : 
                                     entity.type === 'Monster' ? '#ff4444' : 
                                     '#4444ff';
-                this.ctx.fillText(`[${entity.type}] ${entity.name}`, itemX + 8, itemY + 14);
-                
+                this.ctx.fillText(`[${entity.type}] ${entity.name}`, itemX + 6, itemY + 12);
                 // Level e Distância
-                this.ctx.font = '10px Arial';
+                this.ctx.font = '9px Arial';
                 this.ctx.fillStyle = '#cccccc';
-                this.ctx.fillText(`Lvl ${entity.level} | Dist: ${entity.distance}`, itemX + 8, itemY + 28);
-                
+                this.ctx.fillText(`Lvl ${entity.level} | Dist: ${entity.distance}`, itemX + 6, itemY + 22);
                 // HP Bar (se tiver)
                 if (entity.hp !== undefined && entity.maxHp) {
-                    const hpBarX = itemX + 120;
-                    const hpBarY = itemY + 20;
-                    const hpBarWidth = GameConstants.HP_BAR_WIDTH;
-                    const hpBarHeight = 10;
+                    const hpBarX = itemX + 110;
+                    const hpBarY = itemY + 15;
+                    const hpBarWidth = 60;
+                    const hpBarHeight = 7;
                     const hpPercent = entity.hp / entity.maxHp;
-                    
                     // Borda
                     this.ctx.strokeStyle = '#333333';
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(hpBarX, hpBarY, hpBarWidth, hpBarHeight);
-                    
                     // Fundo vermelho
                     this.ctx.fillStyle = '#660000';
                     this.ctx.fillRect(hpBarX + 1, hpBarY + 1, hpBarWidth - 2, hpBarHeight - 2);
-                    
                     // HP atual
                     this.ctx.fillStyle = '#00ff00';
                     this.ctx.fillRect(hpBarX + 1, hpBarY + 1, (hpBarWidth - 2) * hpPercent, hpBarHeight - 2);
-                    
                     // Texto HP
-                    this.ctx.font = '9px Arial';
+                    this.ctx.font = '8px Arial';
                     this.ctx.fillStyle = '#ffffff';
                     this.ctx.textAlign = 'center';
-                    this.ctx.fillText(`${entity.hp}/${entity.maxHp}`, hpBarX + hpBarWidth / 2, hpBarY + hpBarHeight / 2 + 3);
+                    this.ctx.fillText(`${entity.hp}/${entity.maxHp}`, hpBarX + hpBarWidth / 2, hpBarY + hpBarHeight / 2 + 2);
                     this.ctx.textAlign = 'left';
                 }
             });
