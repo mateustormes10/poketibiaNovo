@@ -1,4 +1,17 @@
 export class Camera {
+        /**
+         * Converte coordenada X do mundo para tela
+         */
+        worldToScreenX(worldX) {
+            return worldX * this.tileSize - this.x;
+        }
+
+        /**
+         * Converte coordenada Y do mundo para tela
+         */
+        worldToScreenY(worldY) {
+            return worldY * this.tileSize - this.y;
+        }
     constructor(config) {
         this.x = 0;
         this.y = 0;

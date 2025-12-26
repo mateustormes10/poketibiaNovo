@@ -18,6 +18,8 @@ import { SoundConfigUI } from '../ui/SoundConfigUI.js';
 import { GraphicsConfigUI } from '../ui/GraphicsConfigUI.js';
 import { GmCommandsUI } from '../ui/GmCommandsUI.js';
 import { MapUI } from '../render/UI/MapUI.js';
+import { SkillDatabase } from '../../shared/SkillDatabase.js';
+import { SkillEffectManager } from './SkillEffectManager.js';
 
 export class Game {
     _createMainMenu() {
@@ -280,6 +282,31 @@ export class Game {
         
         // Rendering
         this.renderer = new Renderer(canvas, this.camera, this.wsClient);
+
+        // Gerenciador de animações de skills multiplayer (deve ser criado após this.renderer)
+        this.skillEffectManager = new SkillEffectManager(this.renderer.spriteRenderer, this.camera);
+        // Integrar callback de clique de skill IMEDIATAMENTE
+        if (this.renderer && this.renderer.hud && this.renderer.hud.pokemonSkillsUI) {
+            this.renderer.hud.pokemonSkillsUI.onSkillClick = (skillName, skill, index) => {
+                try {
+                    console.log('[DEBUG] Skill clicada (callback chamado):', skillName, skill, index);
+                    // Envia evento para o servidor para animação multiplayer
+                    const player = this.gameState.localPlayer;
+                    if (player) {
+                        this.wsClient.send('use_skill', {
+                            playerId: player.id,
+                            skillName,
+                            tile: { x: player.x, y: player.y, z: player.z }
+                        });
+                    }
+                } catch (err) {
+                    console.error('[ERRO] ao processar clique de skill:', err);
+                }
+                // Força reset do _lastMouseDown para permitir múltiplos cliques
+                this._lastMouseDown = false;
+            };
+        }
+         
         
         // Inventory system
         this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
@@ -313,6 +340,22 @@ export class Game {
         this.mapUI = null;
     }
 
+    animateSkillAroundPlayer(skillName, skill, index) {
+        try {
+            console.log('[DEBUG] Entrou em animateSkillAroundPlayer', skillName, skill, index);
+            if (!this.activeSkillEffects) this.activeSkillEffects = [];
+            const now = performance.now();
+            this.activeSkillEffects.push({
+                start: now,
+                duration: 700, // ms
+                color: '#ffd700',
+                radius: 48,
+            });
+            console.log('[DEBUG] Efeito de skill adicionado com sucesso');
+        } catch (err) {
+            console.error('[ERRO] em animateSkillAroundPlayer:', err);
+        }
+    }
     showInfoInFrontOfPlayer() {
         const player = this.gameState.localPlayer;
         if (!player) return;
@@ -573,6 +616,17 @@ export class Game {
         this.wsClient.on('connected', (data) => {
             console.log('[Game] Connected to server');
             this.hideConnectionLostUI();
+        });
+        // Evento de animação de skill multiplayer
+        this.wsClient.on('skill_animation', (data) => {
+            // data: { playerId, skillName, tile }
+            console.log('[Game] Evento skill_animation recebido:', data);
+            if (!data || !data.skillName || !data.tile) return;
+            this.skillEffectManager.addSkillEffect({
+                skillName: data.skillName,
+                tile: data.tile,
+                duration: 700 // ms
+            });
         });
                 this.wsClient.on('disconnected', () => {
                     console.warn('[Game] Disconnected from server');
@@ -912,43 +966,49 @@ export class Game {
         const mousePos = this.mouse.getPosition();
         this.inventoryManager.handleMouseMove(mousePos.x, mousePos.y);
         
-        // Detecta clique esquerdo do mouse
-        if (this.mouse.isButtonPressed(0)) { // Botão esquerdo = 0
-            
+        // Detecta clique esquerdo do mouse (debounce manual para UI)
+        if (!this._lastMouseDown) this._lastMouseDown = false;
+        const mouseDown = this.mouse.isButtonDown(0);
+        if (mouseDown && !this._lastMouseDown) {
             // Verifica clique nos botões do Battle View SEMPRE
             if (this.renderer.hud.handleBattleViewClick(mousePos.x, mousePos.y)) {
-                return; // Clique em filtro do Battle View
+                this._lastMouseDown = true;
+                return;
             }
 
             // Verifica clique no inventário primeiro (se estiver aberto)
             if (this.inventoryManager.isInventoryOpen()) {
                 if (this.inventoryManager.handleClick(mousePos.x, mousePos.y)) {
-                    return; // Clique no inventário processado
+                    this._lastMouseDown = true;
+                    return;
                 }
             }
 
             // Verifica clique no modal de morte primeiro
             if (this.renderer.deathModal.checkClick(mousePos.x, mousePos.y)) {
-                return; // Modal foi fechado, não processa outros cliques
+                this._lastMouseDown = true;
+                return;
             }
 
             // Verifica clique no diálogo de NPC
             if (this.renderer.npcDialog.checkClick(mousePos.x, mousePos.y)) {
-                return; // Clique no diálogo processado
+                this._lastMouseDown = true;
+                return;
             }
 
-            // Em modo de edição, verifica drag nos elementos UI
-            if (this.renderer.uiManager.isEditMode()) {
-                if (this.renderer.hud.handleMouseDown(mousePos.x, mousePos.y)) {
-                    return; // Começou drag no HUD
-                }
-                if (this.renderer.chatBox.handleMouseDown(mousePos.x, mousePos.y)) {
-                    return; // Começou drag no ChatBox
-                }
-            } else {
-                // Modo normal: verifica clique nos pokémons e transforma o player
+            // Sempre permite clique no HUD (skills, etc)
+            if (this.renderer.hud.handleMouseDown(mousePos.x, mousePos.y)) {
+                this._lastMouseDown = true;
+                return;
+            }
+
+            // Em modo normal: verifica clique nos pokémons e transforma o player
+            if (!this.renderer.uiManager.isEditMode()) {
                 this.renderer.hud.checkPokemonClick(mousePos.x, mousePos.y, this.gameState.localPlayer, this.wsClient);
             }
+            this._lastMouseDown = true;
+        } else if (!mouseDown) {
+            this._lastMouseDown = false;
         }
         
         // Para o drag quando soltar o botão
@@ -1506,6 +1566,12 @@ export class Game {
         }
         this.wildPokemonRenderer.render(this.renderer.ctx, wildPokemons, this.camera);
 
+        // --- Efeito visual de skill ao redor do player ---
+
+        // Renderiza animações de skills multiplayer (acima do mapa, abaixo do HUD)
+        if (this.skillEffectManager) {
+            this.skillEffectManager.render(this.renderer.ctx);
+        }
         // 3. Renderiza HUD novamente para garantir que a UI fique acima dos sprites (caso algum sprite sobrescreva)
         this.renderer.hud.render(this.gameState, this.wildPokemonManager);
 

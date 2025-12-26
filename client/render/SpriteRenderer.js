@@ -14,6 +14,36 @@ import { SpritePlayerList, getPlayerSprites } from '../config/SpritePlayerList.j
 
 
 export class SpriteRenderer {
+
+        /**
+         * Renderiza uma sprite de skill por id no canvas
+         * @param {CanvasRenderingContext2D} ctx
+         * @param {string|number} spriteId
+         * @param {number} x
+         * @param {number} y
+         */
+        renderSpriteById(ctx, spriteId, x, y) {
+            const img = this.sprites.get(spriteId.toString());
+            if (img && img.complete && img.naturalWidth > 0) {
+                console.log(`[SpriteRenderer] Desenhando spriteId ${spriteId} em (${x},${y})`);
+                ctx.drawImage(img, x, y, this.tileSize, this.tileSize);
+            } else if (!this.sprites.has(spriteId.toString())) {
+                // Tenta carregar na hora
+                console.log(`[SpriteRenderer] Tentando carregar spriteId ${spriteId}`);
+                this.loadSpriteFromIndex(
+                    spriteId,
+                    (imgLoaded) => {
+                        this.sprites.set(spriteId.toString(), imgLoaded);
+                        console.log(`[SpriteRenderer] SpriteId ${spriteId} carregado!`);
+                    },
+                    () => {
+                        console.warn(`[SpriteRenderer] Falha ao carregar spriteId ${spriteId}`);
+                    }
+                );
+            } else {
+                console.log(`[SpriteRenderer] SpriteId ${spriteId} ainda não carregado.`);
+            }
+        }
     constructor(ctx, camera) {
         this.ctx = ctx;
         this.camera = camera;
@@ -31,6 +61,7 @@ export class SpriteRenderer {
             path += folder + '/';
         }
         path += spriteId + '.png';
+        console.log(`[SpriteRenderer] Caminho para spriteId ${spriteId}: ${path}`);
         img.onload = () => {
             if (onLoad) onLoad(img);
         };
@@ -140,10 +171,6 @@ export class SpriteRenderer {
             player.direction || 'down',
             player.animationFrame || 0
         );
-
-        // LOG: Mostra os spriteIds recebidos para debug
-        console.log('[SpriteRenderer] Renderizando player:', player.name, 'sprite:', player.sprite, 'direction:', player.direction, 'animationFrame:', player.animationFrame, 'sprites usados:', sprites);
-
         let rendered = false;
         
         // Renderiza cada camada: [central, esquerda, acima]

@@ -60,16 +60,14 @@ export class HUD {
         this.renderDebugInfo(gameState, wildPokemonManager);
         // Renderiza painel de skills se estiver transformado em pokémon
         const player = gameState.localPlayer;
-        if (player && player.pokemonName) {
-            // Exemplo: skills fixas, pode buscar de uma tabela
-            const skills = [
-                'Tackle', 'Growl', 'Tail Whip', 'Quick Attack',
-                'Thunderbolt', 'Flamethrower', 'Water Gun',
-                'Vine Whip', 'Razor Leaf', 'Ember', 'Bubble', 'Scratch'
-            ];
-            this.pokemonSkillsUI.show(skills.slice(0, 12));
+        if (player && player.pokemonName && Array.isArray(player.skills) && player.skills.length > 0) {
+            this.pokemonSkillsUI.show(player.skills.slice(0, 12));
         } else {
             this.pokemonSkillsUI.hide();
+        }
+        // Garante que o callback nunca seja perdido
+        if (typeof window.game !== 'undefined' && window.game.animateSkillAroundPlayer) {
+            // Não sobrescreve mais o onSkillClick aqui!
         }
         this.pokemonSkillsUI.render();
         // Atualiza bounds para drag
@@ -111,6 +109,11 @@ export class HUD {
     handleMouseDown(mouseX, mouseY) {
         // Permite clique nos filtros do Battle View mesmo fora do modo de edição
         if (this.handleBattleViewClick(mouseX, mouseY)) return true;
+
+        // Clique em skill do painel de skills do Pokémon
+        if (this.pokemonSkillsUI && this.pokemonSkillsUI.handleMouseDown(mouseX, mouseY)) {
+            return true;
+        }
 
         if (!this.uiManager.isEditMode()) return false;
 

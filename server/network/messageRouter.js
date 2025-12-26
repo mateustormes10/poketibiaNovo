@@ -25,6 +25,27 @@ export class MessageRouter {
     
     setupHandlers() {
 
+        // Handler para uso de skill (animação multiplayer)
+        this.handlers.set('use_skill', (client, data) => {
+            // data: { playerId, skillName, tile }
+            if (!data || !data.playerId || !data.skillName || !data.tile) return;
+            // Broadcast para todos os jogadores próximos (ou todos, para simplificar)
+            if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
+                this.wsServer.broadcast('skill_animation', {
+                    playerId: data.playerId,
+                    skillName: data.skillName,
+                    tile: data.tile
+                });
+            } else if (client && typeof client.send === 'function') {
+                // Fallback: envia só para o próprio jogador
+                client.send('skill_animation', {
+                    playerId: data.playerId,
+                    skillName: data.skillName,
+                    tile: data.tile
+                });
+            }
+        });
+
         // Handler para transformação do player em Pokémon
         this.handlers.set('request_transform_pokemon', (client, data) => {
             const playerId = client.player?.id || client.playerId;
@@ -35,6 +56,7 @@ export class MessageRouter {
                 // Voltar a ser player normal
                 player.pokemonName = null;
                 player.sprite = 'default';
+                player.skills = [];
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: 'default' });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
@@ -47,6 +69,7 @@ export class MessageRouter {
                 let direction = player.direction || 'down';
                 let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
                 player.sprite = spriteArr;
+                player.skills = pokeData.skills || [];
                 // Envia atualização de outfit para o próprio player
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
                 // Envia novo estado do jogo

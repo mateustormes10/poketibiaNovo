@@ -1,3 +1,4 @@
+import { SkillDatabase } from '../../../shared/SkillDatabase.js';
 // Painel de skills do Pokémon
 export class PokemonSkillsUI {
     constructor(ctx, uiManager) {
@@ -6,6 +7,8 @@ export class PokemonSkillsUI {
         this.visible = false;
         this.skills = [];
         this.elementName = 'pokemonSkillsPanel';
+        this.skillButtonBounds = [];
+        this.onSkillClick = null; // callback (skillName, skill, index)
     }
 
     setSkills(skills) {
@@ -15,10 +18,14 @@ export class PokemonSkillsUI {
     show(skills) {
         this.setSkills(skills);
         this.visible = true;
+        this.skillButtonBounds = [];
+        // Não sobrescreve mais o onSkillClick aqui!
     }
 
     hide() {
         this.visible = false;
+        this.skillButtonBounds = [];
+        // Não remove o callback onSkillClick!
     }
 
     render() {
@@ -40,10 +47,57 @@ export class PokemonSkillsUI {
         this.ctx.fillStyle = '#fff';
         this.ctx.textAlign = 'left';
         this.ctx.fillText('Skills do Pokémon:', x + 16, y + 32);
+        this.skillButtonBounds = [];
         for (let i = 0; i < Math.min(this.skills.length, 12); i++) {
-            const skill = this.skills[i];
-            this.ctx.fillText(`${i + 1}. ${skill}`, x + 32, y + 60 + i * 24);
+            const skillName = this.skills[i];
+            const skill = SkillDatabase[skillName];
+            // Botão visual
+            const btnX = x + 20;
+            const btnY = y + 45 + i * 32;
+            const btnW = 280;
+            const btnH = 28;
+            // Fundo do botão
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.fillStyle = '#333a';
+            this.ctx.strokeStyle = '#ffd700';
+            this.ctx.lineWidth = 2;
+            this.ctx.roundRect ? this.ctx.roundRect(btnX, btnY, btnW, btnH, 7) : this.ctx.rect(btnX, btnY, btnW, btnH);
+            this.ctx.fill();
+            this.ctx.stroke();
+            this.ctx.restore();
+            // Texto do botão
+            if (skill) {
+                this.ctx.font = 'bold 13px Arial';
+                this.ctx.fillStyle = '#ffd700';
+                this.ctx.fillText(`${i + 1}. ${skill.name}`, btnX + 10, btnY + 16);
+                this.ctx.font = '11px Arial';
+                this.ctx.fillStyle = '#fff';
+                this.ctx.fillText(`Mana: ${skill.manaCost}  |  Power: ${skill.power}  |  Element: ${skill.element}`, btnX + 10, btnY + 27);
+            } else {
+                this.ctx.font = '13px Arial';
+                this.ctx.fillStyle = '#f88';
+                this.ctx.fillText(`${i + 1}. ${skillName}`, btnX + 10, btnY + 16);
+            }
+            // Salva bounds para clique
+            this.skillButtonBounds.push({ x: btnX, y: btnY, width: btnW, height: btnH, skillName, skill, index: i });
         }
         this.ctx.restore();
+    }
+
+    handleMouseDown(mouseX, mouseY) {
+        if (!this.visible) return false;
+        for (const btn of this.skillButtonBounds) {
+            if (
+                mouseX >= btn.x && mouseX <= btn.x + btn.width &&
+                mouseY >= btn.y && mouseY <= btn.y + btn.height
+            ) {
+                if (typeof this.onSkillClick === 'function') {
+                    this.onSkillClick(btn.skillName, btn.skill, btn.index);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

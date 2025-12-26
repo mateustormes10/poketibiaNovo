@@ -29,6 +29,7 @@ export class Player {
         this.animationTime = 0;
         this.animationSpeed = 0.15;
         this.pokemonName = data.pokemonName || null;
+        this.skills = data.skills || [];
     }
     
     update(data) {
@@ -45,6 +46,9 @@ export class Player {
         }
         if (data.pokemonName !== undefined) {
             this.pokemonName = data.pokemonName;
+        }
+        if (data.skills !== undefined) {
+            this.skills = data.skills;
         }
         
         // Se a posição mudou, inicia interpolação

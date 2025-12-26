@@ -1,8 +1,32 @@
+// Coleta todos os spriteIds usados em spriteSkillList do SkillDatabase.js
+function collectSkillSpriteIds() {
+    const skillDbPath = path.join(__dirname, '../shared/SkillDatabase.js');
+    if (!fs.existsSync(skillDbPath)) {
+        console.log('[SkillDB] Arquivo não encontrado:', skillDbPath);
+        return [];
+    }
+    const content = fs.readFileSync(skillDbPath, 'utf8');
+    // Regex para capturar arrays spriteSkillList: ["12345","67890"]
+    const regex = /spriteSkillList\s*:\s*\[([^\]]*)\]/g;
+    const ids = new Set();
+    let match;
+    let skillCount = 0;
+    while ((match = regex.exec(content)) !== null) {
+        skillCount++;
+        const arr = match[1].split(',').map(s => s.replace(/['"\s]/g, ''));
+        console.log(`[SkillDB] spriteSkillList encontrado na skill #${skillCount}:`, arr);
+        arr.forEach(id => {
+            if (id && !isNaN(id)) {
+                ids.add(Number(id));
+            }
+        });
+    }
+    return Array.from(ids);
+}
 // Extrai todos os spriteIds usados em SpritePlayerList.js
 // Extrai todos os spriteIds usados em PokemonEntities.js
 function collectPokemonSpriteIds() {
     const pokemonEntitiesPath = path.join(__dirname, 'game', 'entities', 'PokemonEntities.js');
-    console.log('[DEBUG] Caminho usado:', pokemonEntitiesPath);
     if (!fs.existsSync(pokemonEntitiesPath)) return [];
     let content = fs.readFileSync(pokemonEntitiesPath, 'utf8');
     // Captura todos os números de 5 dígitos
@@ -14,7 +38,6 @@ function collectPokemonSpriteIds() {
             if (n > 0) ids.add(n);
         });
     }
-    console.log('[DEBUG] Todos os spriteIds encontrados:', Array.from(ids));
     return Array.from(ids);
 }
 // Retorna um Set de IDs únicos
@@ -109,15 +132,24 @@ function buildSpriteIndex(spriteIds) {
 
 function main() {
     const spriteIds = collectSpriteIds();
+    console.log('[LOG] spriteIds dos mapas:', spriteIds);
     const playerSpriteIds = collectPlayerSpriteIds();
+    console.log('[LOG] spriteIds dos players:', playerSpriteIds);
     const pokemonSpriteIds = collectPokemonSpriteIds();
-    console.log('[DEBUG] SpriteIds extraídos de PokemonEntities.js:', JSON.stringify(pokemonSpriteIds));
+    console.log('[LOG] spriteIds dos pokemons:', pokemonSpriteIds);
+    const skillSpriteIds = collectSkillSpriteIds();
+    console.log('[LOG] spriteIds das skills:', skillSpriteIds);
     // Junta e remove duplicados
-    const allIds = Array.from(new Set([...spriteIds, ...playerSpriteIds, ...pokemonSpriteIds]));
+    const allIds = Array.from(new Set([...spriteIds, ...playerSpriteIds, ...pokemonSpriteIds, ...skillSpriteIds]));
+    console.log('[LOG] spriteIds totais (unicos):', allIds);
     let index = buildSpriteIndex(allIds);
     // Garante que todos os spriteIds de pokémon estejam no index como 'pokemons'
     for (const id of pokemonSpriteIds) {
         index[id] = 'pokemons';
+    }
+    // Garante que todos os spriteIds de skills estejam no index como 'animacoes_damage'
+    for (const id of skillSpriteIds) {
+        index[id] = 'animacoes_damage';
     }
     fs.writeFileSync(outputFile, JSON.stringify(index, null, 2), 'utf8');
     console.log('sprites_index.json gerado com', Object.keys(index).length, 'sprites.');
