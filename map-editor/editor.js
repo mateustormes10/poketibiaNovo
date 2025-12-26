@@ -131,18 +131,29 @@ deselectSpriteBtn.addEventListener("click", () => {
 
 spriteSearch.addEventListener("input", () => {
     spriteFilter = spriteSearch.value.trim();
-    
-    // Se for um número válido, calcula o grupo e aplica no filtro de grupo
+    // Se for um número válido, busca em todas as pastas
     const id = parseInt(spriteFilter);
     if (!isNaN(id) && id >= 1 && id <= totalSprites) {
-        const group = Math.ceil(id / spritesPerPage); // calcula o grupo do ID
-        spriteGroupSearch.value = group; // preenche automaticamente o filtro de grupo
-        spriteGroupFilter = group; // aplica o filtro do grupo
+        let foundFolder = null;
+        for (const folder of spriteFolders) {
+            const fs = require('fs');
+            const path = require('path');
+            const spritePath = path.join(__dirname, '../client/assets/sprites', folder, `${id}.png`);
+            if (fs.existsSync(spritePath)) {
+                foundFolder = folder;
+                break;
+            }
+        }
+        if (foundFolder) {
+            selectedSpriteFolder = foundFolder;
+            spriteFolderSelect.value = foundFolder;
+        }
+        spriteGroupFilter = null;
+        spriteGroupSearch.value = "";
     } else {
-        spriteGroupFilter = null; // se não for um ID válido, limpa o filtro de grupo
-        spriteGroupSearch.value = ""; // limpa o campo de grupo
+        spriteGroupFilter = null;
+        spriteGroupSearch.value = "";
     }
-
     renderSpriteList();
 });
 
@@ -673,16 +684,18 @@ saveBtn.addEventListener("click", () => {
             for (let x = 0; x < mapSize; x++) {
                 const t = map[y][x];
                 const s = t.ground.join(",");
-                const w = t.walkable ? "S" : "N";
-                const sp = t.spawn ? `SPAWN(${t.spawn})` : "";
-
                 let vertical = "";
                 if (t.up) vertical += `UP(${t.up})`;
                 if (t.down) vertical += (vertical ? "," : "") + `DOWN(${t.down})`;
+                const w = t.walkable ? "S" : "N";
+                const sp = t.spawn ? `SPAWN(${t.spawn})` : "";
 
-                txt += `[${s},${w}${sp ? ',' + sp : ''}${vertical ? ',' + vertical : ''}] `;
-
-
+                // Ordem correta: [ground,UP...,DOWN...,S/N,SPAWN]
+                let arr = [s];
+                if (vertical) arr.push(vertical);
+                arr.push(w);
+                if (sp) arr.push(sp);
+                txt += `[${arr.join(",")}] `;
             }
             txt += "\n";
         }
@@ -700,8 +713,13 @@ floorUpTileBtn.addEventListener("click", () => {
     tile.up = val;    // grava UP
     render();
 
-    // Atualiza display da célula
-    tileContentSpan.textContent = `[${tile.ground.join(",")},${tile.walkable ? "S" : "N"}${tile.spawn ? ",SPAWN(" + tile.spawn + ")" : ""}${tile.up ? ",UP(" + tile.up + ")" : ""}${tile.down ? ",DOWN(" + tile.down + ")" : ""}]`;
+    // Atualiza display da célula (UP/DOWN antes do S/N)
+    var arr = [tile.ground.join(",")];
+    if (tile.up) { arr.push("UP(" + tile.up + ")"); }
+    if (tile.down) { arr.push("DOWN(" + tile.down + ")"); }
+    arr.push(tile.walkable ? "S" : "N");
+    if (tile.spawn) { arr.push("SPAWN(" + tile.spawn + ")"); }
+    tileContentSpan.textContent = "[" + arr.join(",") + "]";
 });
 
 floorDownTileBtn.addEventListener("click", () => {
@@ -710,8 +728,13 @@ floorDownTileBtn.addEventListener("click", () => {
     tile.down = val;  // grava DOWN
     render();
 
-    // Atualiza display da célula
-    tileContentSpan.textContent = `[${tile.ground.join(",")},${tile.walkable ? "S" : "N"}${tile.spawn ? ",SPAWN(" + tile.spawn + ")" : ""}${tile.up ? ",UP(" + tile.up + ")" : ""}${tile.down ? ",DOWN(" + tile.down + ")" : ""}]`;
+    // Atualiza display da célula (UP/DOWN antes do S/N)
+    var arr = [tile.ground.join(",")];
+    if (tile.up) { arr.push("UP(" + tile.up + ")"); }
+    if (tile.down) { arr.push("DOWN(" + tile.down + ")"); }
+    arr.push(tile.walkable ? "S" : "N");
+    if (tile.spawn) { arr.push("SPAWN(" + tile.spawn + ")"); }
+    tileContentSpan.textContent = "[" + arr.join(",") + "]";
 });
 
 
@@ -738,11 +761,11 @@ async function initialize() {
 
     // Carrega todas as sprites usadas em TODOS os andares
     const promises = [];
-    spriteIds.forEach(id => {
+    spriteIds.forEach(function(id) {
         if (!sprites.has(id)) {
-            const img = new Image();
-            img.src = `../client/assets/sprites/${id}`;
-            const p = new Promise(resolve => {
+            var img = new window.Image();
+            img.src = "../client/assets/sprites/" + id + ".png";
+            var p = new Promise(function(resolve) {
                 img.onload = resolve;
                 img.onerror = resolve;
             });
