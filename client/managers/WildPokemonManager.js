@@ -32,20 +32,13 @@ export class WildPokemonManager {
      * @param {Object} data - { wildPokemons: [...] }
      */
     receiveWildPokemonList(data) {
-        // console.log('[WildPokemonManager] Recebendo lista:', data);
-        // logger.info(`[WILD] Recebendo lista de ${data.wildPokemons.length} Pokémon selvagens`);
-        
+    
         this.wildPokemons.clear();
         
         for (const wildPokemon of data.wildPokemons) {
             this.wildPokemons.set(wildPokemon.id, wildPokemon);
-            // console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
-            // logger.debug(`[WILD] ${wildPokemon.name} (id=${wildPokemon.id}) em (${wildPokemon.x}, ${wildPokemon.y}, ${wildPokemon.z})`);
         }
         
-        // console.log(`[WildPokemonManager] ${this.wildPokemons.size} Pokémon selvagens carregados`);
-        // logger.info(`[WILD] ${this.wildPokemons.size} Pokémon selvagens carregados`);
-        console.log('[WildPokemonManager] receiveWildPokemonList:', JSON.stringify(data, null, 2));
         this.wildPokemons.clear();
         for (const wildPokemon of data.wildPokemons) {
             this.wildPokemons.set(wildPokemon.id, wildPokemon);

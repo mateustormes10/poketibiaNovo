@@ -289,20 +289,13 @@ export class Game {
         if (this.renderer && this.renderer.hud && this.renderer.hud.pokemonSkillsUI) {
             this.renderer.hud.pokemonSkillsUI.onSkillClick = (skillName, skill, index) => {
                 try {
-                    console.log('[DEBUG] Skill clicada (callback chamado):', skillName, skill, index);
-                    // Envia evento para o servidor para animação multiplayer
                     const player = this.gameState.localPlayer;
                     if (player) {
-                        this.wsClient.send('use_skill', {
-                            playerId: player.id,
-                            skillName,
-                            tile: { x: player.x, y: player.y, z: player.z }
-                        });
+                        this.useSkillWithCooldown(skillName, skill, player);
                     }
                 } catch (err) {
                     console.error('[ERRO] ao processar clique de skill:', err);
                 }
-                // Força reset do _lastMouseDown para permitir múltiplos cliques
                 this._lastMouseDown = false;
             };
         }
@@ -315,7 +308,6 @@ export class Game {
         // Wild Pokémon system
         this.wildPokemonManager = new WildPokemonManager(this.wsClient);
         this.wildPokemonRenderer = new WildPokemonRenderer();
-        console.log('[Game] WildPokemonManager e WildPokemonRenderer criados');
         
         // Passa wildPokemonManager para o Renderer
         this.renderer.wildPokemonManager = this.wildPokemonManager;
@@ -338,6 +330,28 @@ export class Game {
 
         // Mapa UI
         this.mapUI = null;
+    }
+
+        // Método central para uso de skill com cooldown
+    useSkillWithCooldown(skillName, skill, player) {
+        if (!this._skillCooldowns) this._skillCooldowns = {};
+        const now = Date.now();
+        // Usa SkillDatabase já importado
+        const fullSkill = window.SkillDatabase ? window.SkillDatabase[skillName] : (typeof SkillDatabase !== 'undefined' ? SkillDatabase[skillName] : skill);
+        const key = fullSkill && fullSkill.name ? fullSkill.name : skillName;
+        const cd = fullSkill && fullSkill.cowndown ? fullSkill.cowndown * 1000 : 0;
+        if (this._skillCooldowns[key] && now < this._skillCooldowns[key]) {
+            // Ainda em cooldown, ignora
+            console.log(`[COOLDOWN] Skill '${key}' ainda em cooldown.`);
+            return false;
+        }
+        this.wsClient.send('use_skill', {
+            playerId: player.id,
+            skillName,
+            tile: { x: player.x, y: player.y, z: player.z }
+        });
+        this._skillCooldowns[key] = now + cd;
+        return true;
     }
 
     animateSkillAroundPlayer(skillName, skill, index) {
@@ -604,7 +618,6 @@ export class Game {
             playerId = prompt('Digite o Player ID (1-10):', '1');
         }
         if (!playerId || isNaN(playerId)) {
-            console.log('[Game] Player ID inválido, usando ID 1 por padrão');
             this.sendLogin('Player', 1);
         } else {
             const id = parseInt(playerId);
@@ -634,7 +647,6 @@ export class Game {
                 });
         
         this.wsClient.on('loginSuccess', (data) => {
-            console.log('[DEBUG][CLIENT] loginSuccess recebido:', data);
             // Inicia atualização periódica do mapa após login
             this.startMapUpdateLoop();
         });
@@ -644,7 +656,6 @@ export class Game {
             // Libera flag após receber resposta
             if (this.isRequestingMap) {
                 this.isRequestingMap = false;
-                console.log('[Game] Map update received - flag reset');
             }
             // Não faz mais nada relacionado ao menu ou GM aqui
         });
@@ -713,45 +724,36 @@ export class Game {
         
         // Wild Pokémon handlers
         this.wsClient.on('wild_pokemon_list', (data) => {
-            console.log('[Game] Wild Pokémon list received:', data);
             this.wildPokemonManager.receiveWildPokemonList(data);
         });
         
         this.wsClient.on('wild_pokemon_spawn', (data) => {
-            console.log('[Game] Wild Pokémon spawned:', data);
             this.wildPokemonManager.receiveSpawn(data);
         });
         
         this.wsClient.on('wild_pokemon_update', (data) => {
-            console.log(`[Game] Wild Pokémon UPDATE: ${data.name} (id=${data.id}) moveu para (${data.x}, ${data.y}, ${data.z})`);
             this.wildPokemonManager.receiveUpdate(data);
         });
         
         this.wsClient.on('wild_pokemon_despawn', (data) => {
-            console.log('[Game] Wild Pokémon despawned:', data);
             this.wildPokemonManager.receiveDespawn(data);
         });
         
         this.wsClient.on('inventory_update', (data) => {
-            console.log('[Game] Inventory update received:', data);
             this.inventoryManager.receiveInventoryUpdate(data);
         });
         
         this.wsClient.on('inventory_item_used', (data) => {
-            console.log('[Game] Item used:', data);
             this.inventoryManager.receiveItemUsed(data);
         });
         
         this.wsClient.on('inventory_item_added', (data) => {
-            console.log('[Game] Item added:', data);
             this.inventoryManager.receiveItemAdded(data);
         });
         
         // Outfit change handler
         this.wsClient.on('outfit_changed', (data) => {
-            console.log('[Game] Outfit changed:', data);
             if (data.success && this.gameState.localPlayer) {
-                console.log('[Game] Atualizando sprite do player para:', data.lookaddons);
                 this.gameState.localPlayer.sprite = data.lookaddons;
                 this.renderer.chatBox.addMessage('System', `Aparência alterada para: ${data.lookaddons}`, 'system');
             } else {
@@ -761,7 +763,6 @@ export class Game {
         
         // Outfit update from other players
         this.wsClient.on('player_outfit_update', (data) => {
-            console.log('[Game] Player outfit update:', data);
             const player = this.gameState.players.get(data.playerId);
             if (player) {
                 player.sprite = data.lookaddons;
@@ -770,7 +771,6 @@ export class Game {
         
         // Sistema de mensagens GM
         this.wsClient.on('system_message', (data) => {
-            console.log('[Game] System message:', data);
             this.renderer.chatBox.addMessage({
                 playerName: 'Sistema',
                 message: data.message,
@@ -1048,10 +1048,13 @@ export class Game {
                     // Bloqueia qualquer ação
                     return;
                 }
-        // Bloqueia toda interação se a UI de conexão perdida estiver aberta
+        // Bloqueia toda interação e qualquer envio de requisição se a UI de conexão perdida estiver aberta
         const lostUi = document.getElementById('connection-lost-ui');
         if (lostUi && lostUi.style.display !== 'none') {
-            // Permite apenas interação com os botões da UI
+            // Desabilita completamente o envio de requisições
+            if (this.wsClient) {
+                this.wsClient.send = () => {};
+            }
             return;
         }
         
@@ -1093,6 +1096,41 @@ export class Game {
                 this.renderer.outfitSelector.close();
             }
             return; // Bloqueia outros comandos quando outfit selector está aberto
+        }
+
+
+        // Declara hud e pokemons antes do uso
+        const player = this.gameState.localPlayer;
+        const hud = this.renderer.hud;
+        
+        // Navegação na lista de pokémons do player
+        const pokemons = player.pokemons || [];
+
+        // Seleção de pokémon com Enter (tem prioridade sobre chat)
+        if (hud && hud.pokemonSelectionActive && pokemons.length > 0) {
+            if (this.keyboard.isKeyPressed('Escape')) {
+                hud.deactivatePokemonSelection();
+                return;
+            }
+            if (this.keyboard.isKeyPressed('ArrowUp')) {
+                hud.movePokemonSelection(-1, pokemons.length);
+                return;
+            }
+            if (this.keyboard.isKeyPressed('ArrowDown')) {
+                hud.movePokemonSelection(1, pokemons.length);
+                return;
+            }
+            // Selecionar pokémon com Enter (envia evento de transformação)
+            if (this.keyboard.isKeyPressed('Enter')) {
+                const idx = hud.selectedPokemonIndex;
+                const selected = pokemons[idx];
+                if (selected && selected.name) {
+                    this.wsClient.send('request_transform_pokemon', { pokemonName: selected.name });
+                }
+                hud.deactivatePokemonSelection();
+                return;
+            }
+            return;
         }
 
         // Controle de chat - Enter para ativar/desativar (só se OutfitSelector NÃO estiver aberto)
@@ -1211,7 +1249,6 @@ export class Game {
             return;
         }
         
-        const player = this.gameState.localPlayer;
         if (!player) return;
         
         // Sempre atualiza isWalking ANTES do cooldown de movimento
@@ -1223,9 +1260,6 @@ export class Game {
             return;
         }
         
-        // Navegação na lista de pokémons do player
-        const hud = this.renderer.hud;
-        const pokemons = player.pokemons || [];
         // Use isKeyPressed para consumir o evento corretamente
         if (this.keyboard.isKeyPressed('o')) {
             if (!hud.pokemonSelectionActive) {
@@ -1240,7 +1274,6 @@ export class Game {
         if (hud.pokemonSelectionActive && pokemons.length > 0) {
             if (this.keyboard.isKeyPressed('Escape')) {
                 hud.deactivatePokemonSelection();
-                // Sai do modo seleção e libera movimento
                 return;
             }
             if (this.keyboard.isKeyPressed('ArrowUp')) {
@@ -1251,20 +1284,25 @@ export class Game {
                 hud.movePokemonSelection(1, pokemons.length);
                 return;
             }
-            // Selecionar pokémon com Enter
+            // Selecionar pokémon com Enter (respeita cooldown)
             if (this.keyboard.isKeyPressed('Enter')) {
-                const selected = hud.getSelectedPokemon(player);
-                if (selected && selected.sprite) {
-                    // Troca o sprite do player local
-                    this.wsClient.send('change_outfit', { lookaddons: selected.sprite });
-                    hud.deactivatePokemonSelection();
-                    // Ao sair do modo seleção, libera movimento imediatamente
+                const idx = hud.selectedPokemonIndex;
+                const selected = pokemons[idx];
+                if (selected && selected.name) {
+                    // Se for skill, respeita cooldown
+                    if (selected.skills && selected.skills.length) {
+                        for (const skill of selected.skills) {
+                            if (skill && skill.name) this.useSkillWithCooldown(skill.name, skill, player);
+                        }
+                    } else {
+                        // Se for só troca de sprite, transforma normalmente
+                        this.wsClient.send('request_transform_pokemon', { pokemonName: selected.name });
+                    }
                 }
-                // Só retorna se ainda está em seleção, se saiu deixa seguir para o movimento
-                if (hud.pokemonSelectionActive) return;
-            } else {
+                hud.deactivatePokemonSelection();
                 return;
             }
+            return;
         }
 
         // Movimento via teclado com predição visual (só se não estiver selecionando pokémon)

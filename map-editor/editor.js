@@ -60,7 +60,6 @@ floorUpBtn.addEventListener("click", () => {
         setCurrentMapData();
         updateFloorDisplay();
         render();
-        console.log("Andar atual:", currentFloor);
     }
 });
 
@@ -70,7 +69,6 @@ floorDownBtn.addEventListener("click", () => {
         setCurrentMapData();
         updateFloorDisplay();
         render();
-        console.log("Andar atual:", currentFloor);
     }
 });
 

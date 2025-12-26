@@ -60,8 +60,11 @@ export class HUD {
         this.renderDebugInfo(gameState, wildPokemonManager);
         // Renderiza painel de skills se estiver transformado em pokémon
         const player = gameState.localPlayer;
-        if (player && player.pokemonName && Array.isArray(player.skills) && player.skills.length > 0) {
-            this.pokemonSkillsUI.show(player.skills.slice(0, 12));
+
+        if (player && player.pokemonName) {
+            // Garante que skills seja array
+            const skills = Array.isArray(player.skills) ? player.skills.slice(0, 12) : [];
+            this.pokemonSkillsUI.show(skills);
         } else {
             this.pokemonSkillsUI.hide();
         }

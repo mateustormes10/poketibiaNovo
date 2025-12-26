@@ -14,7 +14,6 @@ function collectSkillSpriteIds() {
     while ((match = regex.exec(content)) !== null) {
         skillCount++;
         const arr = match[1].split(',').map(s => s.replace(/['"\s]/g, ''));
-        console.log(`[SkillDB] spriteSkillList encontrado na skill #${skillCount}:`, arr);
         arr.forEach(id => {
             if (id && !isNaN(id)) {
                 ids.add(Number(id));
@@ -132,16 +131,11 @@ function buildSpriteIndex(spriteIds) {
 
 function main() {
     const spriteIds = collectSpriteIds();
-    console.log('[LOG] spriteIds dos mapas:', spriteIds);
     const playerSpriteIds = collectPlayerSpriteIds();
-    console.log('[LOG] spriteIds dos players:', playerSpriteIds);
     const pokemonSpriteIds = collectPokemonSpriteIds();
-    console.log('[LOG] spriteIds dos pokemons:', pokemonSpriteIds);
     const skillSpriteIds = collectSkillSpriteIds();
-    console.log('[LOG] spriteIds das skills:', skillSpriteIds);
     // Junta e remove duplicados
     const allIds = Array.from(new Set([...spriteIds, ...playerSpriteIds, ...pokemonSpriteIds, ...skillSpriteIds]));
-    console.log('[LOG] spriteIds totais (unicos):', allIds);
     let index = buildSpriteIndex(allIds);
     // Garante que todos os spriteIds de pokémon estejam no index como 'pokemons'
     for (const id of pokemonSpriteIds) {
@@ -152,7 +146,6 @@ function main() {
         index[id] = 'animacoes_damage';
     }
     fs.writeFileSync(outputFile, JSON.stringify(index, null, 2), 'utf8');
-    console.log('sprites_index.json gerado com', Object.keys(index).length, 'sprites.');
 }
 
 main();

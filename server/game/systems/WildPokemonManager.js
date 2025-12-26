@@ -131,7 +131,6 @@ export class WildPokemonManager {
             
             // Se mudou de estado ou posição, notifica clientes
             if (wildPokemon.state !== oldState || wildPokemon.x !== oldX || wildPokemon.y !== oldY) {
-                // console.log(`[WildPokemonManager] ${wildPokemon.name} (id=${wildPokemon.id}) mudou! State: ${oldState}->${wildPokemon.state}, Pos: (${oldX},${oldY})->(${wildPokemon.x},${wildPokemon.y})`);
                 this.broadcastUpdate(wildPokemon);
             }
         }
@@ -180,7 +179,6 @@ export class WildPokemonManager {
      */
     broadcastSpawn(wildPokemon) {
         const data = wildPokemon.toDTO();
-        console.log('[WildPokemonManager] broadcastSpawn DTO:', JSON.stringify(data, null, 2));
         for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {
                 client.send(WildPokemonServerEvents.WILD_POKEMON_SPAWN, data);

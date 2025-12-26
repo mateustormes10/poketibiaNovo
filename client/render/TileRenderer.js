@@ -21,7 +21,6 @@ export class TileRenderer {
         if (tilesetPath) {
             await this.tileSet.loadTileset(tilesetPath, this.tileSize);
         }
-        console.log('[TileRenderer] Initialized');
     }
     
     /**

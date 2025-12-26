@@ -25,16 +25,13 @@ export class SpriteRenderer {
         renderSpriteById(ctx, spriteId, x, y) {
             const img = this.sprites.get(spriteId.toString());
             if (img && img.complete && img.naturalWidth > 0) {
-                console.log(`[SpriteRenderer] Desenhando spriteId ${spriteId} em (${x},${y})`);
                 ctx.drawImage(img, x, y, this.tileSize, this.tileSize);
             } else if (!this.sprites.has(spriteId.toString())) {
                 // Tenta carregar na hora
-                console.log(`[SpriteRenderer] Tentando carregar spriteId ${spriteId}`);
                 this.loadSpriteFromIndex(
                     spriteId,
                     (imgLoaded) => {
                         this.sprites.set(spriteId.toString(), imgLoaded);
-                        console.log(`[SpriteRenderer] SpriteId ${spriteId} carregado!`);
                     },
                     () => {
                         console.warn(`[SpriteRenderer] Falha ao carregar spriteId ${spriteId}`);

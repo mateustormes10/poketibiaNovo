@@ -25,10 +25,6 @@ export class GameMap {
             return;
         }
         
-        // Log detalhado
-        console.log(`[GameMap] Received ${mapData.tiles.length} tiles from server at (${mapData.centerX}, ${mapData.centerY}, z=${mapData.z})`);
-        console.log('[GameMap] First 3 tiles:', mapData.tiles.slice(0, 3));
-        console.log(`[GameMap] updateFromServer: z recebido = ${mapData.z}`);
         
         // Limpa tiles antigos
         this.tiles.clear();
@@ -69,9 +65,6 @@ export class GameMap {
         this.viewport.minY = minY;
         this.viewport.maxX = maxX;
         this.viewport.maxY = maxY;
-        
-        console.log(`[GameMap] Viewport set: x(${minX}-${maxX}) y(${minY}-${maxY}) z=${this.viewport.z}`);
-        console.log(`[GameMap] Total tiles stored: ${this.tiles.size}`);
         
         // Sinaliza que o mapa foi atualizado
         this.updated = true;

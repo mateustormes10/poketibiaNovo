@@ -21,7 +21,6 @@ export class GameState {
         
         // Atualiza mapa
         if (serverState.map) {
-            console.log('[GameState] Updating map from server');
             this.map.updateFromServer(serverState.map);
         }
         
@@ -47,9 +46,9 @@ export class GameState {
             } else {
                 player.update(playerData);
             }
-            if (playerData.isLocal) {
+            // Sempre tenta identificar o localPlayer pelo isLocal ou pelo id igual ao antigo localPlayer
+            if (playerData.isLocal || (this.localPlayer && playerData.id === this.localPlayer.id)) {
                 this.localPlayer = player;
-                // Não força abrir/fechar menu, só atualiza quando realmente abrir
             }
         });
     }
@@ -94,15 +93,15 @@ export class GameState {
             if (data.direction) player.direction = data.direction;
 
             // LOG: sprites do tile atual do player
-            const map = window.game?.gameState?.map || this.map;
-            if (map) {
-                const tile = map.getTile(player.x, player.y, player.z);
-                if (tile && tile.spriteIds) {
-                    console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
-                } else {
-                    console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
-                }
-            }
+            // const map = window.game?.gameState?.map || this.map;
+            // if (map) {
+            //     const tile = map.getTile(player.x, player.y, player.z);
+            //     if (tile && tile.spriteIds) {
+            //         console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
+            //     } else {
+            //         console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
+            //     }
+            // }
         }
     }
     

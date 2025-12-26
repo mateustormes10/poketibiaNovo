@@ -11,7 +11,6 @@ import { resolveTileLayer } from '../utils/resolveTileLayer.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
-            console.log('[Renderer] Instanciado:', this);
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.camera = camera;
@@ -74,15 +73,11 @@ export class Renderer {
         const player = gameState.player;
         if (player && gameState.protocolHandler) {
             const playerTile = map.getTile(player.x, player.y, player.z);
-            console.log('[Renderer] Tile completo sob o player:', playerTile, 'na posição', player.x, player.y, player.z);
             if (playerTile && playerTile.spriteIds) {
-                console.log('[Renderer] Tile sob o player:', playerTile.spriteIds, 'na posição', player.x, player.y, player.z);
                 if (playerTile.spriteIds.some(id => typeof id === 'string' && id.includes('UP(4)'))) {
-                    console.log('[Renderer] Enviando evento CHANGE_FLOOR: up', player.x, player.y, player.z);
                     gameState.protocolHandler.sendChangeFloor('up', player.x, player.y, player.z);
                 }
                 if (playerTile.spriteIds.some(id => typeof id === 'string' && id.includes('DOWN(3)'))) {
-                    console.log('[Renderer] Enviando evento CHANGE_FLOOR: down', player.x, player.y, player.z);
                     gameState.protocolHandler.sendChangeFloor('down', player.x, player.y, player.z);
                 }
             }
@@ -120,9 +115,6 @@ export class Renderer {
                 if (entitiesByY[y]) {
                     entity = entitiesByY[y].find(e => e.x === x);
                     if (entity) {
-                        if (entity.type === 'player') {
-                            console.log('[Renderer] Renderizando player em', x, y, 'screen:', screenX, screenY);
-                        }
                         this.spriteRenderer.renderEntity(entity, startX, startY);
                     }
                 }

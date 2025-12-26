@@ -31,11 +31,7 @@ export class WildPokemonRenderer {
             this.renderWildPokemon(ctx, wildPokemon, camera);
             rendered++;
         }
-        
-        // Log ocasional para debug
-        if (Math.random() < 0.01) { // 1% de chance por frame
-            console.log(`[WildPokemonRenderer] Renderizando ${rendered} pokémons de ${wildPokemons.size} no Map`);
-        }
+    
     }
 
     /**

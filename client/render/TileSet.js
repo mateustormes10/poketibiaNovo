@@ -146,7 +146,6 @@ export class TileSet {
     async preloadSprites(spriteIds) {
         const promises = spriteIds.map(id => this.loadSprite(id));
         await Promise.all(promises);
-        console.log(`[TileSet] Preloaded ${spriteIds.length} sprites`);
     }
     
     /**

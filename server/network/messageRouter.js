@@ -1,7 +1,7 @@
 import { ClientEvents } from '../../shared/protocol/actions.js';
 import { PokemonEntities } from '../game/entities/PokemonEntities.js';
+import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
-import { WildPokemonClientEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { AuthHandler } from '../handlers/authHandler.js';
 import { MovementHandler } from '../handlers/movementHandler.js';
 import { CombatHandler } from '../handlers/combatHandler.js';
@@ -69,7 +69,24 @@ export class MessageRouter {
                 let direction = player.direction || 'down';
                 let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
                 player.sprite = spriteArr;
-                player.skills = pokeData.skills || [];
+                // DEBUG: loga skills do pokeData e resultado do SkillDatabase
+                player.skills = (pokeData.skills || []).map(skillName => {
+                    const skillObj = SkillDatabase[skillName];
+                    if (!skillObj) {
+                        console.log('[SERVER DEBUG] Skill não encontrada no SkillDatabase:', skillName);
+                        return null;
+                    }
+                    return {
+                        name: skillObj.name,
+                        type: skillObj.type,
+                        element: skillObj.element,
+                        power: skillObj.power,
+                        cowndown: skillObj.cowndown,
+                        manaCost: skillObj.manaCost,
+                        spriteSkillList: skillObj.spriteSkillList,
+                        targetArea: skillObj.targetArea
+                    };
+                }).filter(Boolean);
                 // Envia atualização de outfit para o próprio player
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
                 // Envia novo estado do jogo
@@ -228,23 +245,17 @@ export class MessageRouter {
         // Envia novo estado do jogo
         const gameState = this.gameWorld.getGameState(player);
         // Log detalhado do z do player e do mapa enviado
-        console.log(`[MessageRouter] changeFloor: z do player atualizado para ${player.z}`);
-        if (gameState && gameState.map) {
-            console.log(`[MessageRouter] Tiles enviados: z=${gameState.map.z}, total=${gameState.map.tiles.length}`);
-            if (gameState.map.tiles.length > 0) {
-                console.log('[MessageRouter] Exemplos de tiles:', gameState.map.tiles.slice(0, 3));
-            }
-        }
+        // console.log(`[MessageRouter] changeFloor: z do player atualizado para ${player.z}`);
+        // if (gameState && gameState.map) {
+        //     console.log(`[MessageRouter] Tiles enviados: z=${gameState.map.z}, total=${gameState.map.tiles.length}`);
+        //     if (gameState.map.tiles.length > 0) {
+        //         console.log('[MessageRouter] Exemplos de tiles:', gameState.map.tiles.slice(0, 3));
+        //     }
+        // }
         client.send('gameState', gameState);
     }
     
-    handleMapUpdate(client, data) {
-        console.log('[MessageRouter] Map update request received');
-        console.log('[MessageRouter] Client ID:', client.id);
-        console.log('[MessageRouter] Client has player?', !!client.player);
-        console.log('[MessageRouter] Client has playerId?', !!client.playerId);
-        console.log('[MessageRouter] Client authenticated?', client.authenticated);
-        
+    handleMapUpdate(client, data) {        
         // Tenta usar playerId se player não estiver disponível
         const playerId = client.player?.id || client.playerId;
         

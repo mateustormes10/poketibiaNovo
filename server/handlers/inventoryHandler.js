@@ -27,9 +27,6 @@ export class InventoryHandler {
         // Usa dbId (ID do banco) em vez de id (ID local do jogo)
         const playerId = client.player?.dbId || client.player?.id;
 
-        console.log('[InventoryHandler] Client player:', client.player);
-        console.log('[InventoryHandler] Player ID a usar:', playerId);
-
         if (!playerId) {
             this.sendInventoryError(client, InventoryErrorCode.PERMISSION_DENIED, 'Player não autenticado');
             return;

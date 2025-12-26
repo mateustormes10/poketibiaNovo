@@ -30,7 +30,6 @@ export class InventoryManager {
      * Solicita inventário do servidor
      */
     requestInventory() {
-        console.log('[InventoryManager] Solicitando inventário do servidor');
         this.wsClient.send(InventoryClientEvents.REQUEST_INVENTORY, {});
     }
 
@@ -50,8 +49,7 @@ export class InventoryManager {
             if (this.onToggleCallback) {
                 this.onToggleCallback(true);
             }
-            
-            console.log('[InventoryManager] Inventário aberto');
+
         }
     }
 
@@ -68,7 +66,6 @@ export class InventoryManager {
             this.onToggleCallback(false);
         }
         
-        console.log('[InventoryManager] Inventário fechado');
     }
 
     /**
@@ -87,9 +84,6 @@ export class InventoryManager {
      * @param {Object} data - Dados do inventário
      */
     receiveInventoryData(data) {
-        console.log('[InventoryManager] Dados do inventário recebidos:', data);
-        console.log('[InventoryManager] Tipo de data:', typeof data);
-        console.log('[InventoryManager] Keys de data:', data ? Object.keys(data) : 'null');
         
         this.inventoryData = data;
         
@@ -97,7 +91,6 @@ export class InventoryManager {
             this.inventoryUI.updateInventory(data);
         } else {
             // Se estava aguardando dados, abre agora
-            console.log('[InventoryManager] Abrindo inventário com dados recebidos');
             this.inventoryUI.open(data);
             this.isOpen = true;
             
@@ -112,7 +105,6 @@ export class InventoryManager {
      * @param {Object} data - Dados atualizados
      */
     receiveInventoryUpdate(data) {
-        console.log('[InventoryManager] Inventário atualizado:', data);
         this.inventoryData = data;
         
         if (this.isOpen) {
