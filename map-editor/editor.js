@@ -299,7 +299,13 @@ canvas.addEventListener("click", async (e) => {
     cursorX = x; cursorY = y;
     tileXSpan.textContent = x;
     tileYSpan.textContent = y;
-    tileContentSpan.textContent = `[${mapData[y][x].ground.join(",")},${mapData[y][x].walkable ? "S" : "N"}${mapData[y][x].spawn ? ",SPAWN(" + mapData[y][x].spawn + ")" : ""}]`;
+    // Mostra UP/DOWN no conteúdo
+    let arr = [mapData[y][x].ground.join(",")];
+    if (mapData[y][x].up !== undefined) arr.push(`UP(${mapData[y][x].up})`);
+    if (mapData[y][x].down !== undefined) arr.push(`DOWN(${mapData[y][x].down})`);
+    arr.push(mapData[y][x].walkable ? "S" : "N");
+    if (mapData[y][x].spawn) arr.push(`SPAWN(${mapData[y][x].spawn})`);
+    tileContentSpan.textContent = `[${arr.join(",")}]`;
 
     render();
 });
@@ -360,10 +366,10 @@ nextSpritesBtn.addEventListener("click", async () => {
 // -------------------- PARSE MAPA --------------------
 
 function parseCell(cell) {
-    if (!cell.startsWith("[") || !cell.endsWith("]")) return { ground: [], walkable: true, spawn: null, entities: [] };
+    if (!cell.startsWith("[") || !cell.endsWith("]")) return { ground: [], walkable: true, spawn: null, entities: [], up: undefined, down: undefined };
 
     const raw = cell.slice(1, -1).split(",");
-    const tile = { ground: [], walkable: true, spawn: null, entities: [] };
+    const tile = { ground: [], walkable: true, spawn: null, entities: [], up: undefined, down: undefined };
 
     for (let item of raw) {
         item = item.trim();
@@ -372,9 +378,15 @@ function parseCell(cell) {
         else if (item.includes("/") && item.endsWith(".png")) tile.ground.push(item);
         else if (item === "S") tile.walkable = true;
         else if (item === "N") tile.walkable = false;
+        else if (item.startsWith("UP(") && item.endsWith(")")) tile.up = parseInt(item.slice(3, -1));
+        else if (item.startsWith("DOWN(") && item.endsWith(")")) tile.down = parseInt(item.slice(5, -1));
         else if (item.startsWith("SPAWN(") && item.endsWith(")")) 
             tile.entities.push({ type: "pokemon", name: item.slice(6, -1) });
     }
+
+    // Para compatibilidade, se houver SPAWN, também popular tile.spawn
+    const spawnEntity = tile.entities.find(e => e.type === "pokemon");
+    if (spawnEntity) tile.spawn = spawnEntity.name;
 
     return tile;
 }
@@ -496,6 +508,45 @@ function render() {
             if (tile.spawn || tile.entities.length > 0) {
                 ctx.fillStyle = "rgba(0,255,0,0.3)";
                 ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+            }
+
+
+            // OVERLAY UP/DOWN + desenha seta e número
+            if (tile.up !== undefined || tile.down !== undefined) {
+                ctx.fillStyle = "rgba(255,255,0,0.3)"; // amarelo transparente
+                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+
+                ctx.save();
+                ctx.font = Math.floor(tileSize * 0.5) + "px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                let text = "";
+                let color = "#bfa800";
+                if (tile.up !== undefined) {
+                    text = `↑${tile.up}`;
+                }
+                if (tile.down !== undefined) {
+                    // Se tiver up e down, mostra ambos, um em cima do outro
+                    if (tile.up !== undefined) {
+                        ctx.fillStyle = color;
+                        ctx.fillText(`↑${tile.up}`,
+                            vx*tileSize + tileSize/2,
+                            vy*tileSize + tileSize*0.33
+                        );
+                        ctx.fillStyle = color;
+                        ctx.fillText(`↓${tile.down}`,
+                            vx*tileSize + tileSize/2,
+                            vy*tileSize + tileSize*0.67
+                        );
+                        ctx.restore();
+                        continue;
+                    } else {
+                        text = `↓${tile.down}`;
+                    }
+                }
+                ctx.fillStyle = color;
+                ctx.fillText(text, vx*tileSize + tileSize/2, vy*tileSize + tileSize/2);
+                ctx.restore();
             }
 
             ctx.strokeStyle = "gray";
