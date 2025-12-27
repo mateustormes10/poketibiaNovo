@@ -1,7 +1,7 @@
 {
-  "name": "poketibia-desktop",
+  "name": "chaoswar-desktop",
   "version": "1.0.0",
-  "description": "Poketibia menu desktop app",
+  "description": "ChaosWar menu desktop app",
   "main": "abrirExe.js",
   "scripts": {
     "start": "electron ."

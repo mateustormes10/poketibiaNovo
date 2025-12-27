@@ -15,7 +15,7 @@ async function build() {
       asar: false,
       prune: true,
       ignore: [/dist/, /node_modules/, /map-editor/, /server/],
-      executableName: 'PoketibiaMenu',
+      executableName: 'ChaosWar',
     });
     console.log('Build concluído! Executável gerado em:', appPaths);
   } catch (err) {

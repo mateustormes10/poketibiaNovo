@@ -8,7 +8,7 @@ import { Logger } from './utils/Logger.js';
 const logger = new Logger('Server');
 
 async function main() {
-    logger.info('Starting PokeTibia Server...');
+    logger.info('Starting ChaosWar Server...');
     
     // Inicializa banco de dados
     const database = new Database(config.database);

@@ -1,4 +1,4 @@
-# Servidor PokeTibia
+# Servidor ChaosWar
 
 ## Como iniciar o servidor
 
@@ -21,7 +21,7 @@
      ```
    - Você verá logs como:
      ```
-     [INFO] Starting PokeTibia Server...
+     [INFO] Starting ChaosWar Server...
      WebSocket server started on port 3000
      Server running on port 3000
      Tick rate: 10 ticks/second

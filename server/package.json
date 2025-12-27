@@ -1,8 +1,8 @@
 {
-  "name": "poketibia-server",
+  "name": "chaoswar-server",
   "version": "1.0.0",
   "type": "module",
-  "description": "PokeTibia Game Server",
+  "description": "ChaosWar Game Server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

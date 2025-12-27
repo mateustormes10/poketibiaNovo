@@ -297,7 +297,7 @@ export class MapLoader {
      * Obtém tipo de tile do ID (formato [ID,modificador])
      */
     getTileTypeFromId(spriteId) {
-        // IDs comuns do Tibia/PokeTibia
+        // IDs comuns do Tibia/ChaosWar
         if (spriteId >= 9900 && spriteId <= 9920) return 'sand';
         if (spriteId >= 300 && spriteId <= 400) return 'grass';
         if (spriteId >= 100 && spriteId <= 200) return 'floor';

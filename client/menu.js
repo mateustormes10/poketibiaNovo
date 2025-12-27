@@ -10,6 +10,7 @@
  */
 
 import { Game } from "./core/Game.js";
+import { GameConstants } from "../shared/constants/GameConstants.js";
 
 const canvas = document.getElementById("gameCanvas");
 
@@ -17,6 +18,27 @@ document.body.style.margin = "0";
 canvas.style.display = "block";
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+// Redesenha e recalcula campos ao redimensionar
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (menuState === 'login') {
+        initLoginFields();
+        drawLogin();
+    } else if (menuState === 'characterSelect') {
+        drawCharacterSelect(accountData);
+    } else {
+        draw();
+    }
+});
+
+
+// Chama initLoginFields ao iniciar (após declarar variáveis)
+let menuState = "login"; // login, register, characterSelect
+let inputFields = [];
+let currentInput = 0;
+initLoginFields();
 
 let authToken = null;
 let accountData = null;
@@ -53,10 +75,6 @@ async function getPlayer(token) {
     });
     return await res.json();
 }
-
-let menuState = "login"; // login, register, characterSelect
-let inputFields = [];
-let currentInput = 0;
 
 function createInputField(x, y, placeholder, type = "text") {
     inputFields.push({ x, y, value: "", placeholder, type });
@@ -99,6 +117,16 @@ function drawLogin() {
     drawBackground();
     drawOverlay();
     ctx.save();
+    // Nome do jogo centralizado acima do box
+    ctx.font = "32px Arial Black, Arial, sans-serif";
+    ctx.fillStyle = "#FFD700";
+    ctx.textAlign = "center";
+    ctx.fillText(GameConstants.NAME_GAME, canvas.width/2, canvas.height/2 - 170);
+    // Mensagem do dia abaixo do nome
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(GameConstants.MESSAGE_OF_THE_DAY, canvas.width/2, canvas.height/2 - 140);
+
     // Box branco ao redor do bloco de login, preenchido
     const boxW = 260, boxH = 220;
     const boxX = canvas.width/2 - boxW/2;

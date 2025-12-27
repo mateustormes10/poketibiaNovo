@@ -1,4 +1,4 @@
-# Comandos GM/ADM - PokeTibia
+# Comandos GM/ADM - ChaosWar
 
 ## 📋 Comandos Disponíveis
 

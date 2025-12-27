@@ -1,4 +1,4 @@
-# PokeTibia
+# ChaosWar
 
 Um jogo 2D multiplayer estilo Tibia/Pokémon com arquitetura cliente-servidor autoritativa.
 

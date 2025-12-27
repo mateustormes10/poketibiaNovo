@@ -1,6 +1,6 @@
-# Testes de Carga - PokeTibia
+# Testes de Carga - ChaosWar
 
-Este diretório contém scripts Artillery para simular jogadores conectando e realizando ações no servidor multiplayer do PokeTibia.
+Este diretório contém scripts Artillery para simular jogadores conectando e realizando ações no servidor multiplayer do ChaosWar.
 
 ## Pré-requisitos
 - Node.js instalado

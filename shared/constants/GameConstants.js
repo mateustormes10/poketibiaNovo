@@ -95,5 +95,8 @@ export const GameConstants = {
     CHAT_LINE_HEIGHT: 16, // pixels
     HP_BAR_WIDTH: 100, // pixels
     HUD_GOLD_OFFSET_Y: 100, // pixels - Offset vertical para exibição do gold
-    CAMERA_FOLLOW_SPEED: 5
+    CAMERA_FOLLOW_SPEED: 5,
+
+    NAME_GAME: "ChaosWar",
+    MESSAGE_OF_THE_DAY: "Welcome to ChaosWar! Prepare for an epic adventure!",
 };

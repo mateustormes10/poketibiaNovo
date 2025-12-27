@@ -1245,7 +1245,12 @@ export class Game {
         
         // Interação com NPC via tecla E (só funciona quando chat não está ativo)
         if (this.keyboard.isKeyPressed('e')) {
-            this.tryInteractWithNpc();
+            // Só permite interagir se estiver como humano
+            if (player && !player.pokemonName) {
+                this.tryInteractWithNpc();
+            } else {
+                this.renderer.chatBox.addMessage('System', 'Só é possível interagir com NPCs na forma humana.', 'system');
+            }
             return;
         }
         
