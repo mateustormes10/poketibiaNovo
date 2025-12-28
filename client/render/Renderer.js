@@ -69,6 +69,16 @@ export class Renderer {
         const endY = startY + Math.ceil(viewport.height / tileSize) - 1;
         const currentZ = map.viewport.z;
 
+        // Organiza entidades por linha Y
+        const entities = gameState.getEntitiesInView(this.camera);
+        const entitiesByY = {};
+        entities.forEach(entity => {
+            const y = entity.y;
+            if (!entitiesByY[y]) entitiesByY[y] = [];
+            entitiesByY[y].push(entity);
+        });
+
+
         // Detecta tile especial sob o player e notifica o servidor
         const player = gameState.player;
         if (player && gameState.protocolHandler) {
@@ -83,15 +93,7 @@ export class Renderer {
             }
         }
 
-        // Organiza entidades por linha Y
-        const entities = gameState.getEntitiesInView(this.camera);
-        const entitiesByY = {};
-        entities.forEach(entity => {
-            const y = entity.y;
-            if (!entitiesByY[y]) entitiesByY[y] = [];
-            entitiesByY[y].push(entity);
-        });
-
+        
         // Ordem correta: ground, player, overlay
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {

@@ -49,25 +49,35 @@ export class WildPokemonRenderer {
         const screenY = (wildPokemon.y - startY) * this.tileSize;
         if (!this.isOnScreen(screenX, screenY, ctx.canvas.width, ctx.canvas.height)) return;
 
-        // 1. Renderiza sprites (array) conforme direção
-        const spritesArr = this.getSpritesForDirection(wildPokemon);
+        // 1. Renderiza spriteDead se morto, senão normal
         let rendered = false;
-        if (Array.isArray(spritesArr) && spritesArr.length > 0 && spritesArr[0]) {
-            // Central
-            rendered |= await this.renderSpriteImage(ctx, spritesArr[0], screenX, screenY);
-            // Esquerda da central
-            if (spritesArr[1]) rendered |= await this.renderSpriteImage(ctx, spritesArr[1], screenX - this.tileSize, screenY);
-            // Acima da central
-            if (spritesArr[2]) rendered |= await this.renderSpriteImage(ctx, spritesArr[2], screenX, screenY - this.tileSize);
-            // Diagonal (acima e esquerda)
-            if (spritesArr[3]) rendered |= await this.renderSpriteImage(ctx, spritesArr[3], screenX - this.tileSize, screenY - this.tileSize);
+        if (wildPokemon.isDead && Array.isArray(wildPokemon.spriteDead)) {
+            // Renderiza spriteDead nas posições corretas:
+            // [0] central, [1] esquerda, [2] cima, [3] diagonal cima-esquerda
+            if (wildPokemon.spriteDead[0]) rendered |= await this.renderSpriteImage(ctx, wildPokemon.spriteDead[0], screenX, screenY); // central
+            if (wildPokemon.spriteDead[1]) rendered |= await this.renderSpriteImage(ctx, wildPokemon.spriteDead[1], screenX - this.tileSize, screenY); // esquerda
+            if (wildPokemon.spriteDead[2]) rendered |= await this.renderSpriteImage(ctx, wildPokemon.spriteDead[2], screenX, screenY - this.tileSize); // cima
+            if (wildPokemon.spriteDead[3]) rendered |= await this.renderSpriteImage(ctx, wildPokemon.spriteDead[3], screenX - this.tileSize, screenY - this.tileSize); // diagonal cima-esquerda
+        } else {
+            const spritesArr = this.getSpritesForDirection(wildPokemon);
+            if (Array.isArray(spritesArr) && spritesArr.length > 0 && spritesArr[0]) {
+                // Central
+                rendered |= await this.renderSpriteImage(ctx, spritesArr[0], screenX, screenY);
+                // Esquerda da central
+                if (spritesArr[1]) rendered |= await this.renderSpriteImage(ctx, spritesArr[1], screenX - this.tileSize, screenY);
+                // Acima da central
+                if (spritesArr[2]) rendered |= await this.renderSpriteImage(ctx, spritesArr[2], screenX, screenY - this.tileSize);
+                // Diagonal (acima e esquerda)
+                if (spritesArr[3]) rendered |= await this.renderSpriteImage(ctx, spritesArr[3], screenX - this.tileSize, screenY - this.tileSize);
+            }
         }
         if (!rendered) this.renderSpritePlaceholder(ctx, screenX, screenY);
 
-        // 2. Renderiza nome acima
-        this.renderName(ctx, wildPokemon, screenX, screenY);
-        // 3. Renderiza barra de HP abaixo do nome
-        this.renderHealthBar(ctx, wildPokemon, screenX, screenY);
+        // 2. Renderiza nome e barra de HP apenas se não estiver morto
+        if (!wildPokemon.isDead) {
+            this.renderName(ctx, wildPokemon, screenX, screenY);
+            this.renderHealthBar(ctx, wildPokemon, screenX, screenY);
+        }
     }
 
     /**
@@ -102,12 +112,19 @@ export class WildPokemonRenderer {
         const spriteKey = String(spriteId);
         let img = this.sprites.get(spriteKey);
         if (!img) {
-            img = await this.loadSprite(spriteKey);
+            // Corrige caminho: se for spriteDead, tira o 'pokemons/'
+            let path = '';
+            if (spriteKey.startsWith('pokemon_dead/')) {
+                path = `assets/sprites/${spriteKey}.png`;
+            } else {
+                path = `assets/sprites/pokemons/${spriteKey}.png`;
+            }
+            img = await this.loadSpriteWithPath(spriteKey, path);
             if (img) {
                 this.sprites.set(spriteKey, img);
-                console.log(`[WildPokemonRenderer] Sprite carregada: assets/sprites/pokemons/${spriteKey}.png`);
+                console.log(`[WildPokemonRenderer] Sprite carregada: ${path}`);
             } else {
-                console.warn(`[WildPokemonRenderer] Falha ao carregar sprite: assets/sprites/pokemons/${spriteKey}.png`);
+                console.warn(`[WildPokemonRenderer] Falha ao carregar sprite: ${path}`);
             }
         }
         if (img && img.complete && img.naturalWidth > 0) {
@@ -115,6 +132,15 @@ export class WildPokemonRenderer {
             return true;
         }
         return false;
+    }
+
+    async loadSpriteWithPath(spriteKey, path) {
+        return new Promise((resolve) => {
+            const img = new window.Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = path;
+        });
     }
 
     loadSprite(spriteId) {

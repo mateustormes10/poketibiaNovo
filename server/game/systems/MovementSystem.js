@@ -67,11 +67,13 @@ export class MovementSystem {
             }
         }
         
-        // Verifica colisão com wild pokémons
+        // Verifica colisão com wild pokémons (ignora corpos mortos)
         if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
             for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
                 if (wildPokemon.id !== excludeId && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
-                    return true;
+                    if (!wildPokemon.isDead) {
+                        return true;
+                    }
                 }
             }
         }

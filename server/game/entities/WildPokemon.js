@@ -18,6 +18,10 @@ export class WildPokemon {
         this.level = data.level || 5;
         this.hp = data.hp;
         this.maxHp = data.maxHp || data.hp;
+        // spriteDead sempre vem do data (PokemonEntities), nunca valor fixo
+        this.spriteDead = data.spriteDead;
+        this.isDead = false;
+        this.deadSince = null;
 
         // Sprites (podem vir do banco ou ser undefined)
         this.sprite_up = data.sprite_up ?? ['black'];
@@ -79,7 +83,10 @@ export class WildPokemon {
         if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
             for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
                 if (wildPokemon.id !== this.id && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
-                    return true;
+                    // Permite passar por cima de corpos mortos
+                    if (!wildPokemon.isDead) {
+                        return true;
+                    }
                 }
             }
         }
@@ -109,10 +116,21 @@ export class WildPokemon {
      * @param {number} currentTime - Tempo atual
      */
     update(players, currentTime) {
-        // Encontra player mais próximo
+        if (this.hp <= 0) {
+            if (!this.isDead) {
+                this.isDead = true;
+                this.deadSince = currentTime;
+            }
+            // Fica morto por 60 segundos
+            if (currentTime - this.deadSince >= 60000) {
+                // Pode ser removido ou respawnado pelo manager (não faz nada aqui)
+            }
+            return; // Não age enquanto morto
+        }
+
+        // ...comportamento normal se vivo...
         let closestPlayer = null;
         let minDistance = Infinity;
-        
         for (const player of players) {
             const distance = this.getDistanceToPlayer(player);
             if (distance < minDistance) {
@@ -120,8 +138,6 @@ export class WildPokemon {
                 closestPlayer = player;
             }
         }
-        
-        // Define estado baseado na distância
         if (minDistance > this.moveRange) {
             this.state = WildPokemonState.IDLE;
         } else if (minDistance <= this.attackRange) {
@@ -129,23 +145,16 @@ export class WildPokemon {
         } else {
             this.state = WildPokemonState.ROAMING;
         }
-        
-        // Executa comportamento
         switch (this.state) {
             case WildPokemonState.IDLE:
-                // Não faz nada
                 break;
-                
             case WildPokemonState.ROAMING:
-                // Movimento aleatório ocasional
                 if (currentTime - this.lastMoveTime >= this.movementSpeed) {
                     this.randomMove();
                     this.lastMoveTime = currentTime;
                 }
                 break;
-                
             case WildPokemonState.ENGAGE:
-                // Aproxima do player
                 if (closestPlayer && currentTime - this.lastMoveTime >= this.movementSpeed) {
                     this.moveTowards(closestPlayer);
                     this.lastMoveTime = currentTime;
@@ -220,8 +229,17 @@ export class WildPokemon {
      * @returns {boolean} true se morreu
      */
     takeDamage(damage) {
+        if (this.hp <= 0) return true;
         this.hp = Math.max(0, this.hp - damage);
         logger.debug(`[WILD] ${this.name} (id=${this.id}) recebeu ${damage} de dano. HP: ${this.hp}/${this.maxHp}`);
+        if (this.hp <= 0) {
+            this.isDead = true;
+            this.deadSince = Date.now();
+            // Força broadcastUpdate imediatamente para mostrar corpo morto
+            if (this.gameWorld && this.gameWorld.wildPokemonManager) {
+                this.gameWorld.wildPokemonManager.broadcastUpdate(this);
+            }
+        }
         return this.hp <= 0;
     }
 
@@ -242,7 +260,9 @@ export class WildPokemon {
             sprite_up: this.sprite_up,
             sprite_down: this.sprite_down,
             sprite_left: this.sprite_left,
-            sprite_right: this.sprite_right
+            sprite_right: this.sprite_right,
+            isDead: this.isDead,
+            spriteDead: this.spriteDead
         };
     }
 }
