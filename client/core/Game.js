@@ -1149,9 +1149,9 @@ export class Game {
         // Declara hud e pokemons antes do uso
         const player = this.gameState.localPlayer;
         const hud = this.renderer.hud;
-        
-        // Navegação na lista de pokémons do player
-        const pokemons = player.pokemons || [];
+
+        // Navegação na lista de pokémons do player (só se player existir)
+        const pokemons = player && player.pokemons ? player.pokemons : [];
 
         // Seleção de pokémon com Enter (tem prioridade sobre chat)
         if (hud && hud.pokemonSelectionActive && pokemons.length > 0) {

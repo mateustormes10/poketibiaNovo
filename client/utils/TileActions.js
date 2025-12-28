@@ -30,24 +30,22 @@ export const TileActions = {
   197: {
     layer: "overlay",
     instances: [
-      { x: 81, y: 25, z: 3, look: () => "Portal para a cidade.", teleportTo: [73, 34, 3] },
-      { x: 81, y: 27, z: 3, look: () => "Portal para a arena 2.", teleportTo: [50, 50, 3] },
-      { x: 81, y: 29, z: 3, look: () => "Portal para a arena 3.", teleportTo: [50, 54, 2] },
-      { x: 81, y: 31, z: 3, look: () => "Portal para a arena 4.", teleportTo: [50, 58, 3] },
-      { x: 81, y: 33, z: 3, look: () => "Portal para a arena 5.", teleportTo: [50, 62, 1] },
+      { x: 81, y: 25, z: 3, look: () => "Portal para a cidade .", teleportTo: [73, 34, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 27, z: 3, look: () => "Portal para a arena 2.", teleportTo: [50, 50, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 29, z: 3, look: () => "Portal para a arena 3.", teleportTo: [50, 54, 2], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 31, z: 3, look: () => "Portal para a arena 4.", teleportTo: [50, 58, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 33, z: 3, look: () => "Portal para a arena 5.", teleportTo: [50, 62, 1], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
     ]
   },
   198: {
     layer: "overlay",
     look: () => "Escadas para cima",
     floorUp: 4,
-    idleAnimation: { frames: [198, 198], interval: 200, range: 15 }
   },
   199: {
     layer: "overlay",
     look: () => "Escadas para baixo",
     floorDown: 3,
-    idleAnimation: { frames: [199, 199], interval: 200, range: 15 }
   },
   50010: {
     layer: "overlay",

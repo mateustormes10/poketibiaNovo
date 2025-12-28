@@ -8,6 +8,7 @@ import { OutfitSelector } from './UI/OutfitSelector.js';
 import { UIManager } from './UI/UIManager.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { resolveTileLayer } from '../utils/resolveTileLayer.js';
+import { TileActions } from '../utils/TileActions.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
@@ -94,6 +95,9 @@ export class Renderer {
         }
 
         
+        // Atualiza player no TileRenderer para animação de tiles
+        this.tileRenderer.setPlayer(player);
+
         // Ordem correta: ground, player, overlay
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
@@ -126,8 +130,18 @@ export class Renderer {
                     const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
                     const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
                     if (overlayIds.length > 0) {
-                        // Renderiza apenas overlay
-                        const overlayTile = { ...tile, spriteIds: overlayIds };
+                        let overlayTile = { ...tile, spriteIds: overlayIds };
+                        // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
+                        // Só faz sentido para portais (197)
+                        if (overlayIds.includes(197)) {
+                            const portalInstances = TileActions?.[197]?.instances;
+                            if (portalInstances) {
+                                const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                if (portal && portal.idleAnimation) {
+                                    overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+                                }
+                            }
+                        }
                         this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
                     }
                 }

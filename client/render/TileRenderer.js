@@ -12,6 +12,8 @@ export class TileRenderer {
         this.tileSize = tileSize;
         this.tileSet = new TileSet();
         this.debugMode = false;
+        // Controle de animação de tiles
+        this.animatedTiles = new Map(); // key: x,y,z -> { frameIndex, lastUpdate }
     }
     
     /**
@@ -87,8 +89,44 @@ export class TileRenderer {
      * Renderiza um tile em coordenadas de tela específicas
      */
     renderTileAt(ctx, tile, screenX, screenY) {
-        // Desenha todas as sprites (layers) do tile - SUPORTA STACKED SPRITES
-        if (tile.spriteIds && tile.spriteIds.length > 0) {
+
+        // --- ANIMAÇÃO DE TILE COM idleAnimation ---
+        // Verifica se tile tem idleAnimation (ex: portais)
+        let animatedSpriteId = null;
+        let usedIdleAnimation = false;
+        if (tile && tile.idleAnimation && Array.isArray(tile.idleAnimation.frames)) {
+            // Checa range do player (se fornecido)
+            let inRange = true;
+            if (typeof tile.idleAnimation.range === 'number' && this.player) {
+                const dx = tile.x - this.player.x;
+                const dy = tile.y - this.player.y;
+                const dz = (tile.z ?? 0) - (this.player.z ?? 0);
+                inRange = (dz === 0 && Math.sqrt(dx*dx + dy*dy) <= tile.idleAnimation.range);
+            }
+            if (inRange) {
+                // Chave única para o tile
+                const key = `${tile.x},${tile.y},${tile.z ?? 0}`;
+                let anim = this.animatedTiles.get(key);
+                const now = performance.now();
+                if (!anim) {
+                    anim = { frameIndex: 0, lastUpdate: now };
+                } else if (now - anim.lastUpdate >= tile.idleAnimation.interval) {
+                    anim.frameIndex = (anim.frameIndex + 1) % tile.idleAnimation.frames.length;
+                    anim.lastUpdate = now;
+                }
+                this.animatedTiles.set(key, anim);
+                animatedSpriteId = tile.idleAnimation.frames[anim.frameIndex];
+                usedIdleAnimation = true;
+            }
+        }
+
+        if (usedIdleAnimation && animatedSpriteId != null) {
+
+            console.log(`[TileAnim] (${tile.x},${tile.y},${tile.z ?? 0}) frameIndex=${this.animatedTiles.get(`${tile.x},${tile.y},${tile.z ?? 0}`)?.frameIndex} spriteId=${animatedSpriteId}`);
+
+            // Renderiza apenas o frame atual da animação
+            this.tileSet.drawTile(ctx, animatedSpriteId, screenX, screenY, this.tileSize);
+        } else if (tile.spriteIds && tile.spriteIds.length > 0) {
             // Filtra valores 'up' e 'down' (string) e só permite números válidos
             tile.spriteIds.filter(id => typeof id === 'number' && !isNaN(id)).forEach(spriteId => {
                 this.tileSet.drawTile(ctx, spriteId, screenX, screenY, this.tileSize);
@@ -186,16 +224,13 @@ export class TileRenderer {
     renderGrid(ctx, map, camera) {
         ctx.save();
         camera.apply(ctx);
-        
         const viewport = camera.getViewport();
         const startX = Math.floor(viewport.x / this.tileSize) * this.tileSize;
         const startY = Math.floor(viewport.y / this.tileSize) * this.tileSize;
         const endX = viewport.x + viewport.width;
         const endY = viewport.y + viewport.height;
-        
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = 1;
-        
         // Linhas verticais
         for (let x = startX; x <= endX; x += this.tileSize) {
             ctx.beginPath();
@@ -203,7 +238,6 @@ export class TileRenderer {
             ctx.lineTo(x, endY);
             ctx.stroke();
         }
-        
         // Linhas horizontais
         for (let y = startY; y <= endY; y += this.tileSize) {
             ctx.beginPath();
@@ -211,8 +245,14 @@ export class TileRenderer {
             ctx.lineTo(endX, y);
             ctx.stroke();
         }
-        
         ctx.restore();
+    }
+
+    /**
+     * Define o player para cálculo de range de animação
+     */
+    setPlayer(player) {
+        this.player = player;
     }
     
     /**
