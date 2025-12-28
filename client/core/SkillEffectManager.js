@@ -59,11 +59,14 @@ export class SkillEffectManager {
                 // Centraliza a sprite no tile
                 const px = this.camera.worldToScreenX(tile.x);
                 const py = this.camera.worldToScreenY(tile.y);
-                const centerX = px + (this.spriteRenderer.tileSize / 2);
-                const centerY = py + (this.spriteRenderer.tileSize / 2);
-                const drawX = centerX - (this.spriteRenderer.tileSize / 2);
+                // Permite ajuste de offset para sprites maiores/menores
+                const offsetX = 0; // ajuste fino se necessário
+                const offsetY = 0;
+                const centerX = px + (this.spriteRenderer.tileSize / 2) + offsetX;
+                const centerY = py + (this.spriteRenderer.tileSize / 2) + offsetY;
+                const drawX = centerX - (this.spriteRenderer.tileSize / 2) + 30;
                 const drawY = centerY - (this.spriteRenderer.tileSize / 2);
-                console.log(`[SkillEffectManager] Renderizando skill '${anim.skillName}' com spriteId ${spriteId} em (${drawX},${drawY})`);
+                //console.log(`[SkillEffectManager] Renderizando skill '${anim.skillName}' com spriteId ${spriteId} em (${drawX},${drawY})`);
                 this.spriteRenderer.renderSpriteById(ctx, spriteId, drawX, drawY);
             }
         }

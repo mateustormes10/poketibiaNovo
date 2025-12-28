@@ -32,5 +32,22 @@ export function setupWildPokemonHandler(gameWorld) {
 
             logger.debug(`[WILD] Enviando ${wildPokemons.length} Pokémon selvagens para ${client.player.name}`);
         }
+        ,
+        /**
+         * Player informa dano em Pokémon selvagem
+         */
+        'wild_pokemon_damage': (client, data) => {
+            if (!client.player) return;
+            const { wildPokemonId, damage, skillName, attackerId } = data || {};
+            if (!wildPokemonId || !damage) return;
+            const wild = gameWorld.wildPokemonManager.wildPokemons.get(wildPokemonId);
+            if (!wild) return;
+            const morreu = wild.takeDamage(damage);
+            logger.info(`[WILD] ${client.player.name} causou ${damage} de dano ao Pokémon selvagem ${wild.name} (id=${wild.id}) com ${skillName || 'ataque'}`);
+            // Broadcast update para todos os players
+            gameWorld.wildPokemonManager.broadcastUpdate(wild);
+            // (Opcional) Se morreu, pode fazer despawn ou lógica extra
+            // if (morreu) gameWorld.wildPokemonManager.despawnPokemon(wild.id);
+        }
     };
 }

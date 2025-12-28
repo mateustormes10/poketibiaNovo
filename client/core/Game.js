@@ -20,6 +20,7 @@ import { GmCommandsUI } from '../ui/GmCommandsUI.js';
 import { MapUI } from '../render/UI/MapUI.js';
 import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { SkillEffectManager } from './SkillEffectManager.js';
+import { getTypeEffectiveness } from '../../shared/TypeEffectiveness.js';
 
 export class Game {
     _createMainMenu() {
@@ -335,6 +336,8 @@ export class Game {
         // Método central para uso de skill com cooldown
     useSkillWithCooldown(skillName, skill, player) {
         if (!this._skillCooldowns) this._skillCooldowns = {};
+        // Log detalhado para debug de skills
+        console.log('[DEBUG] useSkillWithCooldown', { skillName, skill, fullSkill: (window.SkillDatabase ? window.SkillDatabase[skillName] : (typeof SkillDatabase !== 'undefined' ? SkillDatabase[skillName] : skill)) });
         const now = Date.now();
         // Usa SkillDatabase já importado
         const fullSkill = window.SkillDatabase ? window.SkillDatabase[skillName] : (typeof SkillDatabase !== 'undefined' ? SkillDatabase[skillName] : skill);
@@ -351,6 +354,46 @@ export class Game {
             tile: { x: player.x, y: player.y, z: player.z }
         });
         this._skillCooldowns[key] = now + cd;
+
+        // --- DANO EM POKÉMONS SELVAGENS PRÓXIMOS ---
+        // Só executa se for skill de ataque
+        if (fullSkill && fullSkill.type === 'damage') {
+            // Determina área de efeito (single, 3x3, 5x5, etc)
+            let areaRadius = 0;
+            const areaRaw = fullSkill.targetArea;
+            if (areaRaw === 'single') areaRadius = 0;
+            else if (areaRaw === '3x3') areaRadius = 1;
+            else if (areaRaw === '5x5') areaRadius = 2;
+            else {
+                // fallback: single
+                areaRadius = 0;
+            }
+            console.log(`[DEBUG] Skill '${skillName}' targetArea='${areaRaw}' => areaRadius=${areaRadius}`);
+            const wilds = this.wildPokemonManager.getAll();
+            for (const wild of wilds.values()) {
+                const dx = wild.x - player.x;
+                const dy = wild.y - player.y;
+                const dz = wild.z - player.z;
+                const inArea = (wild.z === player.z && Math.abs(dx) <= areaRadius && Math.abs(dy) <= areaRadius);
+                console.log(`[DEBUG] Wild ${wild.name} pos=(${wild.x},${wild.y},${wild.z}) dx=${dx} dy=${dy} dz=${dz} inArea=${inArea}`);
+                if (inArea) {
+                    const wildType = wild.element || wild.type || wild.pokemonType || 'normal';
+                    const atkType = fullSkill.element || 'normal';
+                    let multiplier = getTypeEffectiveness(atkType, wildType);
+                    let finalDmg = Math.round(fullSkill.power * multiplier);
+                    // Envia dano ao servidor
+                    this.wsClient.send('wild_pokemon_damage', {
+                        wildPokemonId: wild.id,
+                        damage: finalDmg,
+                        skillName,
+                        attackerId: player.id
+                    });
+                    // (Opcional: pode remover a linha abaixo se quiser que só o servidor controle o HP)
+                    // wild.hp = Math.max(0, (wild.hp || 100) - finalDmg);
+                    console.log(`[DANO] ${wild.name} (${wildType}) recebeu ${finalDmg} de dano de ${atkType} (x${multiplier}) [ENVIADO AO SERVIDOR]`);
+                }
+            }
+        }
         return true;
     }
 

@@ -162,15 +162,20 @@ export class SpriteRenderer {
     }
     
     renderPlayer(player, screenPos) {
-        // Obtém as 3 sprites do frame atual
-        const sprites = getPlayerSprites(
-            player.sprite || 'default',
-            player.direction || 'down',
-            player.animationFrame || 0
-        );
+        let sprites;
+        if (Array.isArray(player.sprite)) {
+            // Se for array, renderiza todos os sprites do array (transformação pokémon)
+            sprites = player.sprite;
+        } else {
+            // Se for string, usa outfit normal
+            sprites = getPlayerSprites(
+                player.sprite || 'default',
+                player.direction || 'down',
+                player.animationFrame || 0
+            );
+        }
         let rendered = false;
-        
-        // Renderiza cada camada: [central, esquerda, acima]
+        // Renderiza cada camada: [central, esquerda, acima] ou todos do array
         for (let i = 0; i < sprites.length; i++) {
             const spriteId = sprites[i];
             if (spriteId === 0) continue;
@@ -178,9 +183,16 @@ export class SpriteRenderer {
             if (spriteImg && spriteImg.complete && spriteImg.naturalWidth > 0) {
                 let posX = screenPos.x;
                 let posY = screenPos.y;
+                // Central (0): sem offset
+                // Esquerda (1): -tileSize X
+                // Cima (2): -tileSize Y
+                // Canto sup. esquerdo (3): -tileSize X, -tileSize Y
                 if (i === 1) {
                     posX -= this.tileSize;
                 } else if (i === 2) {
+                    posY -= this.tileSize;
+                } else if (i === 3) {
+                    posX -= this.tileSize;
                     posY -= this.tileSize;
                 }
                 this.ctx.drawImage(
@@ -205,7 +217,6 @@ export class SpriteRenderer {
                 );
             }
         }
-        
         // Se nenhuma sprite foi renderizada, mostra placeholder
         if (!rendered) {
             this.renderPlaceholder(player, screenPos);

@@ -35,10 +35,15 @@ export class WildPokemonManager {
             'Charmander',
             'Venusaur'
         ];
+        let fixedId = 1;
         for (const name of initialPokemonNames) {
             const data = PokemonEntities[name];
             if (data) {
-                this.spawnPokemon({ ...data }, false);
+                // Só cria se não existir
+                if (!this.wildPokemons.has(fixedId)) {
+                    this.spawnPokemon({ ...data, id: fixedId }, false);
+                }
+                fixedId++;
             } else {
                 logger.warn(`[WILD] Dados não encontrados para o Pokémon: ${name}`);
             }
@@ -53,7 +58,15 @@ export class WildPokemonManager {
      * @returns {WildPokemon}
      */
     spawnPokemon(data, broadcast = true) {
-        const id = this.nextId++;
+        console.log('[DEBUG] spawnPokemon chamada:', { id: data.id, name: data.name, x: data.x, y: data.y, z: data.z, hp: data.hp });
+        // Se vier ID fixo, usa ele, senão gera novo
+        const id = data.id ?? this.nextId++;
+        // Se já existe um Pokémon com esse ID, nunca sobrescreve HP ou estado!
+        if (this.wildPokemons.has(id)) {
+            const existing = this.wildPokemons.get(id);
+            // Protege para nunca sobrescrever HP, posição, etc.
+            return existing;
+        }
         // Parse dos campos de sprite se vierem como string JSON
         const parseSprite = (val) => {
             if (typeof val === 'string') {
@@ -66,24 +79,24 @@ export class WildPokemonManager {
             return val ?? ['black'];
         };
         const wildPokemon = new WildPokemon({
-            id,
             ...data,
+            id,
             sprite_up: parseSprite(data.sprite_up),
             sprite_down: parseSprite(data.sprite_down),
             sprite_left: parseSprite(data.sprite_left),
             sprite_right: parseSprite(data.sprite_right)
         });
-        
+
         // Seta referência ao GameWorld para verificação de colisão
         wildPokemon.gameWorld = this.gameWorld;
-        
+
         this.wildPokemons.set(id, wildPokemon);
-        
+
         // Notifica todos os players próximos (apenas se broadcast ativo e servidor disponível)
         if (broadcast && this.gameWorld.server) {
             this.broadcastSpawn(wildPokemon);
         }
-        
+
         return wildPokemon;
     }
 

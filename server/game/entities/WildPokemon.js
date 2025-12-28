@@ -12,6 +12,7 @@ const logger = new Logger('WildPokemon');
 
 export class WildPokemon {
     constructor(data) {
+        console.log('[DEBUG] Criando WildPokemon:', { id: data.id, name: data.name, x: data.x, y: data.y, z: data.z, hp: data.hp });
         this.id = data.id;
         this.name = data.name;
         this.level = data.level || 5;
