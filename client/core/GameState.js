@@ -18,20 +18,32 @@ export class GameState {
         if (serverState.tick) {
             this.tick = serverState.tick;
         }
-        
-        // Atualiza mapa
+
+        // Atualiza mapa principal
         if (serverState.map) {
             this.map.updateFromServer(serverState.map);
         }
-        
+
+        // Salva mapUp/mapDown recebidos do servidor para uso no Renderer
+        if (serverState.mapUp) {
+            this.mapUp = serverState.mapUp;
+        } else {
+            this.mapUp = null;
+        }
+        if (serverState.mapDown) {
+            this.mapDown = serverState.mapDown;
+        } else {
+            this.mapDown = null;
+        }
+
         if (serverState.players) {
             this.updatePlayers(serverState.players);
         }
-        
+
         if (serverState.npcs) {
             this.updateNpcs(serverState.npcs);
         }
-        
+
         if (serverState.monsters) {
             this.updateMonsters(serverState.monsters);
         }

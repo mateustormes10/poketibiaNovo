@@ -695,6 +695,14 @@ export class Game {
         });
         
         this.wsClient.on('gameState', (data) => {
+            // Log para verificar chegada dos novos mapas
+            console.log('[Game] gameState recebido:', data);
+            if (data.mapUp) {
+                console.log('[Game] mapUp recebido:', data.mapUp);
+            }
+            if (data.mapDown) {
+                console.log('[Game] mapDown recebido:', data.mapDown);
+            }
             this.gameState.update(data);
             // Libera flag após receber resposta
             if (this.isRequestingMap) {

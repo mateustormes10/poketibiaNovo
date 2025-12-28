@@ -1,3 +1,4 @@
+
 const canvas = document.getElementById("mapCanvas");
 const ctx = canvas.getContext("2d");
 const spriteListDiv = document.getElementById("sprite-list");
@@ -13,7 +14,9 @@ const floorDisplay = document.getElementById("floorDisplay");
 
 const floorUpTileBtn = document.getElementById("floorUpTileBtn");
 const floorDownTileBtn = document.getElementById("floorDownTileBtn");
+
 const floorValueInput = document.getElementById("floorValueInput");
+const typeSelect = document.getElementById("typeSelect");
 
 
 
@@ -71,7 +74,20 @@ floorDownBtn.addEventListener("click", () => {
         render();
     }
 });
-
+// Botão TYPE: aplica o valor do select typeSelect ao tile selecionado
+document.getElementById("addTypeBtn").addEventListener("click", () => {
+    const tile = mapData[cursorY][cursorX];
+    tile.type = typeSelect.value || undefined;
+    render();
+    // Atualiza display da célula
+    var arr = [tile.ground.join(",")];
+    if (tile.up) { arr.push("UP(" + tile.up + ")"); }
+    if (tile.down) { arr.push("DOWN(" + tile.down + ")"); }
+    arr.push(tile.walkable ? "S" : "N");
+    if (tile.spawn) { arr.push("SPAWN(" + tile.spawn + ")"); }
+    if (tile.type) { arr.push("TYPE(" + tile.type.toUpperCase() + ")"); }
+    tileContentSpan.textContent = "[" + arr.join(",") + "]";
+});
 
 // Removido: let sprites = new Map();
 // Carrega o índice de sprites para mapear número -> pasta
@@ -287,6 +303,10 @@ canvas.addEventListener("click", async (e) => {
 
             ntile.walkable = walkableCheckbox.checked;
             ntile.spawn = spawnCheckbox.checked && spawnNameInput.value.trim() !== "" ? spawnNameInput.value.trim() : null;
+            // Só aplica o TYPE se o brush for maior que 1 (pincel), ou se o usuário estiver desenhando
+            if (size > 1) {
+                ntile.type = typeSelect.value || undefined;
+            }
 
         }
     }
@@ -295,6 +315,7 @@ canvas.addEventListener("click", async (e) => {
     undoStack.push(undoBlock);
 
     cursorX = x; cursorY = y;
+
     tileXSpan.textContent = x;
     tileYSpan.textContent = y;
     // Mostra UP/DOWN no conteúdo
@@ -303,7 +324,14 @@ canvas.addEventListener("click", async (e) => {
     if (mapData[y][x].down !== undefined) arr.push(`DOWN(${mapData[y][x].down})`);
     arr.push(mapData[y][x].walkable ? "S" : "N");
     if (mapData[y][x].spawn) arr.push(`SPAWN(${mapData[y][x].spawn})`);
+    if (mapData[y][x].type) arr.push(`TYPE(${mapData[y][x].type.toUpperCase()})`);
     tileContentSpan.textContent = `[${arr.join(",")}]`;
+    // Atualiza o select TYPE
+    if (mapData[y][x].type) {
+        typeSelect.value = mapData[y][x].type;
+    } else {
+        typeSelect.value = "";
+    }
 
     render();
 });
@@ -380,6 +408,8 @@ function parseCell(cell) {
         else if (item.startsWith("DOWN(") && item.endsWith(")")) tile.down = parseInt(item.slice(5, -1));
         else if (item.startsWith("SPAWN(") && item.endsWith(")")) 
             tile.entities.push({ type: "pokemon", name: item.slice(6, -1) });
+        else if (item.startsWith("TYPE(") && item.endsWith(")"))
+            tile.type = item.slice(5, -1).toLowerCase();
     }
 
     // Para compatibilidade, se houver SPAWN, também popular tile.spawn
@@ -496,6 +526,7 @@ function render() {
             });
 
 
+
             // OVERLAY WALKABLE
             if (!tile.walkable) {
                 ctx.fillStyle = "rgba(255,0,0,0.3)";
@@ -507,7 +538,6 @@ function render() {
                 ctx.fillStyle = "rgba(0,255,0,0.3)";
                 ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
             }
-
 
             // OVERLAY UP/DOWN + desenha seta e número
             if (tile.up !== undefined || tile.down !== undefined) {
@@ -537,6 +567,17 @@ function render() {
                             vy*tileSize + tileSize*0.67
                         );
                         ctx.restore();
+                        // OVERLAY TYPE (após up/down)
+                        if (tile.type === "house") {
+                            ctx.fillStyle = "rgba(0, 0, 128, 0.35)";
+                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                        } else if (tile.type === "construcao") {
+                            ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
+                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                        } else if (tile.type === "floor") {
+                            ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
+                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                        }
                         continue;
                     } else {
                         text = `↓${tile.down}`;
@@ -545,6 +586,18 @@ function render() {
                 ctx.fillStyle = color;
                 ctx.fillText(text, vx*tileSize + tileSize/2, vy*tileSize + tileSize/2);
                 ctx.restore();
+            }
+
+            // OVERLAY TYPE (após overlays principais)
+            if (tile.type === "house") {
+                ctx.fillStyle = "rgba(0, 0, 128, 0.55)"; // azul escuro mais visível
+                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+            } else if (tile.type === "construcao") {
+                ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
+                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+            } else if (tile.type === "floor") {
+                ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
+                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
             }
 
             ctx.strokeStyle = "gray";
@@ -605,6 +658,8 @@ canvas.addEventListener("click", (e) => {
     }
     tile.walkable = walkableCheckbox.checked;
     tile.spawn = spawnCheckbox.checked ? spawnNameInput.value.trim() || "POKEMON" : null;
+    // Salva o tipo selecionado
+    tile.type = typeSelect.value || undefined;
 
     cursorX = x; cursorY = y;
     // Atualiza display da célula
@@ -739,11 +794,12 @@ saveBtn.addEventListener("click", () => {
                 const w = t.walkable ? "S" : "N";
                 const sp = t.spawn ? `SPAWN(${t.spawn})` : "";
 
-                // Ordem correta: [ground,UP...,DOWN...,S/N,SPAWN]
+                // Ordem correta: [ground,UP...,DOWN...,S/N,SPAWN,TYPE]
                 let arr = [s];
                 if (vertical) arr.push(vertical);
                 arr.push(w);
                 if (sp) arr.push(sp);
+                if (t.type) arr.push(`TYPE(${t.type.toUpperCase()})`);
                 txt += `[${arr.join(",")}] `;
             }
             txt += "\n";

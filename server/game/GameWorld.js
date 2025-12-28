@@ -79,6 +79,17 @@ export class GameWorld {
             player.pokemons = [];
         }
     }
+
+        /**
+     * Verifica se há um tile de telhado/casa acima do player (z+1)
+     * Considera type: 'roof' ou 'house' no tile
+     */
+    isPlayerUnderRoof(player) {
+        const tileAbove = this.mapManager.getTile(player.x, player.y, player.z + 1);
+        if (!tileAbove) return false;
+        // Pode ajustar para outros tipos se necessário
+        return tileAbove.type === 'roof' || tileAbove.type === 'house';
+    }
     
     async savePlayer(player) {
         if (!player.dbId) {
@@ -284,11 +295,23 @@ export class GameWorld {
             player.z, 
             visionRange
         );
+        let maxMapUp = 5;
+        let minMapDown = 1;
         
         // Obtém tiles visíveis (28 tiles largura x 15 tiles altura)
         const mapData = this.visionSystem.getVisibleTiles(player, 32, 17);
-        
-        // Serializa players e marca o player local
+        // Só envia mapUp se o player NÃO estiver sob roof/house/construcao
+        let mapDataUp = null;
+        let mapDataDown = null;
+        const isUnderRoof = this.isPlayerUnderRoof(player);
+        if (!isUnderRoof && player.z + 1 < maxMapUp) {
+            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z + 1, this.mapManager.mapLoader);
+            mapDataUp = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z + 1 }, 32, 17);
+        }
+        if (player.z - 1 > minMapDown) {
+            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z - 1, this.mapManager.mapLoader);
+            mapDataDown = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z - 1 }, 32, 17);
+        }
         const serializedPlayers = playersInView.map(p => {
             const data = p.serialize();
             if (p.id === player.id) {
@@ -317,7 +340,9 @@ export class GameWorld {
             players: serializedPlayers,
             npcs: serializedNpcs,
             monsters: [], // Implementar visão de monstros
-            map: mapData // Dados de mapa com tiles
+            map: mapData, // Dados de mapa com tiles
+            mapUp: mapDataUp,
+            mapDown: mapDataDown
         };
     }
     

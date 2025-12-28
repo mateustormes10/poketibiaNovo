@@ -130,15 +130,28 @@ export class MapLoader {
         let maxY = lines.length;
 
         lines.forEach((line, y) => {
-            // Parse tiles no formato [ID1,ID2,...,modificador]
+            // Parse tiles no formato [ID1,ID2,...,modificador,TYPE(...)]
             const tileMatches = line.matchAll(/\[([^\]]+)\]/g);
             let x = 0;
 
             for (const match of tileMatches) {
                 const parts = match[1].split(',');
-                const modifier = parts[parts.length - 1]; // Último elemento (S ou N)
+                let modifier = null;
+                let type = null;
+                // Procura por TYPE(...)
+                for (let i = parts.length - 1; i >= 0; i--) {
+                    const part = parts[i].trim();
+                    const typeMatch = part.match(/^TYPE\(([^)]+)\)$/i);
+                    if (typeMatch) {
+                        type = typeMatch[1].toLowerCase();
+                        parts.splice(i, 1);
+                    } else if (modifier === null && (part === 'S' || part === 'N')) {
+                        modifier = part;
+                        parts.splice(i, 1);
+                    }
+                }
                 // Mantém UP(4)/DOWN(3) como string, outros como int
-                const spriteIds = parts.slice(0, -1).map(id => {
+                const spriteIds = parts.map(id => {
                     if (/UP\(\d+\)/.test(id) || /DOWN\(\d+\)/.test(id)) {
                         return id;
                     }
@@ -154,7 +167,7 @@ export class MapLoader {
                     z,
                     localX: x,
                     localY: y,
-                    type: this.getTileTypeFromId(mainSpriteId),
+                    type: type || this.getTileTypeFromId(mainSpriteId),
                     walkable: modifier === 'S', // S = Sim, N = Não
                     spriteId: mainSpriteId,
                     spriteIds: spriteIds, // Array com todas as sprites (layers)

@@ -56,6 +56,15 @@ export class Renderer {
     }
     
     render(gameState) {
+        // (Bloco antigo de renderização do andar de baixo removido para evitar confusão)
+                // DEBUG: Loga informações do mapUp recebido
+                if (gameState.mapUp) {
+                    console.log('[DEBUG] mapUp recebido:', gameState.mapUp);
+                    if (gameState.mapUp.tiles) {
+                        const tilesZUp = gameState.mapUp.tiles.filter(t => t.z === (gameState.map ? gameState.map.viewport.z + 1 : undefined));
+                        console.log(`[DEBUG] mapUp.tiles.length = ${gameState.mapUp.tiles.length}, tiles z+1 =`, tilesZUp);
+                    }
+                }
         // Limpa canvas
         this.clear();
 
@@ -99,24 +108,27 @@ export class Renderer {
         this.tileRenderer.setPlayer(player);
 
         // Ordem correta: ground, player, overlay
+        // 1. Renderiza ground e entidades do andar atual
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 const tile = map.getTile(x, y, currentZ);
                 const screenX = (x - startX) * tileSize;
                 const screenY = (y - startY) * tileSize;
 
-                // 1. Renderiza ground (sempre)
+                // Renderiza ground do andar atual com opacidade total
                 if (tile) {
                     const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
                     const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay');
                     if (groundIds.length > 0) {
-                        // Renderiza apenas ground
                         const groundTile = { ...tile, spriteIds: groundIds };
+                        this.ctx.save();
+                        this.ctx.globalAlpha = 1.0;
                         this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
+                        this.ctx.restore();
                     }
                 }
 
-                // 2. Renderiza entidade (player, NPC, etc)
+                // Renderiza entidade (player, NPC, etc)
                 let entity = null;
                 if (entitiesByY[y]) {
                     entity = entitiesByY[y].find(e => e.x === x);
@@ -124,15 +136,82 @@ export class Renderer {
                         this.spriteRenderer.renderEntity(entity, startX, startY);
                     }
                 }
+            }
+        }
 
-                // 3. Renderiza overlay (sempre por cima do player)
+        // Agora sim, renderiza o overlay do andar debaixo (mapDown) por cima do ground
+        // Renderiza overlay do andar debaixo (mapDown) SEM opacidade
+        if (gameState.mapDown && gameState.localPlayer) {
+            const player = gameState.localPlayer;
+            const mapDown = new gameState.map.constructor();
+            mapDown.updateFromServer(gameState.mapDown);
+            // Se o player está no roof (z=4), renderiza o andar de baixo com opacidade
+            if (player.z === 4) {
+                for (let y = startY; y <= endY; y++) {
+                    for (let x = startX; x <= endX; x++) {
+                        const tileDown = mapDown.getTile(x, y, currentZ - 1);
+                        if (tileDown) {
+                            const spriteIds = tileDown.spriteIds || (tileDown.spriteId ? [tileDown.spriteId] : []);
+                            if (spriteIds.length > 0) {
+                                let overlayTile = { ...tileDown, spriteIds };
+                                this.ctx.save();
+                                this.ctx.globalAlpha = 0.15;
+                                this.tileRenderer.renderTileAt(this.ctx, overlayTile, (x - startX) * tileSize, (y - startY) * tileSize);
+                                this.ctx.restore();
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Se não está no roof, não renderiza overlay do andar de baixo
+            }
+        }
+
+        // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
+        if (gameState.mapUp && gameState.localPlayer) {
+            // Só renderiza se o player NÃO estiver sob roof/house/construcao
+            const player = gameState.localPlayer;
+            const tileAbove = map.getTile(player.x, player.y, player.z + 1);
+            const isUnderRoof = tileAbove && (tileAbove.type === 'roof' || tileAbove.type === 'house' || tileAbove.type === 'construcao');
+            if (!isUnderRoof) {
+                // Se o player está no z=3, renderiza o andar superior com opacidade
+                const player = gameState.localPlayer;
+                const mapUp = new gameState.map.constructor();
+                mapUp.updateFromServer(gameState.mapUp);
+                if (player.z === 3) {
+                    for (let y = startY; y <= endY; y++) {
+                        for (let x = startX; x <= endX; x++) {
+                            const tileUp = mapUp.getTile(x, y, currentZ + 1);
+                            if (tileUp) {
+                                const spriteIds = tileUp.spriteIds || (tileUp.spriteId ? [tileUp.spriteId] : []);
+                                if (spriteIds.length > 0) {
+                                    let overlayTile = { ...tileUp, spriteIds };
+                                    this.ctx.save();
+                                    this.ctx.globalAlpha = 0.3;
+                                    this.tileRenderer.renderTileAt(this.ctx, overlayTile, (x - startX) * tileSize, (y - startY) * tileSize);
+                                    this.ctx.restore();
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Se não está no z=3, não renderiza overlay do andar superior
+                }
+            }
+        }
+
+        // 3. Renderiza overlay do andar atual (sempre por cima do player)
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
+                const tile = map.getTile(x, y, currentZ);
+                const screenX = (x - startX) * tileSize;
+                const screenY = (y - startY) * tileSize;
                 if (tile) {
                     const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
                     const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
                     if (overlayIds.length > 0) {
                         let overlayTile = { ...tile, spriteIds: overlayIds };
                         // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
-                        // Só faz sentido para portais (197)
                         if (overlayIds.includes(197)) {
                             const portalInstances = TileActions?.[197]?.instances;
                             if (portalInstances) {
@@ -142,7 +221,11 @@ export class Renderer {
                                 }
                             }
                         }
+                        // Todos overlays do andar atual SEM opacidade
+                        this.ctx.save();
+                        this.ctx.globalAlpha = 1.0;
                         this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                        this.ctx.restore();
                     }
                 }
             }
