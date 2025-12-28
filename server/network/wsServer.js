@@ -1,7 +1,9 @@
 import { WebSocketServer } from 'ws';
 import { WsClient } from './wsClient.js';
 import { MessageRouter } from './messageRouter.js';
+
 import { Logger } from '../utils/Logger.js';
+import { PlayerRepository } from '../persistence/PlayerRepository.js';
 
 const logger = new Logger('WsServer');
 
@@ -60,21 +62,35 @@ export class WsServer {
         }
     }
     
-    handleDisconnect(client) {
+    async handleDisconnect(client) {
         logger.info(`Client disconnected: ${client.id}`);
-        
         // Salva player antes de remover do mundo
         if (client.player) {
+            // Se o player está transformado em Pokémon, busca o outfit original do banco
+            if (Array.isArray(client.player.sprite)) {
+                try {
+                    // PlayerRepository já existe em gameWorld
+                    const repo = this.gameWorld.playerRepository;
+                    const dbPlayer = await repo.findById(client.player.dbId || client.player.id);
+                    if (dbPlayer && dbPlayer.lookaddons) {
+                        client.player.sprite = dbPlayer.lookaddons;
+                    } else {
+                        client.player.sprite = 'default';
+                    }
+                } catch (e) {
+                    logger.error('Erro ao restaurar outfit original do player:', e);
+                    client.player.sprite = 'default';
+                }
+            }
             logger.info(`Saving player ${client.player.name} before disconnect...`);
-            this.gameWorld.savePlayer(client.player).then(() => {
-                logger.info(`Player ${client.player.name} saved successfully`);
-            }).catch(error => {
-                logger.error(`Error saving player ${client.player.name}:`, error);
-            });
-            
+            await this.gameWorld.savePlayer(client.player)
+                .then(() => {
+                    logger.info(`Player ${client.player.name} saved successfully`);
+                }).catch(error => {
+                    logger.error(`Error saving player ${client.player.name}:`, error);
+                });
             this.gameWorld.removePlayer(client.player.id);
         }
-        
         this.clients.delete(client.id);
     }
     

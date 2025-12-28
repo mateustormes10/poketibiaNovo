@@ -755,6 +755,10 @@ export class Game {
         this.wsClient.on('outfit_changed', (data) => {
             if (data.success && this.gameState.localPlayer) {
                 this.gameState.localPlayer.sprite = data.lookaddons;
+                // Sempre que trocar outfit, atualiza o _lastHumanSprite se não estiver transformado em pokémon
+                if (!this.gameState.localPlayer.pokemonName) {
+                    this.gameState.localPlayer._lastHumanSprite = data.lookaddons;
+                }
                 this.renderer.chatBox.addMessage('System', `Aparência alterada para: ${data.lookaddons}`, 'system');
             } else {
                 console.warn('[Game] Falha ao trocar outfit:', data.message);

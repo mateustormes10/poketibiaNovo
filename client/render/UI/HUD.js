@@ -96,11 +96,21 @@ export class HUD {
                 mouseY >= bound.y && mouseY <= bound.y + bound.height) {
                 if (bound.isReturnPlayer) {
                     // Voltar a ser player
-                    if (wsClient) wsClient.send('request_transform_pokemon', { pokemonName: null });
+                    if (wsClient && player) {
+                        // Envia a sprite anterior (antes de virar pokémon)
+                        wsClient.send('request_transform_pokemon', {
+                            pokemonName: null,
+                            lastSprite: player._lastHumanSprite || player.sprite
+                        });
+                    }
                     return null;
                 }
                 // Ao clicar, solicita ao servidor a transformação do player nesse pokémon
                 if (player && wsClient && bound.pokemon && bound.pokemon.name) {
+                    // Salva a sprite atual antes de transformar
+                    if (!player._lastHumanSprite && !player.pokemonName) {
+                        player._lastHumanSprite = player.sprite;
+                    }
                     wsClient.send('request_transform_pokemon', { pokemonName: bound.pokemon.name });
                 }
                 return bound.pokemon;

@@ -55,9 +55,14 @@ export class MessageRouter {
             if (!data.pokemonName) {
                 // Voltar a ser player normal
                 player.pokemonName = null;
-                player.sprite = 'default';
+                // Usa a sprite anterior enviada pelo cliente, se existir
+                if (data.lastSprite) {
+                    player.sprite = data.lastSprite;
+                } else {
+                    player.sprite = 'default';
+                }
                 player.skills = [];
-                client.send('player_outfit_update', { playerId: player.id, lookaddons: 'default' });
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
                 return;

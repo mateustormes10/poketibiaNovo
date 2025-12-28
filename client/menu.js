@@ -9,8 +9,10 @@
  * - Inicialização do Game (authoritative client)
  */
 
+
 import { Game } from "./core/Game.js";
 import { GameConstants } from "../shared/constants/GameConstants.js";
+import { saveCredentials, getCredentials } from "./userCredentials.js";
 
 const canvas = document.getElementById("gameCanvas");
 
@@ -109,9 +111,36 @@ function initLoginFields() {
     // Inputs centralizados dentro do box
     const inputW = 240;
     const inputX = boxX + (boxW - inputW) / 2;
+    // Recupera credenciais salvas
+    let creds = { username: '', password: '' };
+    try {
+        creds = getCredentials() || creds;
+    } catch (e) {}
     createInputField(inputX, boxY + 150, "Username");
     createInputField(inputX, boxY + 200, "Password", "password");
+    if (creds.username) inputFields[0].value = creds.username;
+    if (creds.password) inputFields[1].value = creds.password;
 }
+// Evento para salvar credenciais ao clicar no botão de salvar
+canvas.addEventListener("mousedown", (e) => {
+    if (menuState !== "login") return;
+    // Coordenadas do mouse
+    const mx = e.offsetX, my = e.offsetY;
+    // Box login
+    const boxW = 260, boxH = 220;
+    const boxX = canvas.width/2 - boxW/2;
+    const boxY = canvas.height/2 - 70;
+    // Botão salvar credenciais (área igual ao botão desenhado)
+    const btnW = 160, btnH = 32;
+    const btnX = canvas.width/2 - btnW/2;
+    const btnY = boxY + boxH - 40;
+    if (mx > btnX && mx < btnX + btnW && my > btnY && my < btnY + btnH) {
+        saveCredentials(inputFields[0].value, inputFields[1].value);
+        alert("Usuário e senha salvos!");
+        drawLogin();
+        return;
+    }
+});
 
 function drawLogin() {
     drawBackground();
@@ -128,7 +157,7 @@ function drawLogin() {
     ctx.fillText(GameConstants.MESSAGE_OF_THE_DAY, canvas.width/2, canvas.height/2 - 140);
 
     // Box branco ao redor do bloco de login, preenchido
-    const boxW = 260, boxH = 220;
+    const boxW = 260, boxH = 260;
     const boxX = canvas.width/2 - boxW/2;
     const boxY = canvas.height/2 - 70;
     ctx.save();
@@ -158,6 +187,22 @@ function drawLogin() {
     ctx.fillStyle = "#fff";
     ctx.font = "14px Arial";
     ctx.fillText("Press Enter to submit", boxX + boxW/2, boxY + boxH - 36);
+
+    // Botão Salvar Credenciais
+    const btnW = 160, btnH = 32;
+    const btnX = canvas.width/2 - btnW/2;
+    const btnY = boxY + boxH - 80;
+    ctx.save();
+    ctx.fillStyle = "#FFD700";
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+    ctx.fillStyle = "#222";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Salvar Credenciais", btnX + btnW/2, btnY + btnH/2);
     ctx.restore();
 }
 
