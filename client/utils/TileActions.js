@@ -126,5 +126,11 @@ export const TileActions = {
     layer: "overlay",
     look: () => "Uma arvore.",
     use: { allowed: true, onUse(game) { game.showMessage("Uma arvore pequena!"); } }
-  }
+  },
+
+  
+  1599: { layer: "overlay" },
+  1600: { layer: "overlay" },
+  1601: { layer: "overlay" },
+  1602: { layer: "pedra gigantesca" },
 };

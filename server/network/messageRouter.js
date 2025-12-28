@@ -62,6 +62,9 @@ export class MessageRouter {
                     player.sprite = 'default';
                 }
                 player.skills = [];
+                // Ao voltar a ser humano, volta para o HP base do player
+                player.maxHp = player.baseMaxHp || player.maxHp || 100;
+                player.hp = Math.min(player.hp, player.maxHp);
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
@@ -92,6 +95,10 @@ export class MessageRouter {
                         targetArea: skillObj.targetArea
                     };
                 }).filter(Boolean);
+                // HP: soma vida base do player + vida do Pokémon selecionado
+                if (!player.baseMaxHp) player.baseMaxHp = player.maxHp || 100;
+                player.maxHp = player.baseMaxHp + (pokeData.maxHp || pokeData.hp || 0);
+                player.hp = player.maxHp;
                 // Envia atualização de outfit para o próprio player
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
                 // Envia novo estado do jogo
