@@ -8,6 +8,8 @@
 import { WildPokemonState, WildPokemonConfig } from '../../../shared/protocol/WildPokemonProtocol.js';
 import { Logger } from '../../utils/Logger.js';
 
+import { SkillDatabase } from '../../../shared/SkillDatabase.js';
+
 const logger = new Logger('WildPokemon');
 
 export class WildPokemon {
@@ -18,6 +20,17 @@ export class WildPokemon {
         this.level = data.level || 5;
         this.hp = data.hp;
         this.maxHp = data.maxHp || data.hp;
+        // Skills e cooldowns
+        this.skills = [];
+        this.skillCooldowns = {};
+        if (data.skills && Array.isArray(data.skills)) {
+            for (const skillName of data.skills) {
+                if (SkillDatabase[skillName]) {
+                    this.skills.push(skillName);
+                    this.skillCooldowns[skillName] = 0;
+                }
+            }
+        }
         // spriteDead sempre vem do data (PokemonEntities), nunca valor fixo
         this.spriteDead = data.spriteDead;
         this.isDead = false;
@@ -128,6 +141,14 @@ export class WildPokemon {
             return; // Não age enquanto morto
         }
 
+        // Atualiza cooldowns das skills
+        for (const skillName of this.skills) {
+            if (this.skillCooldowns[skillName] > 0) {
+                this.skillCooldowns[skillName] = Math.max(0, this.skillCooldowns[skillName] - (currentTime - (this._lastUpdateTime || currentTime)) / 1000);
+            }
+        }
+        this._lastUpdateTime = currentTime;
+
         // ...comportamento normal se vivo...
         let closestPlayer = null;
         let minDistance = Infinity;
@@ -155,13 +176,61 @@ export class WildPokemon {
                 }
                 break;
             case WildPokemonState.ENGAGE:
-                if (closestPlayer && currentTime - this.lastMoveTime >= this.movementSpeed) {
-                    this.moveTowards(closestPlayer);
-                    this.lastMoveTime = currentTime;
+                if (closestPlayer) {
+                    // Tenta usar skill antes de mover
+                    const skillResult = this.useRandomSkill(closestPlayer, currentTime);
+                    if (skillResult && this.gameWorld && this.gameWorld.wildPokemonManager) {
+                        // Broadcast para feedback visual (pode ser expandido)
+                        this.gameWorld.wildPokemonManager.broadcastUpdate(this);
+                    }
+                    // Move se não estiver em cooldown de movimento
+                    if (currentTime - this.lastMoveTime >= this.movementSpeed) {
+                        this.moveTowards(closestPlayer);
+                        this.lastMoveTime = currentTime;
+                    }
                 }
                 break;
         }
+        
     }
+
+    /**
+         * Faz o Pokémon selvagem usar uma skill aleatória disponível no player alvo
+         * @param {Player} targetPlayer
+         * @param {number} currentTime
+         * @returns {object|null} resultado do uso da skill
+         */
+        useRandomSkill(targetPlayer, currentTime) {
+            if (!this.skills || this.skills.length === 0) return null;
+            // Só skills sem cooldown
+            const availableSkills = this.skills.filter(skillName => this.skillCooldowns[skillName] <= 0);
+            if (availableSkills.length === 0) return null;
+            const skillName = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+            const skill = SkillDatabase[skillName];
+            if (!skill) return null;
+            let result = null;
+            if (skill.type === 'damage') {
+                const baseDamage = skill.power + Math.floor(this.level * 0.5);
+                if (targetPlayer && typeof targetPlayer.takeDamage === 'function') {
+                    targetPlayer.takeDamage(baseDamage);
+                    result = { skillName, damage: baseDamage, targetId: targetPlayer.id };
+                }
+            }
+            // TODO: status, área, buffs, etc.
+            this.skillCooldowns[skillName] = skill.cowndown;
+
+            // Envia evento de animação de skill para todos os clientes
+            if (this.gameWorld && this.gameWorld.server) {
+                for (const client of this.gameWorld.server.clients.values()) {
+                    client.send('skill_animation', {
+                        skillName,
+                        tile: { x: targetPlayer.x, y: targetPlayer.y, z: targetPlayer.z },
+                        attackerId: this.id
+                    });
+                }
+            }
+            return result;
+        }
 
     /**
      * Movimento aleatório (roaming)
