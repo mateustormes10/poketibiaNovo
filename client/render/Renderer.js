@@ -107,31 +107,60 @@ export class Renderer {
         // Atualiza player no TileRenderer para animação de tiles
         this.tileRenderer.setPlayer(player);
 
-        // Ordem correta: ground, player, overlay
-        // 1. Renderiza ground e entidades do andar atual
+
+        // SEMPRE renderiza z=3 e z=4 sobrepostos
+        const playerZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
+        let mapZ3 = map;
+        if (playerZ === 4 && gameState.mapDown) {
+            // Se player está em z=4, usa mapDown para z=3
+            mapZ3 = new map.constructor();
+            mapZ3.updateFromServer(gameState.mapDown);
+        }
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
-                const tile = map.getTile(x, y, currentZ);
                 const screenX = (x - startX) * tileSize;
                 const screenY = (y - startY) * tileSize;
-
-                // Renderiza ground do andar atual com opacidade total
-                if (tile) {
-                    const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                // Chão z=3
+                const tileZ3 = mapZ3.getTile(x, y, 3);
+                if (tileZ3) {
+                    const spriteIds = tileZ3.spriteIds || (tileZ3.spriteId ? [tileZ3.spriteId] : []);
                     const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay');
                     if (groundIds.length > 0) {
-                        const groundTile = { ...tile, spriteIds: groundIds };
+                        const groundTile = { ...tileZ3, spriteIds: groundIds };
                         this.ctx.save();
                         this.ctx.globalAlpha = 1.0;
                         this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
                         this.ctx.restore();
                     }
                 }
+                // Roof z=4
+                const tileZ4 = map.getTile(x, y, 4);
+                if (tileZ4) {
+                    let spriteIds = tileZ4.spriteIds || (tileZ4.spriteId ? [tileZ4.spriteId] : []);
+                    const allZero = spriteIds.length > 0 && spriteIds.every(id => id === 0 || id === '0');
+                    if (!allZero) {
+                        const validSpriteIds = spriteIds.filter(id => id !== 0 && id !== '0' && id !== undefined && id !== null);
+                        if (validSpriteIds.length > 0) {
+                            this.ctx.save();
+                            this.ctx.globalAlpha = 1.0;
+                            this.tileRenderer.renderTileAt(this.ctx, { ...tileZ4, spriteIds: validSpriteIds }, screenX, screenY);
+                            this.ctx.restore();
+                        }
+                    }
+                }
+            }
+        }
 
-                // Renderiza entidade (player, NPC, etc)
+
+        // Ordem correta: ground, overlay, player
+        // 1. Renderiza todos os tiles primeiro (feito abaixo)
+        // 2. Renderiza entidades (player, NPC, etc) SEMPRE por cima dos tiles
+        let entityZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
+        for (let y = startY; y <= endY; y++) {
+            for (let x = startX; x <= endX; x++) {
                 let entity = null;
                 if (entitiesByY[y]) {
-                    entity = entitiesByY[y].find(e => e.x === x);
+                    entity = entitiesByY[y].find(e => e.x === x && e.z === entityZ);
                     if (entity) {
                         this.spriteRenderer.renderEntity(entity, startX, startY);
                     }
@@ -139,33 +168,8 @@ export class Renderer {
             }
         }
 
-        // Agora sim, renderiza o overlay do andar debaixo (mapDown) por cima do ground
-        // Renderiza overlay do andar debaixo (mapDown) SEM opacidade
-        if (gameState.mapDown && gameState.localPlayer) {
-            const player = gameState.localPlayer;
-            const mapDown = new gameState.map.constructor();
-            mapDown.updateFromServer(gameState.mapDown);
-            // Se o player está no roof (z=4), renderiza o andar de baixo com opacidade
-            if (player.z === 4) {
-                for (let y = startY; y <= endY; y++) {
-                    for (let x = startX; x <= endX; x++) {
-                        const tileDown = mapDown.getTile(x, y, currentZ - 1);
-                        if (tileDown) {
-                            const spriteIds = tileDown.spriteIds || (tileDown.spriteId ? [tileDown.spriteId] : []);
-                            if (spriteIds.length > 0) {
-                                let overlayTile = { ...tileDown, spriteIds };
-                                this.ctx.save();
-                                this.ctx.globalAlpha = 0.15;
-                                this.tileRenderer.renderTileAt(this.ctx, overlayTile, (x - startX) * tileSize, (y - startY) * tileSize);
-                                this.ctx.restore();
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Se não está no roof, não renderiza overlay do andar de baixo
-            }
-        }
+        
+        // aqui termina o problema pra arrumarmos
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
         if (gameState.mapUp && gameState.localPlayer) {
@@ -174,33 +178,31 @@ export class Renderer {
             const tileAbove = map.getTile(player.x, player.y, player.z + 1);
             const isUnderRoof = tileAbove && (tileAbove.type === 'roof' || tileAbove.type === 'house' || tileAbove.type === 'construcao');
             if (!isUnderRoof) {
-                // Se o player está no z=3, renderiza o andar superior com opacidade
-                const player = gameState.localPlayer;
+                // Se o player está no z=3, renderiza o andar superior (z=4) por cima do z=3, sem opacidade
                 const mapUp = new gameState.map.constructor();
                 mapUp.updateFromServer(gameState.mapUp);
                 if (player.z === 3) {
                     for (let y = startY; y <= endY; y++) {
                         for (let x = startX; x <= endX; x++) {
-                            const tileUp = mapUp.getTile(x, y, currentZ + 1);
-                            if (tileUp) {
-                                const spriteIds = tileUp.spriteIds || (tileUp.spriteId ? [tileUp.spriteId] : []);
-                                if (spriteIds.length > 0) {
-                                    let overlayTile = { ...tileUp, spriteIds };
+                            const tileZ4 = mapUp.getTile(x, y, 4); // z=4
+                            if (tileZ4) {
+                                const spriteIds = tileZ4.spriteIds || (tileZ4.spriteId ? [tileZ4.spriteId] : []);
+                                // Só renderiza se houver spriteIds e não for 0
+                                if (spriteIds.length > 0 && !spriteIds.every(id => id === 0)) {
+                                    let overlayTile = { ...tileZ4, spriteIds };
                                     this.ctx.save();
-                                    this.ctx.globalAlpha = 0.3;
+                                    this.ctx.globalAlpha = 1.0;
                                     this.tileRenderer.renderTileAt(this.ctx, overlayTile, (x - startX) * tileSize, (y - startY) * tileSize);
                                     this.ctx.restore();
                                 }
                             }
                         }
                     }
-                } else {
-                    // Se não está no z=3, não renderiza overlay do andar superior
                 }
             }
         }
 
-        // 3. Renderiza overlay do andar atual (sempre por cima do player)
+        // 3. Renderiza overlay do andar atual (sempre por cima do player) não mexer tem nd haver aqui
         for (let y = startY; y <= endY; y++) {
             for (let x = startX; x <= endX; x++) {
                 const tile = map.getTile(x, y, currentZ);

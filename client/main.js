@@ -15,12 +15,31 @@ window.addEventListener('DOMContentLoaded', () => {
     loadingDiv.innerHTML = '<div>Carregando game... Aguarde</div>';
     document.body.appendChild(loadingDiv);
 
+    // Função para checar se o jogo está pronto para remover o loading
+    function isGameReady(game) {
+        // Garante que o mapa principal está carregado
+        if (!game.gameState.map || !game.gameState.map.tiles || game.gameState.map.tiles.size === 0) return false;
+        // Garante que o player está carregado
+        if (!game.gameState.localPlayer) return false;
+        // Se o player está em z=4, precisa do mapDown
+        if (game.gameState.localPlayer.z === 4) {
+            if (!game.gameState.mapDown || !game.gameState.mapDown.tiles || game.gameState.mapDown.tiles.length === 0) return false;
+        }
+        return true;
+    }
+
     game.init().then(() => {
-        setTimeout(() => {
-            loadingDiv.remove();
-            console.log('Game initialized successfully');
-            game.start();
-        }, 500); // Espera 2 segundos
+        // Checa periodicamente se o jogo está pronto
+        const checkReady = () => {
+            if (isGameReady(game)) {
+                loadingDiv.remove();
+                console.log('Game initialized successfully');
+                game.start();
+            } else {
+                setTimeout(checkReady, 100); // Checa novamente em 100ms
+            }
+        };
+        checkReady();
     }).catch(err => {
         loadingDiv.remove();
         console.error('Failed to initialize game:', err);
