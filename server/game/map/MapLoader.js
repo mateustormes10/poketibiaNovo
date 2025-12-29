@@ -59,11 +59,7 @@ export class MapLoader {
                     filePath = path.join(this.mapPath, `map_z${z}.json`);
                     mapData = await this.loadFromJSON(filePath, z);
                     break;
-                    
-                case 'tiled':
-                    filePath = path.join(this.mapPath, `map_z${z}.tmj`);
-                    mapData = await this.loadFromTiled(filePath, z);
-                    break;
+
                     
                 default:
                     throw new Error(`Unsupported format: ${format}`);
@@ -160,20 +156,21 @@ export class MapLoader {
                 });
                 // Sprite principal (primeiro ID numérico, ou string se não houver)
                 const mainSpriteId = spriteIds.find(sid => typeof sid === 'number') ?? spriteIds[0];
-
-                tiles.push({
-                    x,
-                    y,
-                    z,
-                    localX: x,
-                    localY: y,
-                    type: type || this.getTileTypeFromId(mainSpriteId),
-                    walkable: modifier === 'S', // S = Sim, N = Não
-                    spriteId: mainSpriteId,
-                    spriteIds: spriteIds, // Array com todas as sprites (layers)
-                    modifier: modifier
-                });
-
+                // Só adiciona tile se houver spriteId válido (não 0, não undefined)
+                if (mainSpriteId && mainSpriteId !== 0 && mainSpriteId !== '0' && mainSpriteId !== undefined) {
+                    tiles.push({
+                        x,
+                        y,
+                        z,
+                        localX: x,
+                        localY: y,
+                        type: type,
+                        walkable: modifier === 'S' ? true : (modifier === 'N' ? false : undefined),
+                        spriteId: mainSpriteId,
+                        spriteIds: spriteIds, // Array com todas as sprites (layers)
+                        modifier: modifier
+                    });
+                }
                 x++;
             }
 
@@ -200,85 +197,21 @@ export class MapLoader {
             z,
             width: data.width || 0,
             height: data.height || 0,
-            tiles: data.tiles.map(tile => ({
-                x: tile.x,
-                y: tile.y,
-                z,
-                type: tile.type || 'grass',
-                walkable: tile.walkable !== false,
-                spriteId: tile.spriteId || 0
-            })),
+            tiles: data.tiles
+                .filter(tile => tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0')
+                .map(tile => ({
+                    x: tile.x,
+                    y: tile.y,
+                    z,
+                    type: tile.type,
+                    walkable: tile.hasOwnProperty('walkable') ? tile.walkable : undefined,
+                    spriteId: tile.spriteId
+                })),
             format: 'json',
             metadata: data.metadata || {}
         };
     }
-    
-    /**
-     * Carrega de arquivo Tiled (.tmj)
-     */
-    async loadFromTiled(filePath, z) {
-        const content = await fs.readFile(filePath, 'utf-8');
-        const tiledData = JSON.parse(content);
         
-        const tiles = [];
-        
-        // Processa cada layer
-        tiledData.layers?.forEach(layer => {
-            if (layer.type === 'tilelayer' && layer.data) {
-                const width = layer.width;
-                
-                layer.data.forEach((gid, index) => {
-                    if (gid === 0) return; // Tile vazio
-                    
-                    const x = index % width;
-                    const y = Math.floor(index / width);
-                    
-                    tiles.push({
-                        x,
-                        y,
-                        z,
-                        type: this.getTileTypeFromGid(gid, tiledData.tilesets),
-                        walkable: this.isWalkableGid(gid, tiledData.tilesets),
-                        spriteId: gid,
-                        layer: layer.name
-                    });
-                });
-            }
-        });
-        
-        return {
-            z,
-            width: tiledData.width,
-            height: tiledData.height,
-            tiles,
-            format: 'tiled',
-            tilesets: tiledData.tilesets,
-            metadata: {
-                orientation: tiledData.orientation,
-                renderorder: tiledData.renderorder,
-                tilewidth: tiledData.tilewidth,
-                tileheight: tiledData.tileheight
-            }
-        };
-    }
-    
-    /**
-     * Converte caractere para tipo de tile
-     */
-    getTileTypeFromChar(char) {
-        const mapping = {
-            '.': 'grass',
-            '#': 'wall',
-            '~': 'water',
-            '^': 'mountain',
-            'T': 'tree',
-            '=': 'floor',
-            ',': 'sand',
-            ' ': 'void'
-        };
-        
-        return mapping[char] || 'grass';
-    }
     
     /**
      * Verifica se caractere é walkable
@@ -288,54 +221,6 @@ export class MapLoader {
         return walkable.includes(char);
     }
     
-    /**
-     * Obtém sprite ID do caractere
-     */
-    getSpriteIdFromChar(char) {
-        const mapping = {
-            '.': 100, // grass
-            '#': 200, // wall
-            '~': 300, // water
-            '^': 400, // mountain
-            'T': 500, // tree
-            '=': 600, // floor
-            ',': 700, // sand
-            ' ': 0    // void
-        };
-        
-        return mapping[char] || 0;
-    }
-    
-    /**
-     * Obtém tipo de tile do ID (formato [ID,modificador])
-     */
-    getTileTypeFromId(spriteId) {
-        // IDs comuns do Tibia/ChaosWar
-        if (spriteId >= 9900 && spriteId <= 9920) return 'sand';
-        if (spriteId >= 300 && spriteId <= 400) return 'grass';
-        if (spriteId >= 100 && spriteId <= 200) return 'floor';
-        if (spriteId >= 4500 && spriteId <= 4600) return 'water';
-        return 'ground';
-    }
-    
-    /**
-     * Verifica se ID é walkable
-     */
-    isWalkableId(spriteId) {
-        // A maioria dos tiles são walkable, exceto paredes e água
-        if (spriteId >= 4500 && spriteId <= 4600) return false; // água
-        if (spriteId >= 1000 && spriteId <= 2000) return false; // paredes
-        return true;
-    }
-    
-    /**
-     * Obtém tipo de tile do GID (Tiled)
-     */
-    getTileTypeFromGid(gid, tilesets) {
-        // Implementar lógica de conversão GID -> tipo
-        // Por enquanto retorna padrão
-        return 'grass';
-    }
     
     /**
      * Verifica se GID é walkable (Tiled)

@@ -108,42 +108,65 @@ export class Renderer {
         this.tileRenderer.setPlayer(player);
 
 
-        // SEMPRE renderiza z=3 e z=4 sobrepostos
+        // Renderização condicional por andar:
         const playerZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
-        let mapZ3 = map;
-        if (playerZ === 4 && gameState.mapDown) {
-            // Se player está em z=4, usa mapDown para z=3
-            mapZ3 = new map.constructor();
-            mapZ3.updateFromServer(gameState.mapDown);
-        }
-        for (let y = startY; y <= endY; y++) {
-            for (let x = startX; x <= endX; x++) {
-                const screenX = (x - startX) * tileSize;
-                const screenY = (y - startY) * tileSize;
-                // Chão z=3
-                const tileZ3 = mapZ3.getTile(x, y, 3);
-                if (tileZ3) {
-                    const spriteIds = tileZ3.spriteIds || (tileZ3.spriteId ? [tileZ3.spriteId] : []);
-                    const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay');
-                    if (groundIds.length > 0) {
-                        const groundTile = { ...tileZ3, spriteIds: groundIds };
-                        this.ctx.save();
-                        this.ctx.globalAlpha = 1.0;
-                        this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
-                        this.ctx.restore();
-                    }
-                }
-                // Roof z=4
-                const tileZ4 = map.getTile(x, y, 4);
-                if (tileZ4) {
-                    let spriteIds = tileZ4.spriteIds || (tileZ4.spriteId ? [tileZ4.spriteId] : []);
-                    const allZero = spriteIds.length > 0 && spriteIds.every(id => id === 0 || id === '0');
-                    if (!allZero) {
-                        const validSpriteIds = spriteIds.filter(id => id !== 0 && id !== '0' && id !== undefined && id !== null);
-                        if (validSpriteIds.length > 0) {
+        if (playerZ === 3 || playerZ === 4) {
+            // Renderiza z=3 e z=4 sobrepostos
+            let mapZ3 = map;
+            if (playerZ === 4 && gameState.mapDown) {
+                // Se player está em z=4, usa mapDown para z=3
+                mapZ3 = new map.constructor();
+                mapZ3.updateFromServer(gameState.mapDown);
+            }
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const screenX = (x - startX) * tileSize;
+                    const screenY = (y - startY) * tileSize;
+                    // Chão z=3
+                    const tileZ3 = mapZ3.getTile(x, y, 3);
+                    if (tileZ3 && tileZ3.spriteId && tileZ3.spriteId !== 0 && tileZ3.spriteId !== '0' && tileZ3.spriteId !== undefined && tileZ3.spriteId !== null) {
+                        const spriteIds = tileZ3.spriteIds || (tileZ3.spriteId ? [tileZ3.spriteId] : []);
+                        const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
+                        if (groundIds.length > 0) {
+                            const groundTile = { ...tileZ3, spriteIds: groundIds };
                             this.ctx.save();
                             this.ctx.globalAlpha = 1.0;
-                            this.tileRenderer.renderTileAt(this.ctx, { ...tileZ4, spriteIds: validSpriteIds }, screenX, screenY);
+                            this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
+                            this.ctx.restore();
+                        }
+                    }
+                    // Roof z=4
+                    const tileZ4 = map.getTile(x, y, 4);
+                    if (tileZ4 && tileZ4.spriteId && tileZ4.spriteId !== 0 && tileZ4.spriteId !== '0' && tileZ4.spriteId !== undefined && tileZ4.spriteId !== null) {
+                        let spriteIds = tileZ4.spriteIds || (tileZ4.spriteId ? [tileZ4.spriteId] : []);
+                        const allZero = spriteIds.length > 0 && spriteIds.every(id => id === 0 || id === '0');
+                        if (!allZero) {
+                            const validSpriteIds = spriteIds.filter(id => id !== 0 && id !== '0' && id !== undefined && id !== null);
+                            if (validSpriteIds.length > 0) {
+                                this.ctx.save();
+                                this.ctx.globalAlpha = 1.0;
+                                this.tileRenderer.renderTileAt(this.ctx, { ...tileZ4, spriteIds: validSpriteIds }, screenX, screenY);
+                                this.ctx.restore();
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Para outros andares (ex: z=2), renderiza apenas o mapa atual (sem overlay de z=3/z=4)
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const screenX = (x - startX) * tileSize;
+                    const screenY = (y - startY) * tileSize;
+                    const tile = map.getTile(x, y, currentZ);
+                    if (tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
+                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                        const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
+                        if (groundIds.length > 0) {
+                            const groundTile = { ...tile, spriteIds: groundIds };
+                            this.ctx.save();
+                            this.ctx.globalAlpha = 1.0;
+                            this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
                             this.ctx.restore();
                         }
                     }
@@ -173,11 +196,16 @@ export class Renderer {
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
         if (gameState.mapUp && gameState.localPlayer) {
-            // Só renderiza se o player NÃO estiver sob roof/house/construcao
+            // Só renderiza se o player NÃO estiver em tile house/construcao
             const player = gameState.localPlayer;
-            const tileAbove = map.getTile(player.x, player.y, player.z + 1);
-            const isUnderRoof = tileAbove && (tileAbove.type === 'roof' || tileAbove.type === 'house' || tileAbove.type === 'construcao');
-            if (!isUnderRoof) {
+            const tileAtual = map.getTile(player.x, player.y, player.z);
+            const isInHouseOrConstrucao = tileAtual && (
+                tileAtual.type === 'house' ||
+                tileAtual.type === 'HOUSE' ||
+                tileAtual.type === 'construcao' ||
+                tileAtual.type === 'CONSTRUCAO'
+            );
+            if (!isInHouseOrConstrucao) {
                 // Se o player está no z=3, renderiza o andar superior (z=4) por cima do z=3, sem opacidade
                 const mapUp = new gameState.map.constructor();
                 mapUp.updateFromServer(gameState.mapUp);
