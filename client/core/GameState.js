@@ -24,7 +24,7 @@ export class GameState {
             this.map.updateFromServer(serverState.map);
         }
 
-        // Salva mapUp/mapDown recebidos do servidor para uso no Renderer
+        // Salva mapUp/mapDown/mapDown2 recebidos do servidor para uso no Renderer
         if (serverState.mapUp) {
             this.mapUp = serverState.mapUp;
         } else {
@@ -34,6 +34,11 @@ export class GameState {
             this.mapDown = serverState.mapDown;
         } else {
             this.mapDown = null;
+        }
+        if (serverState.mapDown2) {
+            this.mapDown2 = serverState.mapDown2;
+        } else {
+            this.mapDown2 = null;
         }
 
         if (serverState.players) {

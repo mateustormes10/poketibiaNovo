@@ -465,141 +465,158 @@ async function loadMap(path) {
 function render() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
+    // Renderiza múltiplos andares: z atual, z-1, z-2 (se existirem)
     for (let vy = 0; vy < viewHeight; vy++) {
         for (let vx = 0; vx < viewWidth; vx++) {
             const mx = cameraX + vx;
             const my = cameraY + vy;
             if (mx >= mapSize || my >= mapSize) continue;
 
-            const tile = mapData[my][mx];
+            // Renderiza do mais baixo para o mais alto (apenas sprites)
+            for (let dz = 2; dz >= 0; dz--) {
+                const z = currentFloor - dz - 1; // floorData é 0-based
+                if (z < 0 || z >= maxFloors) continue;
+                const tile = floorData[z][my][mx];
+                if (!tile) continue;
 
-            // DESENHA SPRITES EMPILHADAS
-            tile.ground.forEach(id => {
-                let spritePath = null;
-                let found = false;
-                if (typeof id === 'number' || (/^\d+$/.test(id))) {
-                    const folder = spriteIndex[id];
-                    if (folder !== undefined && folder !== null && folder !== "") {
-                        spritePath = `${folder}/${id}.png`;
-                        found = true;
-                    } else if (folder === "") {
-                        spritePath = `${id}.png`;
-                        found = true;
-                    } else {
-                        // Tenta buscar em todas as pastas
-                        for (const f of spriteFolders) {
-                            const testPath = `${f}/${id}.png`;
-                            let img = loadedSprites.get(testPath);
-                            if (!img) {
-                                img = new Image();
-                                img.src = `../client/assets/sprites/${testPath}`;
-                                img.onload = () => render();
-                                loadedSprites.set(testPath, img);
-                            }
-                            if (img.complete && img.naturalWidth > 0) {
-                                ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (found && spritePath) {
-                    let img = loadedSprites.get(spritePath);
-                    if (!img) {
-                        img = new Image();
-                        img.src = `../client/assets/sprites/${spritePath}`;
-                        img.onload = () => render();
-                        loadedSprites.set(spritePath, img);
-                    }
-                    if (img.complete && img.naturalWidth > 0) {
-                        ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
-                    }
-                } else if (!found) {
-                    // id não existe, mostra placeholder
-                    ctx.save();
-                    ctx.strokeStyle = "red";
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-                    ctx.restore();
-                }
-            });
-
-
-
-            // OVERLAY WALKABLE
-            if (!tile.walkable) {
-                ctx.fillStyle = "rgba(255,0,0,0.3)";
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-            }
-
-            // OVERLAY SPAWN
-            if (tile.spawn || tile.entities.length > 0) {
-                ctx.fillStyle = "rgba(0,255,0,0.3)";
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-            }
-
-            // OVERLAY UP/DOWN + desenha seta e número
-            if (tile.up !== undefined || tile.down !== undefined) {
-                ctx.fillStyle = "rgba(255,255,0,0.3)"; // amarelo transparente
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-
+                // Opacidade: z atual = 1, z-1 = 0.7, z-2 = 0.5
+                let alpha = 1.0;
+                if (dz === 1) alpha = 0.7;
+                if (dz === 2) alpha = 0.5;
                 ctx.save();
-                ctx.font = Math.floor(tileSize * 0.5) + "px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                let text = "";
-                let color = "#bfa800";
-                if (tile.up !== undefined) {
-                    text = `↑${tile.up}`;
-                }
-                if (tile.down !== undefined) {
-                    // Se tiver up e down, mostra ambos, um em cima do outro
-                    if (tile.up !== undefined) {
-                        ctx.fillStyle = color;
-                        ctx.fillText(`↑${tile.up}`,
-                            vx*tileSize + tileSize/2,
-                            vy*tileSize + tileSize*0.33
-                        );
-                        ctx.fillStyle = color;
-                        ctx.fillText(`↓${tile.down}`,
-                            vx*tileSize + tileSize/2,
-                            vy*tileSize + tileSize*0.67
-                        );
-                        ctx.restore();
-                        // OVERLAY TYPE (após up/down)
-                        if (tile.type === "house") {
-                            ctx.fillStyle = "rgba(0, 0, 128, 0.35)";
-                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-                        } else if (tile.type === "construcao") {
-                            ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
-                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-                        } else if (tile.type === "floor") {
-                            ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
-                            ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                ctx.globalAlpha = alpha;
+
+                // DESENHA SPRITES EMPILHADAS
+                tile.ground.forEach(id => {
+                    let spritePath = null;
+                    let found = false;
+                    if (typeof id === 'number' || (/^\d+$/.test(id))) {
+                        const folder = spriteIndex[id];
+                        if (folder !== undefined && folder !== null && folder !== "") {
+                            spritePath = `${folder}/${id}.png`;
+                            found = true;
+                        } else if (folder === "") {
+                            spritePath = `${id}.png`;
+                            found = true;
+                        } else {
+                            // Tenta buscar em todas as pastas
+                            for (const f of spriteFolders) {
+                                const testPath = `${f}/${id}.png`;
+                                let img = loadedSprites.get(testPath);
+                                if (!img) {
+                                    img = new Image();
+                                    img.src = `../client/assets/sprites/${testPath}`;
+                                    img.onload = () => render();
+                                    loadedSprites.set(testPath, img);
+                                }
+                                if (img.complete && img.naturalWidth > 0) {
+                                    ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
+                                    found = true;
+                                    break;
+                                }
+                            }
                         }
-                        continue;
-                    } else {
-                        text = `↓${tile.down}`;
                     }
-                }
-                ctx.fillStyle = color;
-                ctx.fillText(text, vx*tileSize + tileSize/2, vy*tileSize + tileSize/2);
+                    if (found && spritePath) {
+                        let img = loadedSprites.get(spritePath);
+                        if (!img) {
+                            img = new Image();
+                            img.src = `../client/assets/sprites/${spritePath}`;
+                            img.onload = () => render();
+                            loadedSprites.set(spritePath, img);
+                        }
+                        if (img.complete && img.naturalWidth > 0) {
+                            ctx.drawImage(img, vx*tileSize, vy*tileSize, tileSize, tileSize);
+                        }
+                    } else if (!found) {
+                        // id não existe, mostra placeholder
+                        ctx.save();
+                        ctx.strokeStyle = "red";
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                        ctx.restore();
+                    }
+                });
                 ctx.restore();
             }
 
-            // OVERLAY TYPE (após overlays principais)
-            if (tile.type === "house") {
-                ctx.fillStyle = "rgba(0, 0, 128, 0.55)"; // azul escuro mais visível
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-            } else if (tile.type === "construcao") {
-                ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-            } else if (tile.type === "floor") {
-                ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
-                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
-            }
+            // --- OVERLAYS, GRID E BORDAS: sempre do andar atual ---
+            const tile = floorData[currentFloor-1][my][mx];
+            if (tile) {
+                // OVERLAY WALKABLE
+                if (!tile.walkable) {
+                    ctx.fillStyle = "rgba(255,0,0,0.3)";
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                }
 
+                // OVERLAY SPAWN
+                if (tile.spawn || (tile.entities && tile.entities.length > 0)) {
+                    ctx.fillStyle = "rgba(0,255,0,0.3)";
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                }
+
+                // OVERLAY UP/DOWN + desenha seta e número
+                if (tile.up !== undefined || tile.down !== undefined) {
+                    ctx.fillStyle = "rgba(255,255,0,0.3)"; // amarelo transparente
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+
+                    ctx.save();
+                    ctx.font = Math.floor(tileSize * 0.5) + "px Arial";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    let text = "";
+                    let color = "#bfa800";
+                    if (tile.up !== undefined) {
+                        text = `↑${tile.up}`;
+                    }
+                    if (tile.down !== undefined) {
+                        // Se tiver up e down, mostra ambos, um em cima do outro
+                        if (tile.up !== undefined) {
+                            ctx.fillStyle = color;
+                            ctx.fillText(`↑${tile.up}`,
+                                vx*tileSize + tileSize/2,
+                                vy*tileSize + tileSize*0.33
+                            );
+                            ctx.fillStyle = color;
+                            ctx.fillText(`↓${tile.down}`,
+                                vx*tileSize + tileSize/2,
+                                vy*tileSize + tileSize*0.67
+                            );
+                            ctx.restore();
+                            // OVERLAY TYPE (após up/down)
+                            if (tile.type === "house") {
+                                ctx.fillStyle = "rgba(0, 0, 128, 0.35)";
+                                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                            } else if (tile.type === "construcao") {
+                                ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
+                                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                            } else if (tile.type === "floor") {
+                                ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
+                                ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                            }
+                            continue;
+                        } else {
+                            text = `↓${tile.down}`;
+                        }
+                    }
+                    ctx.fillStyle = color;
+                    ctx.fillText(text, vx*tileSize + tileSize/2, vy*tileSize + tileSize/2);
+                    ctx.restore();
+                }
+
+                // OVERLAY TYPE (após overlays principais)
+                if (tile.type === "house") {
+                    ctx.fillStyle = "rgba(0, 0, 128, 0.55)"; // azul escuro mais visível
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                } else if (tile.type === "construcao") {
+                    ctx.fillStyle = "rgba(100, 180, 255, 0.35)";
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                } else if (tile.type === "floor") {
+                    ctx.fillStyle = "rgba(180, 0, 90, 0.35)";
+                    ctx.fillRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
+                }
+            }
+            // GRID/BORDA sempre
             ctx.strokeStyle = "gray";
             ctx.strokeRect(vx*tileSize, vy*tileSize, tileSize, tileSize);
         }

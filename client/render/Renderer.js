@@ -56,6 +56,8 @@ export class Renderer {
     }
     
     render(gameState) {
+            // DEBUG: Verifica se mapDown2 chegou do server
+            console.log('[DEBUG] mapDown2:', gameState.mapDown2);
         // (Bloco antigo de renderização do andar de baixo removido para evitar confusão)
                 // DEBUG: Loga informações do mapUp recebido
                 if (gameState.mapUp) {
@@ -108,44 +110,44 @@ export class Renderer {
         this.tileRenderer.setPlayer(player);
 
 
-        // Renderização condicional por andar:
+        // Renderização condicional para múltiplos andares (z >= 3 mostra z, z-1, z-2)
         const playerZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
-        if (playerZ === 3 || playerZ === 4) {
-            // Renderiza z=3 e z=4 sobrepostos
-            let mapZ3 = map;
-            if (playerZ === 4 && gameState.mapDown) {
-                // Se player está em z=4, usa mapDown para z=3
-                mapZ3 = new map.constructor();
-                mapZ3.updateFromServer(gameState.mapDown);
-            }
-            for (let y = startY; y <= endY; y++) {
-                for (let x = startX; x <= endX; x++) {
-                    const screenX = (x - startX) * tileSize;
-                    const screenY = (y - startY) * tileSize;
-                    // Chão z=3
-                    const tileZ3 = mapZ3.getTile(x, y, 3);
-                    if (tileZ3 && tileZ3.spriteId && tileZ3.spriteId !== 0 && tileZ3.spriteId !== '0' && tileZ3.spriteId !== undefined && tileZ3.spriteId !== null) {
-                        const spriteIds = tileZ3.spriteIds || (tileZ3.spriteId ? [tileZ3.spriteId] : []);
-                        const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
-                        if (groundIds.length > 0) {
-                            const groundTile = { ...tileZ3, spriteIds: groundIds };
-                            this.ctx.save();
-                            this.ctx.globalAlpha = 1.0;
-                            this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
-                            this.ctx.restore();
+        if (playerZ >= 3) {
+            // Renderiza do mais baixo para o mais alto (z-2, z-1, z)
+            for (let dz = 2; dz >= 0; dz--) {
+                const z = playerZ - dz;
+                // Seleciona o mapa correto para cada z
+                let mapForZ = map;
+                if (z === playerZ - 1 && gameState.mapDown) {
+                    // z-1: usa mapDown se disponível
+                    mapForZ = new map.constructor();
+                    mapForZ.updateFromServer(gameState.mapDown);
+                } else if (z === playerZ - 2 && gameState.mapDown2) {
+                    // z-2: usa mapDown2 se disponível (precisa ser enviado pelo server)
+                    mapForZ = new map.constructor();
+                    mapForZ.updateFromServer(gameState.mapDown2);
+                }
+                for (let y = startY; y <= endY; y++) {
+                    for (let x = startX; x <= endX; x++) {
+                        const screenX = (x - startX) * tileSize;
+                        const screenY = (y - startY) * tileSize;
+                        const tile = mapForZ.getTile(x, y, z);
+                        // Bloqueia renderização se o tile acima for construcao/house
+                        let blockAbove = false;
+                        if (dz < 2) { // só verifica se não é o topo
+                            const tileAbove = map.getTile(x, y, z+1);
+                            if (tileAbove && (tileAbove.type === 'construcao' || tileAbove.type === 'CONSTRUCAO' || tileAbove.type === 'house' || tileAbove.type === 'HOUSE')) {
+                                blockAbove = true;
+                            }
                         }
-                    }
-                    // Roof z=4
-                    const tileZ4 = map.getTile(x, y, 4);
-                    if (tileZ4 && tileZ4.spriteId && tileZ4.spriteId !== 0 && tileZ4.spriteId !== '0' && tileZ4.spriteId !== undefined && tileZ4.spriteId !== null) {
-                        let spriteIds = tileZ4.spriteIds || (tileZ4.spriteId ? [tileZ4.spriteId] : []);
-                        const allZero = spriteIds.length > 0 && spriteIds.every(id => id === 0 || id === '0');
-                        if (!allZero) {
-                            const validSpriteIds = spriteIds.filter(id => id !== 0 && id !== '0' && id !== undefined && id !== null);
-                            if (validSpriteIds.length > 0) {
+                        if (!blockAbove && tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
+                            const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                            const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
+                            if (groundIds.length > 0) {
+                                const groundTile = { ...tile, spriteIds: groundIds };
                                 this.ctx.save();
                                 this.ctx.globalAlpha = 1.0;
-                                this.tileRenderer.renderTileAt(this.ctx, { ...tileZ4, spriteIds: validSpriteIds }, screenX, screenY);
+                                this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
                                 this.ctx.restore();
                             }
                         }
@@ -153,7 +155,7 @@ export class Renderer {
                 }
             }
         } else {
-            // Para outros andares (ex: z=2), renderiza apenas o mapa atual (sem overlay de z=3/z=4)
+            // Para outros andares (ex: z=2), renderiza apenas o mapa atual (sem overlay de z superiores)
             for (let y = startY; y <= endY; y++) {
                 for (let x = startX; x <= endX; x++) {
                     const screenX = (x - startX) * tileSize;

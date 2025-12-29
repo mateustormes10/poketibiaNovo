@@ -303,6 +303,7 @@ export class GameWorld {
         // Só envia mapUp se o player NÃO estiver sob roof/house/construcao
         let mapDataUp = null;
         let mapDataDown = null;
+        let mapDataDown2 = null;
         const isUnderRoof = this.isPlayerUnderRoof(player);
         if (!isUnderRoof && player.z + 1 < maxMapUp) {
             this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z + 1, this.mapManager.mapLoader);
@@ -312,6 +313,11 @@ export class GameWorld {
             this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z - 1, this.mapManager.mapLoader);
             mapDataDown = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z - 1 }, 32, 17);
         }
+        if (player.z - 2 > minMapDown) {
+            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z - 2, this.mapManager.mapLoader);
+            mapDataDown2 = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z - 2 }, 32, 17);
+        }
+
         const serializedPlayers = playersInView.map(p => {
             const data = p.serialize();
             if (p.id === player.id) {
@@ -342,7 +348,8 @@ export class GameWorld {
             monsters: [], // Implementar visão de monstros
             map: mapData, // Dados de mapa com tiles
             mapUp: mapDataUp,
-            mapDown: mapDataDown
+            mapDown: mapDataDown,
+            mapDown2: mapDataDown2
         };
     }
     
