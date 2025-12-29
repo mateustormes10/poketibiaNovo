@@ -78,7 +78,7 @@ export class MapProtocol {
                 z: tile.z || 0,
                 spriteId: tile.spriteId || 100,
                 walkable: tile.walkable !== false,
-                type: tile.type || 'grass'
+                type: tile.type
             }))
         };
     }

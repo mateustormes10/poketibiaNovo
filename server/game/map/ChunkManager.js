@@ -167,10 +167,10 @@ export class ChunkManager {
                         x: worldX,
                         y: worldY,
                         z: z,
-                        spriteId: tile.spriteId || 100,
-                        spriteIds: tile.spriteIds || [tile.spriteId || 100], // Array de layers
+                        spriteId: tile.spriteId,
+                        spriteIds: tile.spriteIds || [tile.spriteId || 0], // Array de layers
                         walkable: tile.walkable !== false,
-                        type: tile.type || 'ground'
+                        type: tile.type
                     });
                 }
             }
