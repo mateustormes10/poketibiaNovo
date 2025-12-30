@@ -132,9 +132,16 @@ export class InventoryManager {
      */
     receiveItemUsed(data) {
         console.log('[InventoryManager] Item usado:', data);
+        // Atualiza saldo do player se vier balance
+        if (typeof data.balance !== 'undefined' && window.game && window.game.gameState && window.game.gameState.localPlayer) {
+            window.game.gameState.localPlayer.goldCoin = data.balance;
+            // Força re-renderização completa do jogo (HUD, mapa, etc)
+            if (window.game.render) {
+                window.game.render();
+            }
+        }
         // Mostra mensagem de feedback no chat
         if (data.message) {
-            // Tenta usar o chatBox global do jogo
             if (window.game && window.game.renderer && window.game.renderer.chatBox) {
                 window.game.renderer.chatBox.addMessage('System', data.message, 'system');
             } else {

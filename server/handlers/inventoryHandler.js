@@ -84,8 +84,14 @@ export class InventoryHandler {
                     item_name: item_name,
                     message: result.message,
                     effect: result.effect,
-                    value: result.value
+                    value: result.value,
+                    balance: result.balance // pode ser undefined
                 });
+
+                // Se for Gold Coin, envia também o evento balance_update para atualizar o HUD
+                if (item_name === 'Gold Coin' && typeof result.balance !== 'undefined') {
+                    client.send('balance_update', { balance: result.balance });
+                }
 
                 // Envia inventário atualizado
                 await this.sendInventoryUpdate(client, playerId);

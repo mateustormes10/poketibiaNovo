@@ -26,7 +26,7 @@ export const ItemDefinitions = {
         type: ItemType.CONSUMABLE,
         description: 'Restaura 200 HP de um Pokémon.',
         effect: 'heal',
-        value: 200
+        value: 400
     },
     'Revive': {
         type: ItemType.CONSUMABLE,
@@ -60,7 +60,7 @@ export const ItemDefinitions = {
         type: ItemType.MISC,
         description: 'Moeda do jogo.',
         effect: 'none',
-        value: 0
+        value: 1
     }
 };
 
@@ -128,34 +128,52 @@ export class InventoryService {
 
         // Aplica efeito do item baseado no tipo
         let result;
-        
-        switch (itemDef.effect) {
-            case 'heal':
-                result = await this.applyHealEffect(playerId, itemDef.value, context);
-                break;
-                
-            case 'revive':
-                result = await this.applyReviveEffect(playerId, itemDef.value, context);
-                break;
-                
-            case 'capture':
-                result = await this.applyCaptureEffect(playerId, itemDef.value, context);
-                break;
-                
-            default:
+        if (itemName === 'Gold Coin') {
+            // Adiciona Gold Coin ao saldo do player usando BalanceRepository
+            const gameWorld = global.gameWorld || (globalThis && globalThis.gameWorld);
+            if (!gameWorld || !gameWorld.balanceRepository) {
                 return {
                     success: false,
-                    error: 'CANNOT_USE_ITEM',
-                    message: 'Este item não pode ser usado agora.'
+                    error: 'NO_BALANCE_REPO',
+                    message: 'BalanceRepository não disponível.'
                 };
-        }
-
-        // Se o uso foi bem-sucedido, remove o item
-        if (result.success) {
+            }
+            const coinValue = itemDef.value || 1;
+            // Atualiza saldo no banco
+            const newBalance = await gameWorld.balanceRepository.addGold(playerId, coinValue);
+            // Remove o item do inventário
             await this.inventoryRepository.removeItem(playerId, itemName, 1);
+            return {
+                success: true,
+                message: `Você usou uma Gold Coin e recebeu ${coinValue} gold!`,
+                effect: 'gold',
+                value: coinValue,
+                balance: newBalance
+            };
+        } else {
+            switch (itemDef.effect) {
+                case 'heal':
+                    result = await this.applyHealEffect(playerId, itemDef.value, context);
+                    break;
+                case 'revive':
+                    result = await this.applyReviveEffect(playerId, itemDef.value, context);
+                    break;
+                case 'capture':
+                    result = await this.applyCaptureEffect(playerId, itemDef.value, context);
+                    break;
+                default:
+                    return {
+                        success: false,
+                        error: 'CANNOT_USE_ITEM',
+                        message: 'Este item não pode ser usado agora.'
+                    };
+            }
+            // Se o uso foi bem-sucedido, remove o item
+            if (result.success) {
+                await this.inventoryRepository.removeItem(playerId, itemName, 1);
+            }
+            return result;
         }
-
-        return result;
     }
 
     /**
