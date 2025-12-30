@@ -26,8 +26,8 @@ export const WildPokemonState = {
 
 // Configurações
 export const WildPokemonConfig = {
-    ATTACK_RANGE_DEFAULT: 2,      // tiles
+    ATTACK_RANGE_DEFAULT: 5,      // tiles
     MOVE_RANGE_MULTIPLIER: 2,     // moveRange = attackRange * 2
-    UPDATE_INTERVAL: 1000,        // ms entre updates de comportamento
-    MOVEMENT_SPEED: 500           // ms entre movimentos
+    UPDATE_INTERVAL: 700,        // ms entre updates de comportamento
+    MOVEMENT_SPEED: 350           // ms entre movimentos
 };

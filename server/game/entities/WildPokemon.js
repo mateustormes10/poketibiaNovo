@@ -129,6 +129,7 @@ export class WildPokemon {
      * @param {number} currentTime - Tempo atual
      */
     update(players, currentTime) {
+        logger.debug(`[UPDATE] ${this.name} (${this.id}) update iniciado. Pos: (${this.x},${this.y},${this.z}) HP: ${this.hp}`);
         if (this.hp <= 0) {
             if (!this.isDead) {
                 this.isDead = true;
@@ -138,6 +139,7 @@ export class WildPokemon {
             if (currentTime - this.deadSince >= 60000) {
                 // Pode ser removido ou respawnado pelo manager (não faz nada aqui)
             }
+            logger.debug(`[UPDATE] ${this.name} (${this.id}) está morto, não age.`);
             return; // Não age enquanto morto
         }
 
@@ -154,46 +156,76 @@ export class WildPokemon {
         let minDistance = Infinity;
         for (const player of players) {
             const distance = this.getDistanceToPlayer(player);
+            logger.debug(`[UPDATE] ${this.name} (${this.id}) distância até player ${player.id}: ${distance}`);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestPlayer = player;
             }
         }
+        if (!closestPlayer) {
+            logger.debug(`[UPDATE] ${this.name} (${this.id}) nenhum player encontrado para perseguir.`);
+        }
         if (minDistance > this.moveRange) {
             this.state = WildPokemonState.IDLE;
-        } else if (minDistance <= this.attackRange) {
-            this.state = WildPokemonState.ENGAGE;
+            logger.debug(`[UPDATE] ${this.name} (${this.id}) está fora do moveRange (${this.moveRange}), entrando em IDLE.`);
         } else {
-            this.state = WildPokemonState.ROAMING;
-        }
-        switch (this.state) {
-            case WildPokemonState.IDLE:
-                break;
-            case WildPokemonState.ROAMING:
-                if (currentTime - this.lastMoveTime >= this.movementSpeed) {
-                    this.randomMove();
-                    this.lastMoveTime = currentTime;
+            // Checa se está adjacente ao player (incluindo diagonal)
+            let isAdjacent = false;
+            if (closestPlayer) {
+                const dx = Math.abs(this.x - closestPlayer.x);
+                const dy = Math.abs(this.y - closestPlayer.y);
+                isAdjacent = (dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0));
+            }
+            if (currentTime - this.lastMoveTime >= this.movementSpeed) {
+                if (!isAdjacent) {
+                    logger.debug(`[UPDATE] ${this.name} (${this.id}) não está adjacente ao player, vai tentar mover.`);
+                    this.moveTowards(closestPlayer);
+                } else {
+                    logger.debug(`[UPDATE] ${this.name} (${this.id}) já está adjacente ao player.`);
                 }
-                break;
-            case WildPokemonState.ENGAGE:
-                if (closestPlayer) {
-                    // Tenta usar skill antes de mover
-                    const skillResult = this.useRandomSkill(closestPlayer, currentTime);
-                    if (skillResult && this.gameWorld && this.gameWorld.wildPokemonManager) {
-                        // Broadcast para feedback visual (pode ser expandido)
-                        this.gameWorld.wildPokemonManager.broadcastUpdate(this);
-                    }
-                    // Move se não estiver em cooldown de movimento
-                    if (currentTime - this.lastMoveTime >= this.movementSpeed) {
-                        this.moveTowards(closestPlayer);
-                        this.lastMoveTime = currentTime;
-                    }
+                this.lastMoveTime = currentTime;
+            } else {
+                logger.debug(`[UPDATE] ${this.name} (${this.id}) aguardando cooldown de movimento.`);
+            }
+            // Se está na distância de ataque E tem linha de visão, ataca
+            if (minDistance <= this.attackRange && closestPlayer && this.hasLineOfSightTo(closestPlayer)) {
+                logger.debug(`[UPDATE] ${this.name} (${this.id}) vai atacar player ${closestPlayer.id}`);
+                const skillResult = this.useRandomSkill(closestPlayer, currentTime);
+                if (skillResult && this.gameWorld && this.gameWorld.wildPokemonManager) {
+                    this.gameWorld.wildPokemonManager.broadcastUpdate(this);
                 }
-                break;
+            }
         }
+           
         
     }
 
+     /**
+             * Verifica se há linha de visão (sem obstáculos) até o alvo
+             * @param {Object} target
+             * @returns {boolean}
+             */
+            hasLineOfSightTo(target) {
+                if (!this.gameWorld || !this.gameWorld.mapManager) return false;
+                // Só suporta linha reta horizontal ou vertical (para ataques à distância)
+                if (this.x === target.x) {
+                    const minY = Math.min(this.y, target.y);
+                    const maxY = Math.max(this.y, target.y);
+                    for (let y = minY + 1; y < maxY; y++) {
+                        if (!this.gameWorld.mapManager.isWalkable(this.x, y, this.z)) return false;
+                    }
+                    return true;
+                } else if (this.y === target.y) {
+                    const minX = Math.min(this.x, target.x);
+                    const maxX = Math.max(this.x, target.x);
+                    for (let x = minX + 1; x < maxX; x++) {
+                        if (!this.gameWorld.mapManager.isWalkable(x, this.y, this.z)) return false;
+                    }
+                    return true;
+                }
+                // Não suporta diagonal (pode expandir se necessário)
+                return false;
+            }
     /**
          * Faz o Pokémon selvagem usar uma skill aleatória disponível no player alvo
          * @param {Player} targetPlayer
@@ -243,20 +275,17 @@ export class WildPokemon {
             { dx: -1, dy: 0 },  // esquerda
             { dx: 1, dy: 0 }    // direita
         ];
-        
         const dir = directions[Math.floor(Math.random() * directions.length)];
-        
-        // Não se afasta muito do spawn
         const newX = this.x + dir.dx;
         const newY = this.y + dir.dy;
-        
         const distanceFromSpawn = Math.max(
             Math.abs(newX - this.spawnX),
             Math.abs(newY - this.spawnY)
         );
-        
-        // Verifica se pode mover (distância do spawn + colisão)
-        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z)) {
+        // Verifica se pode mover (distância do spawn + colisão + walkable)
+        const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
+        const isWalkable = mapManager ? mapManager.isWalkable(newX, newY, this.z) : true;
+        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z) && isWalkable) {
             this.x = newX;
             this.y = newY;
         }
@@ -267,28 +296,90 @@ export class WildPokemon {
      * @param {Object} target - Alvo (player)
      */
     moveTowards(target) {
-        const dx = target.x - this.x;
-        const dy = target.y - this.y;
+        // Pathfinding A* aprimorado para garantir encostar no player
+        const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
+        if (!mapManager) return;
+        logger.debug(`[WILD] ${this.name} (${this.id}) tentando mover de (${this.x},${this.y}) para (${target.x},${target.y})`);
 
-        // Calcula nova posição
-        let newX = this.x;
-        let newY = this.y;
-        let newDirection = this.direction || 'down';
+        // Tiles adjacentes ao player (incluindo diagonais)
+        const adjacents = [];
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue; // Ignora o tile do player
+                adjacents.push({ x: target.x + dx, y: target.y + dy });
+            }
+        }
+        // Filtra apenas os walkable e não ocupados
+        const validAdjacents = adjacents.filter(pos =>
+            mapManager.isWalkable(pos.x, pos.y, this.z) &&
+            !this.isPositionOccupied(pos.x, pos.y, this.z)
+        );
 
-        // Move um tile por vez e define direção
-        if (Math.abs(dx) > Math.abs(dy)) {
-            newX += dx > 0 ? 1 : -1;
-            newDirection = dx > 0 ? 'right' : 'left';
-        } else if (dy !== 0) {
-            newY += dy > 0 ? 1 : -1;
-            newDirection = dy > 0 ? 'down' : 'up';
+        // Função heurística Manhattan
+        function heuristic(ax, ay, bx, by) {
+            return Math.abs(ax - bx) + Math.abs(ay - by);
         }
 
-        // Só move se não houver colisão
-        if (!this.isPositionOccupied(newX, newY, this.z)) {
-            this.x = newX;
-            this.y = newY;
-            this.direction = newDirection;
+        // A* para múltiplos destinos (apenas tiles adjacentes válidos)
+        let bestPath = null;
+        let bestDest = null;
+        let bestLen = Infinity;
+        for (const dest of validAdjacents) {
+            const open = [];
+            const closed = new Set();
+            open.push({ x: this.x, y: this.y, path: [] });
+            let found = null;
+            const maxSteps = 100; // Aumentado para evitar desistência prematura
+            while (open.length > 0 && !found) {
+                open.sort((a, b) => heuristic(a.x, a.y, dest.x, dest.y) - heuristic(b.x, b.y, dest.x, dest.y));
+                const current = open.shift();
+                const key = `${current.x},${current.y}`;
+                if (closed.has(key)) continue;
+                closed.add(key);
+                if (current.x === dest.x && current.y === dest.y) {
+                    found = current.path;
+                    break;
+                }
+                if (current.path.length >= maxSteps) {
+                    logger.debug(`[WILD] ${this.name} (${this.id}) atingiu o limite de passos (${maxSteps}) tentando chegar em (${dest.x},${dest.y})`);
+                    continue;
+                }
+                const directions = [
+                    { dx: 0, dy: -1, dir: 'up' },
+                    { dx: 0, dy: 1, dir: 'down' },
+                    { dx: -1, dy: 0, dir: 'left' },
+                    { dx: 1, dy: 0, dir: 'right' }
+                ];
+                for (const d of directions) {
+                    const nx = current.x + d.dx;
+                    const ny = current.y + d.dy;
+                    const nkey = `${nx},${ny}`;
+                    if (closed.has(nkey)) continue;
+                    if (!mapManager.isWalkable(nx, ny, this.z)) {
+                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) não é walkable.`);
+                        continue;
+                    }
+                    if (this.isPositionOccupied(nx, ny, this.z)) {
+                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) está ocupado.`);
+                        continue;
+                    }
+                    open.push({ x: nx, y: ny, path: [...current.path, d] });
+                }
+            }
+            if (found && found.length < bestLen) {
+                bestPath = found;
+                bestDest = dest;
+                bestLen = found.length;
+            }
+        }
+        if (bestPath && bestPath.length > 0) {
+            const step = bestPath[0];
+            logger.debug(`[WILD] ${this.name} (${this.id}) moveu para (${this.x + step.dx},${this.y + step.dy}) direção ${step.dir}`);
+            this.x += step.dx;
+            this.y += step.dy;
+            this.direction = step.dir;
+        } else {
+            logger.debug(`[WILD] ${this.name} (${this.id}) não encontrou caminho para nenhum tile adjacente ao player. Motivo provável: todos ocupados ou bloqueados.`);
         }
     }
 
