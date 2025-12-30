@@ -1,0 +1,38 @@
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menu lateral">&#9776;</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">Chaotic</div>
+    <nav class="sidebar-menu">
+        <button class="sidebar-btn" onclick="window.location.href='login.php'">Login</button>
+        <button class="sidebar-btn" onclick="window.location.href='register.php'">Criar Conta</button>
+        <button class="sidebar-btn download-btn">Download</button>
+        <button class="sidebar-section" onclick="window.location.href='info.php'">Informações do Game</button>
+        <button class="sidebar-section" onclick="window.location.href='library.php'">Library</button>
+        <button class="sidebar-section" onclick="window.location.href='community.php'">Community</button>
+        <button class="sidebar-section" onclick="window.location.href='forum.php'">Forum</button>
+        <button class="sidebar-section" onclick="window.location.href='support.php'">Support</button>
+    </nav>
+</aside>
+<script>
+// Responsividade do menu lateral (sidebar)
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+function openSidebar() {
+    sidebar.classList.add('open');
+    document.body.classList.add('sidebar-open');
+    sidebarBackdrop.style.display = 'block';
+}
+function closeSidebar() {
+    sidebar.classList.remove('open');
+    document.body.classList.remove('sidebar-open');
+    sidebarBackdrop.style.display = 'none';
+}
+sidebarToggle.addEventListener('click', openSidebar);
+sidebarBackdrop.addEventListener('click', closeSidebar);
+window.addEventListener('resize', function() {
+    if(window.innerWidth > 900) {
+        closeSidebar();
+    }
+});
+</script>
