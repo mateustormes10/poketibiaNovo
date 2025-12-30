@@ -54,7 +54,18 @@ export class Player {
         // Se a posição mudou, inicia interpolação
         if (data.x !== undefined && data.y !== undefined) {
             if (data.x !== this.x || data.y !== this.y) {
-                this.startMove(data.x, data.y);
+                // Verifica se está entrando em tile house/construção em outro andar
+                if (data.tileType && (data.tileType === 'house' || data.tileType === 'HOUSE' || data.tileType === 'construcao' || data.tileType === 'CONSTRUCAO') && data.z !== this.z) {
+                    // Força parada da interpolação e reseta posição
+                    this.isMoving = false;
+                    this.moveProgress = 1;
+                    this.renderX = data.x;
+                    this.renderY = data.y;
+                    this.prevX = data.x;
+                    this.prevY = data.y;
+                } else {
+                    this.startMove(data.x, data.y);
+                }
             }
         }
         

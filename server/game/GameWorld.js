@@ -289,12 +289,19 @@ export class GameWorld {
         // Retorna o estado do jogo visível para o player
         const visionRange = 24;
         
-        // Inclui todos os players próximos em X/Y, independente do andar (z)
+        // Inclui todos os players próximos em X/Y, independente do andar (z),
+        // mas se o player local está em tile house/construcao, não vê players em z acima
         const playersInView = [];
+        const tileAtual = this.mapManager.getTile(player.x, player.y, player.z);
         for (const p of this.players.values()) {
             const dx = Math.abs(p.x - player.x);
             const dy = Math.abs(p.y - player.y);
             if (dx <= visionRange && dy <= visionRange) {
+                const tileP = this.mapManager.getTile(p.x, p.y, p.z);
+                const isLocalHouse = tileAtual && (tileAtual.type === 'house' || tileAtual.type === 'HOUSE' || tileAtual.type === 'construcao' || tileAtual.type === 'CONSTRUCAO');
+                const isPHouse = tileP && (tileP.type === 'house' || tileP.type === 'HOUSE' || tileP.type === 'construcao' || tileP.type === 'CONSTRUCAO');
+                // Só podem se ver se ambos estiverem em tile normal OU no mesmo andar
+                if ((isLocalHouse || isPHouse) && p.z !== player.z) continue;
                 playersInView.push(p);
             }
         }

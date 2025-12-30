@@ -145,9 +145,24 @@ export class Renderer {
                     }
                 }
             }
-            // Renderiza players desse andar
+            // Renderiza players desse andar, filtrando house/construção
             if (gameState.players) {
+                const localPlayer = gameState.localPlayer;
                 for (const [id, p] of gameState.players) {
+                    if (!localPlayer) continue;
+                    const localTile = map.getTile(localPlayer.x, localPlayer.y, localPlayer.z);
+                    const otherTile = map.getTile(p.x, p.y, p.z);
+                    const isLocalInHouse = localTile && (localTile.type === 'house' || localTile.type === 'HOUSE' || localTile.type === 'construcao' || localTile.type === 'CONSTRUCAO');
+                    const isLocalNormal = !localTile || !localTile.type || localTile.type === '';
+                    const isOtherNormal = !otherTile || !otherTile.type || otherTile.type === '';
+                    // Se o localPlayer está em house/construção, só vê quem está no mesmo andar
+                    if (isLocalInHouse && p.z !== localPlayer.z) {
+                        continue;
+                    }
+                    // Se o localPlayer está em tile normal, só vê players de outros andares se ambos estão em tile normal
+                    if (!isLocalInHouse && p.z !== localPlayer.z && !(isLocalNormal && isOtherNormal)) {
+                        continue;
+                    }
                     if (p.z === z) {
                         const screenPos = this.camera.worldToScreen(p.x, p.y);
                         this.spriteRenderer.renderPlayer(p, screenPos);
@@ -173,13 +188,7 @@ export class Renderer {
         //     }
         // }
         // Renderiza todos os players de todos os andares
-        if (gameState.players) {
-            for (const [id, p] of gameState.players) {
-                // Corrige: usa camera.worldToScreen ao invés de getScreenPos
-                const screenPos = this.camera.worldToScreen(p.x, p.y);
-                this.spriteRenderer.renderPlayer(p, screenPos);
-            }
-        }
+        // ...existing code...
 
         
         // aqui termina o problema pra arrumarmos
