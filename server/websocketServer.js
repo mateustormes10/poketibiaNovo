@@ -17,6 +17,7 @@ async function main() {
     // Inicializa o mundo do jogo
     const gameWorld = new GameWorld(database);
     await gameWorld.init();
+    global.gameWorld = gameWorld;
     
     // Inicializa o servidor WebSocket
     const wsServer = new WsServer(config.port, gameWorld);

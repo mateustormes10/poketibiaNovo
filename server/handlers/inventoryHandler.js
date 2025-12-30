@@ -60,7 +60,7 @@ export class InventoryHandler {
      * @param {Object} data - Dados da requisição
      */
     async handleUseItem(client, data) {
-        const playerId = client.player?.id;
+        const playerId = client.player?.dbId || client.player?.id;
 
         if (!playerId) {
             this.sendInventoryError(client, InventoryErrorCode.PERMISSION_DENIED, 'Player não autenticado');

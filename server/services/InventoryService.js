@@ -12,15 +12,15 @@ export const ItemDefinitions = {
     // Itens Consumíveis
     'Poção': {
         type: ItemType.CONSUMABLE,
-        description: 'Restaura 20 HP de um Pokémon.',
+        description: 'Restaura 100 HP do jogador.',
         effect: 'heal',
-        value: 20
+        value: 100
     },
     'Super Poção': {
         type: ItemType.CONSUMABLE,
-        description: 'Restaura 50 HP de um Pokémon.',
+        description: 'Restaura 200 HP do jogador.',
         effect: 'heal',
-        value: 50
+        value: 200
     },
     'Hyper Poção': {
         type: ItemType.CONSUMABLE,
@@ -102,8 +102,11 @@ export class InventoryService {
      */
     async useItem(playerId, itemName, context = {}) {
         // Verifica se o player possui o item
-        const hasItem = await this.inventoryRepository.hasItem(playerId, itemName);
-        
+        console.log('[InventoryService] playerId recebido em useItem:', playerId);
+        const items = await this.inventoryRepository.getInventory(playerId);
+        console.log('[InventoryService] Tentando usar item:', itemName);
+        console.log('[InventoryService] Inventário do player:', items.map(i => i.item_name));
+        const hasItem = items.some(i => i.item_name === itemName);
         if (!hasItem) {
             return {
                 success: false,
@@ -160,13 +163,45 @@ export class InventoryService {
      * @private
      */
     async applyHealEffect(playerId, healValue, context) {
-        // TODO: Implementar lógica de cura de Pokémon
-        // Por enquanto, retorna sucesso simulado
+        // Busca o player ativo no GameWorld
+        const gameWorld = global.gameWorld || (globalThis && globalThis.gameWorld);
+        if (!gameWorld || !gameWorld.players) {
+            return {
+                success: false,
+                error: 'NO_GAMEWORLD',
+                message: 'GameWorld não disponível.'
+            };
+        }
+        let player = gameWorld.players.get(playerId);
+        if (!player) {
+            // Tenta buscar por id string (caso a chave seja diferente)
+            for (const p of gameWorld.players.values()) {
+                if (p.dbId == playerId || p.id == playerId) {
+                    player = p;
+                    break;
+                }
+            }
+        }
+        if (!player) {
+            return {
+                success: false,
+                error: 'PLAYER_NOT_FOUND',
+                message: 'Player não encontrado.'
+            };
+        }
+        // Cura a quantidade correta de HP do item
+        const before = player.hp;
+        player.heal(healValue);
+        const after = player.hp;
+        // Atualiza no banco
+        if (gameWorld.playerRepository && typeof gameWorld.playerRepository.updateHealth === 'function') {
+            await gameWorld.playerRepository.updateHealth(playerId, player.hp, player.mana ?? 0);
+        }
         return {
             success: true,
-            message: `Item usado! Curou ${healValue} HP.`,
+            message: `Item usado! Curou ${after-before} HP.`,
             effect: 'heal',
-            value: healValue
+            value: after-before
         };
     }
 

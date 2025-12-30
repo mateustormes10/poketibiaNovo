@@ -129,7 +129,7 @@ export class WildPokemon {
      * @param {number} currentTime - Tempo atual
      */
     update(players, currentTime) {
-        logger.debug(`[UPDATE] ${this.name} (${this.id}) update iniciado. Pos: (${this.x},${this.y},${this.z}) HP: ${this.hp}`);
+        // logger.debug(`[UPDATE] ${this.name} (${this.id}) update iniciado. Pos: (${this.x},${this.y},${this.z}) HP: ${this.hp}`);
         if (this.hp <= 0) {
             if (!this.isDead) {
                 this.isDead = true;
@@ -139,7 +139,6 @@ export class WildPokemon {
             if (currentTime - this.deadSince >= 60000) {
                 // Pode ser removido ou respawnado pelo manager (não faz nada aqui)
             }
-            logger.debug(`[UPDATE] ${this.name} (${this.id}) está morto, não age.`);
             return; // Não age enquanto morto
         }
 
@@ -156,18 +155,18 @@ export class WildPokemon {
         let minDistance = Infinity;
         for (const player of players) {
             const distance = this.getDistanceToPlayer(player);
-            logger.debug(`[UPDATE] ${this.name} (${this.id}) distância até player ${player.id}: ${distance}`);
+            // logger.debug(`[UPDATE] ${this.name} (${this.id}) distância até player ${player.id}: ${distance}`);
             if (distance < minDistance) {
                 minDistance = distance;
                 closestPlayer = player;
             }
         }
         if (!closestPlayer) {
-            logger.debug(`[UPDATE] ${this.name} (${this.id}) nenhum player encontrado para perseguir.`);
+            // logger.debug(`[UPDATE] ${this.name} (${this.id}) nenhum player encontrado para perseguir.`);
         }
         if (minDistance > this.moveRange) {
             this.state = WildPokemonState.IDLE;
-            logger.debug(`[UPDATE] ${this.name} (${this.id}) está fora do moveRange (${this.moveRange}), entrando em IDLE.`);
+            // logger.debug(`[UPDATE] ${this.name} (${this.id}) está fora do moveRange (${this.moveRange}), entrando em IDLE.`);
         } else {
             // Checa se está adjacente ao player (incluindo diagonal)
             let isAdjacent = false;
@@ -178,18 +177,18 @@ export class WildPokemon {
             }
             if (currentTime - this.lastMoveTime >= this.movementSpeed) {
                 if (!isAdjacent) {
-                    logger.debug(`[UPDATE] ${this.name} (${this.id}) não está adjacente ao player, vai tentar mover.`);
+                    // logger.debug(`[UPDATE] ${this.name} (${this.id}) não está adjacente ao player, vai tentar mover.`);
                     this.moveTowards(closestPlayer);
                 } else {
-                    logger.debug(`[UPDATE] ${this.name} (${this.id}) já está adjacente ao player.`);
+                    // logger.debug(`[UPDATE] ${this.name} (${this.id}) já está adjacente ao player.`);
                 }
                 this.lastMoveTime = currentTime;
             } else {
-                logger.debug(`[UPDATE] ${this.name} (${this.id}) aguardando cooldown de movimento.`);
+                // logger.debug(`[UPDATE] ${this.name} (${this.id}) aguardando cooldown de movimento.`);
             }
             // Se está na distância de ataque E tem linha de visão, ataca
             if (minDistance <= this.attackRange && closestPlayer && this.hasLineOfSightTo(closestPlayer)) {
-                logger.debug(`[UPDATE] ${this.name} (${this.id}) vai atacar player ${closestPlayer.id}`);
+                // logger.debug(`[UPDATE] ${this.name} (${this.id}) vai atacar player ${closestPlayer.id}`);
                 const skillResult = this.useRandomSkill(closestPlayer, currentTime);
                 if (skillResult && this.gameWorld && this.gameWorld.wildPokemonManager) {
                     this.gameWorld.wildPokemonManager.broadcastUpdate(this);

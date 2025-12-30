@@ -132,11 +132,14 @@ export class InventoryManager {
      */
     receiveItemUsed(data) {
         console.log('[InventoryManager] Item usado:', data);
-        
-        // Mostra mensagem de feedback (pode ser integrado com MessageBox)
+        // Mostra mensagem de feedback no chat
         if (data.message) {
-            console.log('[InventoryManager] Mensagem:', data.message);
-            // TODO: Integrar com sistema de mensagens
+            // Tenta usar o chatBox global do jogo
+            if (window.game && window.game.renderer && window.game.renderer.chatBox) {
+                window.game.renderer.chatBox.addMessage('System', data.message, 'system');
+            } else {
+                console.log('[InventoryManager] Mensagem:', data.message);
+            }
         }
     }
 

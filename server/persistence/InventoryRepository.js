@@ -27,7 +27,8 @@ export class InventoryRepository {
             WHERE player_id = ? AND quantity > 0
             ORDER BY created_at ASC
         `;
-        return await this.db.query(sql, [playerId]);
+            console.log('[InventoryRepository] getInventory playerId:', playerId);
+            return await this.db.query(sql, [playerId]);
     }
 
     /**
@@ -111,7 +112,7 @@ export class InventoryRepository {
                 DELETE FROM player_inventory 
                 WHERE player_id = ? AND item_name = ?
             `;
-            await this.db.execute(sql, [playerId, itemName]);
+            await this.db.update(sql, [playerId, itemName]);
         } else {
             // Atualiza quantidade
             const sql = `
@@ -119,7 +120,7 @@ export class InventoryRepository {
                 SET quantity = ?
                 WHERE player_id = ? AND item_name = ?
             `;
-            await this.db.execute(sql, [newQuantity, playerId, itemName]);
+            await this.db.update(sql, [newQuantity, playerId, itemName]);
         }
 
         return true;
@@ -149,7 +150,7 @@ export class InventoryRepository {
                 DELETE FROM player_inventory 
                 WHERE player_id = ? AND item_name = ?
             `;
-            await this.db.execute(sql, [playerId, itemName]);
+            await this.db.update(sql, [playerId, itemName]);
         } else {
             // Atualiza quantidade
             const sql = `
@@ -157,7 +158,7 @@ export class InventoryRepository {
                 SET quantity = ?
                 WHERE player_id = ? AND item_name = ?
             `;
-            await this.db.execute(sql, [quantity, playerId, itemName]);
+            await this.db.update(sql, [quantity, playerId, itemName]);
         }
 
         return true;
