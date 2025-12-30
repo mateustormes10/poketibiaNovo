@@ -221,6 +221,10 @@ export class SpriteRenderer {
         if (!rendered) {
             this.renderPlaceholder(player, screenPos);
         }
+        // Sempre renderiza o nome do player
+        if (player.name) {
+            this.renderName(player.name, screenPos);
+        }
     }
     
     renderPlaceholder(entity, screenPos) {

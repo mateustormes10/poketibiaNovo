@@ -289,12 +289,15 @@ export class GameWorld {
         // Retorna o estado do jogo visível para o player
         const visionRange = 24;
         
-        const playersInView = this.getPlayersInArea(
-            player.x, 
-            player.y, 
-            player.z, 
-            visionRange
-        );
+        // Inclui todos os players próximos em X/Y, independente do andar (z)
+        const playersInView = [];
+        for (const p of this.players.values()) {
+            const dx = Math.abs(p.x - player.x);
+            const dy = Math.abs(p.y - player.y);
+            if (dx <= visionRange && dy <= visionRange) {
+                playersInView.push(p);
+            }
+        }
         let maxMapUp = 5;
         let minMapDown = 1;
         
