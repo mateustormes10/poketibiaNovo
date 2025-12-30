@@ -221,13 +221,19 @@ export class GameWorld {
         if (player) {
             // Remove do spatial grid
             this.spatialGrid.remove(playerId);
-            
             // Remove do sistema de streaming
             this.mapManager.unregisterPlayer(playerId);
-            
             // Limpa estados de delta
             this.deltaManager.clearObserver(playerId);
-            
+            // Notifica todos os clientes que viam esse player para remover sprite
+            if (this.wsServer) {
+                for (const client of this.wsServer.clients.values()) {
+                    if (client.player && client.player._lastVisiblePlayers && client.player._lastVisiblePlayers.has(playerId)) {
+                        client.send('removePlayer', { id: playerId });
+                        client.player._lastVisiblePlayers.delete(playerId);
+                    }
+                }
+            }
             this.players.delete(playerId);
             logger.info(`Player removed: ${player.name} (${playerId})`);
         }
@@ -293,6 +299,9 @@ export class GameWorld {
         // mas se o player local está em tile house/construcao, não vê players em z acima
         const playersInView = [];
         const tileAtual = this.mapManager.getTile(player.x, player.y, player.z);
+        // Track previous visible players for this client
+        if (!player._lastVisiblePlayers) player._lastVisiblePlayers = new Set();
+        const currentVisiblePlayers = new Set();
         for (const p of this.players.values()) {
             const dx = Math.abs(p.x - player.x);
             const dy = Math.abs(p.y - player.y);
@@ -303,8 +312,20 @@ export class GameWorld {
                 // Só podem se ver se ambos estiverem em tile normal OU no mesmo andar
                 if ((isLocalHouse || isPHouse) && p.z !== player.z) continue;
                 playersInView.push(p);
+                currentVisiblePlayers.add(p.id);
             }
         }
+        // Find players that left visibility
+        const removedPlayers = [...player._lastVisiblePlayers].filter(id => !currentVisiblePlayers.has(id));
+        if (removedPlayers.length && this.wsServer) {
+            const client = Array.from(this.wsServer.clients.values()).find(c => c.player?.id === player.id);
+            if (client) {
+                removedPlayers.forEach(id => {
+                    client.send('removePlayer', { id });
+                });
+            }
+        }
+        player._lastVisiblePlayers = currentVisiblePlayers;
         let maxMapUp = 5;
         let minMapDown = 1;
         

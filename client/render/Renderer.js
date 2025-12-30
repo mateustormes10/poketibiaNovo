@@ -27,8 +27,14 @@ export class Renderer {
         this.outfitSelector = new OutfitSelector(this.ctx, canvas, wsClient);
         this.showGrid = false;
         this.wildPokemonManager = null; // Será definido depois
+        this.removedPlayers = new Set();
+        if (wsClient && typeof wsClient.on === 'function') {
+            wsClient.on('removePlayer', ({ id }) => {
+                this.removedPlayers.add(id);
+            });
+        }
     }
-    
+
     async init() {
         this.ctx.imageSmoothingEnabled = false;
         
@@ -56,6 +62,38 @@ export class Renderer {
     }
     
     render(gameState) {
+        // Remove players marked for removal before rendering
+        if (gameState.players) {
+            for (const id of this.removedPlayers) {
+                gameState.players.delete(id);
+            }
+        }
+        // Antes de renderizar, reseta estado de renderização/interpolação dos players que não devem ser visíveis
+        if (gameState.players && gameState.localPlayer) {
+            const localPlayer = gameState.localPlayer;
+            for (const [id, p] of gameState.players) {
+                const localTile = gameState.map.getTile(localPlayer.x, localPlayer.y, localPlayer.z);
+                const otherTile = gameState.map.getTile(p.x, p.y, p.z);
+                const isLocalInHouse = localTile && (localTile.type === 'house' || localTile.type === 'HOUSE' || localTile.type === 'construcao' || localTile.type === 'CONSTRUCAO');
+                const isLocalNormal = !localTile || !localTile.type || localTile.type === '';
+                const isOtherNormal = !otherTile || !otherTile.type || otherTile.type === '';
+                let canSee = true;
+                if (isLocalInHouse && p.z !== localPlayer.z) {
+                    canSee = false;
+                }
+                if (!isLocalInHouse && p.z !== localPlayer.z && !(isLocalNormal && isOtherNormal)) {
+                    canSee = false;
+                }
+                if (!canSee) {
+                    p.isMoving = false;
+                    p.moveProgress = 1;
+                    p.renderX = p.x;
+                    p.renderY = p.y;
+                    p.prevX = p.x;
+                    p.prevY = p.y;
+                }
+            }
+        }
             // DEBUG: Verifica se mapDown2 chegou do server
             console.log('[DEBUG] mapDown2:', gameState.mapDown2);
         // (Bloco antigo de renderização do andar de baixo removido para evitar confusão)
@@ -155,12 +193,23 @@ export class Renderer {
                     const isLocalInHouse = localTile && (localTile.type === 'house' || localTile.type === 'HOUSE' || localTile.type === 'construcao' || localTile.type === 'CONSTRUCAO');
                     const isLocalNormal = !localTile || !localTile.type || localTile.type === '';
                     const isOtherNormal = !otherTile || !otherTile.type || otherTile.type === '';
+                    let canSee = true;
                     // Se o localPlayer está em house/construção, só vê quem está no mesmo andar
                     if (isLocalInHouse && p.z !== localPlayer.z) {
-                        continue;
+                        canSee = false;
                     }
                     // Se o localPlayer está em tile normal, só vê players de outros andares se ambos estão em tile normal
                     if (!isLocalInHouse && p.z !== localPlayer.z && !(isLocalNormal && isOtherNormal)) {
+                        canSee = false;
+                    }
+                    if (!canSee) {
+                        // Força reset do estado de renderização/interpolação para remover fantasma
+                        p.isMoving = false;
+                        p.moveProgress = 1;
+                        p.renderX = p.x;
+                        p.renderY = p.y;
+                        p.prevX = p.x;
+                        p.prevY = p.y;
                         continue;
                     }
                     if (p.z === z) {
