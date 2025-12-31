@@ -221,24 +221,6 @@ export class Renderer {
         }
 
 
-        // Ordem correta: ground, overlay, player
-        // 1. Renderiza todos os tiles primeiro (feito abaixo)
-        // 2. Renderiza entidades (player, NPC, etc) SEMPRE por cima dos tiles
-        // let entityZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
-        // for (let y = startY; y <= endY; y++) {
-        //     for (let x = startX; x <= endX; x++) {
-        //         let entity = null;
-        //         if (entitiesByY[y]) {
-        //             entity = entitiesByY[y].find(e => e.x === x && e.z === entityZ);
-        //             if (entity) {
-        //                 this.spriteRenderer.renderEntity(entity, startX, startY);
-        //             }
-        //         }
-        //     }
-        // }
-        // Renderiza todos os players de todos os andares
-        // ...existing code...
-
         
         // aqui termina o problema pra arrumarmos
 
