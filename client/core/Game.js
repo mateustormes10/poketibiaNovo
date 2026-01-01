@@ -1666,33 +1666,7 @@ export class Game {
     }
     
     render() {
-        this.renderer.clear();
-        // 1. Renderiza mapa, entidades e HUD (HUD inclui lista de pokémons do player)
-        this.renderer.render(this.gameState);
-
-        // 2. Renderiza pokémons selvagens de TODOS os andares (mortos e vivos)
-        let wildPokemons = this.wildPokemonManager.getAll();
-        const player = this.gameState.localPlayer;
-        let allWildPokemons = [];
-        if (player) {
-            // Renderiza apenas os pokémons selvagens do mesmo andar (z) do player local
-            for (const wp of wildPokemons.values()) {
-                if (wp.z === player.z) {
-                    allWildPokemons.push(wp);
-                }
-            }
-        }
-        this.wildPokemonRenderer.render(this.renderer.ctx, new Map(allWildPokemons.map(wp => [wp.id, wp])), this.camera);
-
-        // ... (removido: renderização duplicada de players, já feita no Renderer.js)
-
-        // --- Efeito visual de skill ao redor do player ---
-        if (this.skillEffectManager) {
-            this.skillEffectManager.render(this.renderer.ctx);
-        }
-        // 3. Renderiza HUD novamente para garantir que a UI fique acima dos sprites (caso algum sprite sobrescreva)
-        this.renderer.hud.render(this.gameState, this.wildPokemonManager);
-        // 4. Renderiza inventário por último (acima de tudo)
-        this.inventoryManager.render();
+        // Toda a lógica de renderização foi movida para Renderer.js
+        this.renderer.render(this.gameState, this.skillEffectManager, this.inventoryManager);
     }
 }

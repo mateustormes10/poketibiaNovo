@@ -57,7 +57,7 @@ export class Renderer {
         this.ctx.restore();
     }
     
-    render(gameState) {
+    render(gameState, skillEffectManager, inventoryManager) {
         // Limpa canvas
         this.clear();
 
@@ -205,20 +205,43 @@ export class Renderer {
         }
 
 
-        // 3. Renderiza pokémons selvagens vivos (não mortos) sobre o chão, mas sob a UI
+        // 1. Renderiza corpos mortos de pokémons selvagens (spriteDead) ANTES dos jogadores
+        if (this.wildPokemonManager && this.wildPokemonRenderer) {
+            for (let z of zsVisiveis) {
+                const wildsDead = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && wp.isDead);
+                for (const wild of wildsDead) {
+                    this.ctx.save();
+                    if (z !== entityZ) {
+                        this.ctx.globalAlpha = 0.8;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
+                    } else {
+                        this.ctx.globalAlpha = 1.0;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
+                    }
+                    this.ctx.restore();
+                }
+            }
+        }
+
+        // 2. Renderiza entidades (inclui jogadores, npcs, monstros vivos)
+        if(entityZ <= 3){
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY, entityZ);
+        }
+
+        // 3. Renderiza pokémons selvagens vivos (não mortos) DEPOIS dos jogadores
         if (this.wildPokemonManager && this.wildPokemonRenderer) {
             for (let z of zsVisiveis) {
                 const wildsAlive = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && !wp.isDead);
                 for (const wild of wildsAlive) {
                     let wildMap = map;
-if (z === entityZ - 1 && gameState.mapDown) {
-    wildMap = new map.constructor();
-    wildMap.updateFromServer(gameState.mapDown);
-} else if (z === entityZ - 2 && gameState.mapDown2) {
-    wildMap = new map.constructor();
-    wildMap.updateFromServer(gameState.mapDown2);
-}
-const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
+                    if (z === entityZ - 1 && gameState.mapDown) {
+                        wildMap = new map.constructor();
+                        wildMap.updateFromServer(gameState.mapDown);
+                    } else if (z === entityZ - 2 && gameState.mapDown2) {
+                        wildMap = new map.constructor();
+                        wildMap.updateFromServer(gameState.mapDown2);
+                    }
+                    const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
                     const isWildInConstrucao = wildTile && (
                         wildTile.type === 'house' ||
                         wildTile.type === 'HOUSE' ||
@@ -358,32 +381,22 @@ const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
         // 5. Renderiza indicador de modo de edição
         this.uiManager.renderEditModeIndicator();
         
-        // 6. Renderiza diálogo de NPC (se visível)
-        this.npcDialog.render();
-        
-        // 7. Renderiza modal de morte (se visível - bloqueia tudo)
-        this.deathModal.render();
-
-        // 8. Renderiza OutfitSelector (UI de troca de sprite)
-        this.outfitSelector.render(this.spriteRenderer);
-
-        // 1. Renderiza corpos mortos de pokémons selvagens (spriteDead) ANTES dos jogadores
-        if (this.wildPokemonManager && this.wildPokemonRenderer) {
-            for (let z of zsVisiveis) {
-                const wildsDead = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && wp.isDead);
-                for (const wild of wildsDead) {
-                    this.ctx.save();
-                    if (z !== entityZ) {
-                        this.ctx.globalAlpha = 0.8;
-                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
-                    } else {
-                        this.ctx.globalAlpha = 1.0;
-                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
-                    }
-                    this.ctx.restore();
-                }
-            }
+        // --- Efeito visual de skill ao redor do player ---
+        if (skillEffectManager) {
+            skillEffectManager.render(this.ctx);
         }
+        // 3. Renderiza HUD novamente para garantir que a UI fique acima dos sprites (caso algum sprite sobrescreva)
+        this.hud.render(gameState, this.wildPokemonManager);
+        // 4. Renderiza inventário por último (acima de tudo)
+        if (inventoryManager) {
+            inventoryManager.render();
+        }
+        // 5. Renderiza diálogo de NPC (se visível)
+        this.npcDialog.render();
+        // 6. Renderiza modal de morte (se visível - bloqueia tudo)
+        this.deathModal.render();
+        // 7. Renderiza OutfitSelector (UI de troca de sprite)
+        this.outfitSelector.render(this.spriteRenderer);
 
     }
 
