@@ -247,36 +247,6 @@ const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
         for (let z of zsVisiveisOrdem) {
             // Seleciona o mapa correto para cada z
             let mapForZ = map;
-             for (let y = startY; y <= endY; y++) {
-                for (let x = startX; x <= endX; x++) {
-                    const tile = mapForZ.getTile(x, y, z);
-                    const screenX = (x - startX) * tileSize;
-                    const screenY = (y - startY) * tileSize;
-                  
-                    if (tile) {
-                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                        const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
-                        if (overlayIds.length > 0) {
-                            let overlayTile = { ...tile, spriteIds: overlayIds };
-                            // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
-                            if (overlayIds.includes(197)) {
-                                const portalInstances = TileActions?.[197]?.instances;
-                                if (portalInstances) {
-                                    const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
-                                    if (portal && portal.idleAnimation) {
-                                        overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
-                                    }
-                                }
-                            }
-                            // Todos overlays do andar SEM opacidade
-                            this.ctx.save();
-                            this.ctx.globalAlpha = 1.0;
-                            this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
-                            this.ctx.restore();
-                        }
-                    }
-                }
-            }
             if (z === entityZ - 1 && gameState.mapDown) {
                 mapForZ = new map.constructor();
                 mapForZ.updateFromServer(gameState.mapDown);
@@ -287,7 +257,56 @@ const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
                 mapForZ = new map.constructor();
                 mapForZ.updateFromServer(gameState.mapUp);
             }
-           
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const tile = mapForZ.getTile(x, y, z);
+                    const screenX = (x - startX) * tileSize;
+                    const screenY = (y - startY) * tileSize;
+                    if (tile) {
+                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                        const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
+                        if (overlayIds.length > 0) {
+                            // Se está no mesmo andar do player, renderiza todos overlays
+                            if (z === entityZ) {
+                                let overlayTile = { ...tile, spriteIds: overlayIds };
+                                if (overlayIds.includes(197)) {
+                                    const portalInstances = TileActions?.[197]?.instances;
+                                    if (portalInstances) {
+                                        const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                        if (portal && portal.idleAnimation) {
+                                            overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+                                        }
+                                    }
+                                }
+                                this.ctx.save();
+                                this.ctx.globalAlpha = 1.0;
+                                this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                                this.ctx.restore();
+                            } else {
+                                // Se está em outro andar, NÃO renderiza overlays de house/construcao
+                                if (!tile.type || (
+                                    tile.type.toLowerCase() !== 'house' && tile.type.toLowerCase() !== 'construcao'
+                                )) {
+                                    let overlayTile = { ...tile, spriteIds: overlayIds };
+                                    if (overlayIds.includes(197)) {
+                                        const portalInstances = TileActions?.[197]?.instances;
+                                        if (portalInstances) {
+                                            const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                            if (portal && portal.idleAnimation) {
+                                                overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+                                            }
+                                        }
+                                    }
+                                    this.ctx.save();
+                                    this.ctx.globalAlpha = 1.0;
+                                    this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                                    this.ctx.restore();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir

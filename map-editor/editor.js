@@ -804,7 +804,9 @@ saveBtn.addEventListener("click", () => {
         for (let y = 0; y < mapSize; y++) {
             for (let x = 0; x < mapSize; x++) {
                 const t = map[y][x];
-                const s = t.ground.join(",");
+                // Remove zeros à esquerda do ground
+                let groundArr = t.ground.filter(v => v !== 0 && v !== '0');
+                const s = groundArr.join(",");
                 let vertical = "";
                 if (t.up) vertical += `UP(${t.up})`;
                 if (t.down) vertical += (vertical ? "," : "") + `DOWN(${t.down})`;

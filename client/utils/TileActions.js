@@ -35,6 +35,11 @@ export const TileActions = {
       { x: 81, y: 29, z: 3, look: () => "Portal para a arena 3.", teleportTo: [50, 54, 2], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
       { x: 81, y: 31, z: 3, look: () => "Portal para a arena 4.", teleportTo: [50, 58, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
       { x: 81, y: 33, z: 3, look: () => "Portal para a arena 5.", teleportTo: [50, 62, 1], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      
+      { x: 81, y: 35, z: 3, look: () => "Portal para a arena 6.", teleportTo: [50, 62, 1], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 37, z: 3, look: () => "Portal para a arena 7.", teleportTo: [50, 62, 2], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 39, z: 3, look: () => "Portal para a arena 8.", teleportTo: [50, 62, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
+      { x: 81, y: 41, z: 3, look: () => "Portal para a arena 9.", teleportTo: [50, 62, 4], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
     ]
   },
   198: {
