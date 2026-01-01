@@ -48,6 +48,11 @@ export class SoundConfigUI {
         inputVolume.style = 'width:200px;margin-left:12px;';
         inputVolume.oninput = (e) => {
             localStorage.setItem('sound_volume', e.target.value);
+            if (window.game && window.game.music) {
+                const vol = parseInt(e.target.value, 10) / 100;
+                window.game.music.config(vol);
+                if (window.game.music.audio) window.game.music.audio.muted = inputMute.checked;
+            }
         };
         labelVolume.appendChild(inputVolume);
         container.appendChild(labelVolume);
@@ -60,7 +65,18 @@ export class SoundConfigUI {
         inputMute.checked = localStorage.getItem('sound_muted') === 'true';
         inputMute.onchange = (e) => {
             localStorage.setItem('sound_muted', e.target.checked);
+            if (window.game && window.game.music && window.game.music.audio) {
+                window.game.music.audio.muted = e.target.checked;
+            }
         };
+                // Aplica volume e mute ao abrir
+                setTimeout(() => {
+                    if (window.game && window.game.music) {
+                        const vol = parseInt(inputVolume.value, 10) / 100;
+                        window.game.music.config(vol);
+                        if (window.game.music.audio) window.game.music.audio.muted = inputMute.checked;
+                    }
+                }, 100);
         labelMute.appendChild(inputMute);
         labelMute.appendChild(document.createTextNode(' Mutar Som'));
         container.appendChild(labelMute);

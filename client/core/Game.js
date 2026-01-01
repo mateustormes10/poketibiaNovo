@@ -21,8 +21,21 @@ import { MapUI } from '../render/UI/MapUI.js';
 import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { SkillEffectManager } from './SkillEffectManager.js';
 import { getTypeEffectiveness } from '../../shared/TypeEffectiveness.js';
-
+import { MusicPlayer } from './MusicPlayer.js';
 export class Game {
+
+        // Instancie MusicPlayer como this.music
+        playBackgroundMusic() {
+            if (!this.music) {
+                this.music = new MusicPlayer('assets/');
+            }
+            this.music.play('rpg_city_medieval.mp3');
+            // Aplica volume e mute das configs salvas
+            const vol = parseInt(localStorage.getItem('sound_volume') || '80', 10) / 100;
+            const muted = localStorage.getItem('sound_muted') === 'true';
+            this.music.config(vol);
+            if (this.music.audio) this.music.audio.muted = muted;
+        }
     _createMainMenu() {
             let menu = document.getElementById('main-menu-ui');
             if (!menu) {
@@ -857,6 +870,7 @@ export class Game {
     
     start() {
         this.running = true;
+        this.playBackgroundMusic();
         this.lastFrameTime = performance.now();
         this.gameLoop();
     }
