@@ -1661,25 +1661,16 @@ export class Game {
         const player = this.gameState.localPlayer;
         let allWildPokemons = [];
         if (player) {
-            // Renderiza todos os pokémons selvagens de todos os andares
+            // Renderiza apenas os pokémons selvagens do mesmo andar (z) do player local
             for (const wp of wildPokemons.values()) {
-                // Se está morto OU está em qualquer z diferente do player OU está no mesmo z
-                if (wp.isDead || wp.z !== player.z || wp.z === player.z) {
+                if (wp.z === player.z) {
                     allWildPokemons.push(wp);
                 }
             }
         }
-        // Renderiza todos os pokémons selvagens (mortos e vivos, todos os andares)
         this.wildPokemonRenderer.render(this.renderer.ctx, new Map(allWildPokemons.map(wp => [wp.id, wp])), this.camera);
 
-        // 2b. Renderiza todos os players dos andares acima/abaixo
-        // Renderiza todos os players de todos os andares, inclusive o próprio
-        if (this.gameState.players) {
-            for (const [id, p] of this.gameState.players) {
-                const screenPos = this.camera.worldToScreen(p.x, p.y);
-                this.renderer.spriteRenderer.renderPlayer(p, screenPos);
-            }
-        }
+        // ... (removido: renderização duplicada de players, já feita no Renderer.js)
 
         // --- Efeito visual de skill ao redor do player ---
         if (this.skillEffectManager) {
