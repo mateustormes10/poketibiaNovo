@@ -55,6 +55,8 @@ export class GameState {
     }
     
     updatePlayers(players) {
+        // Atualiza ou adiciona players recebidos
+        const receivedIds = new Set();
         players.forEach(playerData => {
             let player = this.players.get(playerData.id);
             if (!player) {
@@ -63,11 +65,18 @@ export class GameState {
             } else {
                 player.update(playerData);
             }
+            receivedIds.add(playerData.id);
             // Sempre tenta identificar o localPlayer pelo isLocal ou pelo id igual ao antigo localPlayer
             if (playerData.isLocal || (this.localPlayer && playerData.id === this.localPlayer.id)) {
                 this.localPlayer = player;
             }
         });
+        // Remove players que não vieram do servidor (deslogados)
+        for (let id of this.players.keys()) {
+            if (!receivedIds.has(id)) {
+                this.players.delete(id);
+            }
+        }
     }
     
     updateNpcs(npcs) {
@@ -145,31 +154,51 @@ export class GameState {
         });
     }
     
-    getEntitiesInView(camera) {
+    /**
+     * Retorna entidades visíveis na câmera, podendo filtrar por múltiplos andares (zsVisiveis).
+     * @param {Camera} camera
+     * @param {number[]} [zsVisiveis] - Lista de andares visíveis (opcional)
+     */
+    getEntitiesInView(camera, zsVisiveis) {
         const entities = [];
-        
         this.players.forEach(player => {
-            if (this.isInView(player, camera)) {
+            if (this.isInView(player, camera, zsVisiveis)) {
                 entities.push({ ...player, type: 'player' });
             }
         });
-        
         this.npcs.forEach(npc => {
-            if (this.isInView(npc, camera)) {
+            if (this.isInView(npc, camera, zsVisiveis)) {
                 entities.push({ ...npc, type: 'npc' });
             }
         });
-        
         this.monsters.forEach(monster => {
-            if (this.isInView(monster, camera)) {
+            if (this.isInView(monster, camera, zsVisiveis)) {
                 entities.push({ ...monster, type: 'monster' });
             }
         });
-        
         return entities;
     }
-    
-    isInView(entity, camera) {
-        return entity.z === camera.z;
+
+    /**
+     * Verifica se a entidade está visível na câmera e em um dos andares permitidos.
+     * @param {object} entity
+     * @param {Camera} camera
+     * @param {number[]} [zsVisiveis]
+     */
+    isInView(entity, camera, zsVisiveis) {
+        // Checa se está em um dos andares visíveis
+        if (Array.isArray(zsVisiveis)) {
+            if (!zsVisiveis.includes(entity.z)) return false;
+        } else {
+            if (entity.z !== camera.z) return false;
+        }
+        // Checa se está dentro do viewport
+        const viewport = camera.getViewport();
+        return (
+            entity.x >= Math.floor(viewport.x / camera.tileSize) &&
+            entity.x <= Math.floor((viewport.x + viewport.width) / camera.tileSize) &&
+            entity.y >= Math.floor(viewport.y / camera.tileSize) &&
+            entity.y <= Math.floor((viewport.y + viewport.height) / camera.tileSize)
+        );
     }
 }

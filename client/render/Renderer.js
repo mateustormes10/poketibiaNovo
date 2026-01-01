@@ -70,28 +70,47 @@ export class Renderer {
         const endY = startY + Math.ceil(viewport.height / tileSize) - 1;
         const currentZ = map.viewport.z;
 
-        // Organiza entidades por linha Y
-        const entities = gameState.getEntitiesInView(this.camera);
+        const player = gameState.localPlayer;
+        const tileAtual = map.getTile(player.x, player.y, player.z);
+        const isInHouseOrConstrucao = tileAtual && (
+                tileAtual.type === 'house' ||
+                tileAtual.type === 'HOUSE' ||
+                tileAtual.type === 'construcao' ||
+                tileAtual.type === 'CONSTRUCAO'
+        );
+        
+        // Renderização condicional para múltiplos andares (z >= 3 mostra z, z-1, z-2)
+        const entityZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
+
+        // Organiza entidades por linha Y e múltiplos andares visíveis
+        let zsVisiveis;
+        if (entityZ >= 3) {
+            zsVisiveis = [3, 4, 5];
+        } else {
+            zsVisiveis = [entityZ];
+        }
+        // Busca entidades de todos os andares visíveis
+        const entities = gameState.getEntitiesInView(this.camera, zsVisiveis);
         const entitiesByY = {};
         entities.forEach(entity => {
             const y = entity.y;
             if (!entitiesByY[y]) entitiesByY[y] = [];
             entitiesByY[y].push(entity);
         });
+        
 
-        // Renderização condicional para múltiplos andares (z >= 3 mostra z, z-1, z-2)
-        const playerZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
-        if (playerZ >= 3) {
+        
+        if (entityZ >= 3) {
             // Renderiza do mais baixo para o mais alto (z-2, z-1, z)
             for (let dz = 2; dz >= 0; dz--) {
-                const z = playerZ - dz;
+                const z = entityZ - dz;
                 // Seleciona o mapa correto para cada z
                 let mapForZ = map;
-                if (z === playerZ - 1 && gameState.mapDown) {
+                if (z === entityZ - 1 && gameState.mapDown) {
                     // z-1: usa mapDown se disponível
                     mapForZ = new map.constructor();
                     mapForZ.updateFromServer(gameState.mapDown);
-                } else if (z === playerZ - 2 && gameState.mapDown2) {
+                } else if (z === entityZ - 2 && gameState.mapDown2) {
                     // z-2: usa mapDown2 se disponível (precisa ser enviado pelo server)
                     mapForZ = new map.constructor();
                     mapForZ.updateFromServer(gameState.mapDown2);
@@ -145,35 +164,11 @@ export class Renderer {
             }
         }
 
-
-        // Ordem correta: ground, overlay, player
-        // 1. Renderiza todos os tiles primeiro (feito abaixo)
-        // 2. Renderiza entidades (player, NPC, etc) SEMPRE por cima dos tiles
-        let entityZ = (gameState.localPlayer && typeof gameState.localPlayer.z === 'number') ? gameState.localPlayer.z : currentZ;
-        for (let y = startY; y <= endY; y++) {
-            for (let x = startX; x <= endX; x++) {
-                let entity = null;
-                if (entitiesByY[y]) {
-                    entity = entitiesByY[y].find(e => e.x === x && e.z === entityZ);
-                    if (entity) {
-                        this.spriteRenderer.renderEntity(entity, startX, startY);
-                    }
-                }
-            }
-        }
-
+        this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
         if (gameState.mapUp && gameState.localPlayer) {
             // Só renderiza se o player NÃO estiver em tile house/construcao
-            const player = gameState.localPlayer;
-            const tileAtual = map.getTile(player.x, player.y, player.z);
-            const isInHouseOrConstrucao = tileAtual && (
-                tileAtual.type === 'house' ||
-                tileAtual.type === 'HOUSE' ||
-                tileAtual.type === 'construcao' ||
-                tileAtual.type === 'CONSTRUCAO'
-            );
             if (!isInHouseOrConstrucao) {
                 // Se o player está no z=3, renderiza o andar superior (z=4) por cima do z=3, sem opacidade
                 const mapUp = new gameState.map.constructor();
@@ -195,36 +190,53 @@ export class Renderer {
                             }
                         }
                     }
+                    // Após o overlay do mapa superior, renderiza entidades de z=4 (e z=5 se desejar)
+                    this.renderEntitiesByFloors(entitiesByY, startX, startY, [4, 5], endX, endY);
                 }
             }
         }
 
-        // 3. Renderiza overlay do andar atual (sempre por cima do player) 
-        for (let y = startY; y <= endY; y++) {
-            for (let x = startX; x <= endX; x++) {
-                const tile = map.getTile(x, y, currentZ);
-                const screenX = (x - startX) * tileSize;
-                const screenY = (y - startY) * tileSize;
-                if (tile) {
-                    const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                    const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
-                    if (overlayIds.length > 0) {
-                        let overlayTile = { ...tile, spriteIds: overlayIds };
-                        // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
-                        if (overlayIds.includes(197)) {
-                            const portalInstances = TileActions?.[197]?.instances;
-                            if (portalInstances) {
-                                const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
-                                if (portal && portal.idleAnimation) {
-                                    overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+        // 3. Renderiza overlays dos andares visíveis na ordem correta (de baixo para cima)
+        const zsVisiveisOrdem = [...zsVisiveis].sort((a, b) => a - b); // menor z primeiro
+        for (let z of zsVisiveisOrdem) {
+            // Seleciona o mapa correto para cada z
+            let mapForZ = map;
+            if (z === entityZ - 1 && gameState.mapDown) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapDown);
+            } else if (z === entityZ - 2 && gameState.mapDown2) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapDown2);
+            } else if (z === entityZ + 1 && gameState.mapUp) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapUp);
+            }
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const tile = mapForZ.getTile(x, y, z);
+                    const screenX = (x - startX) * tileSize;
+                    const screenY = (y - startY) * tileSize;
+                    if (tile) {
+                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                        const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
+                        if (overlayIds.length > 0) {
+                            let overlayTile = { ...tile, spriteIds: overlayIds };
+                            // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
+                            if (overlayIds.includes(197)) {
+                                const portalInstances = TileActions?.[197]?.instances;
+                                if (portalInstances) {
+                                    const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                    if (portal && portal.idleAnimation) {
+                                        overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+                                    }
                                 }
                             }
+                            // Todos overlays do andar SEM opacidade
+                            this.ctx.save();
+                            this.ctx.globalAlpha = 1.0;
+                            this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                            this.ctx.restore();
                         }
-                        // Todos overlays do andar atual SEM opacidade
-                        this.ctx.save();
-                        this.ctx.globalAlpha = 1.0;
-                        this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
-                        this.ctx.restore();
                     }
                 }
             }
@@ -250,5 +262,33 @@ export class Renderer {
 
         // 8. Renderiza OutfitSelector (UI de troca de sprite)
         this.outfitSelector.render(this.spriteRenderer);
+    }
+
+    renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY) {
+        for (let z of zsVisiveis) {
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    let entity = null;
+                    if (entitiesByY[y]) {
+                        entity = entitiesByY[y].find(e => e.x === x && e.z === z);
+                        if (entity) {
+                            if (entity.type === 'player') {
+                                // Renderiza player
+                                this.spriteRenderer.renderEntity(entity, startX, startY);
+                            } else if (entity.type === 'npc') {
+                                // Renderiza NPC
+                                this.spriteRenderer.renderEntity(entity, startX, startY);
+                            } else if (entity.type === 'monster') {
+                                // Renderiza pokémon selvagem (ou monstro)
+                                this.spriteRenderer.renderEntity(entity, startX, startY);
+                            } else {
+                                // Outros tipos, se houver
+                                this.spriteRenderer.renderEntity(entity, startX, startY);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
