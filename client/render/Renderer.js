@@ -131,8 +131,12 @@ export class Renderer {
                             }
                         }
                         if (!blockAbove && tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
-                            const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                            const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
+                            let spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                            // Remove zeros apenas se houver outros valores
+                            if (spriteIds.length > 1) {
+                                spriteIds = spriteIds.filter(id => id !== 0 && id !== '0');
+                            }
+                            const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== undefined && id !== null);
                             if (groundIds.length > 0) {
                                 const groundTile = { ...tile, spriteIds: groundIds };
                                 this.ctx.save();
@@ -152,8 +156,12 @@ export class Renderer {
                     const screenY = (y - startY) * tileSize;
                     const tile = map.getTile(x, y, currentZ);
                     if (tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
-                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                        const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== 0 && id !== '0' && id !== undefined && id !== null);
+                        let spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                        // Remove zeros apenas se houver outros valores
+                        if (spriteIds.length > 1) {
+                            spriteIds = spriteIds.filter(id => id !== 0 && id !== '0');
+                        }
+                        const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== undefined && id !== null);
                         if (groundIds.length > 0) {
                             const groundTile = { ...tile, spriteIds: groundIds };
                             this.ctx.save();
