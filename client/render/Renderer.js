@@ -9,6 +9,7 @@ import { UIManager } from './UI/UIManager.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { resolveTileLayer } from '../utils/resolveTileLayer.js';
 import { TileActions } from '../utils/TileActions.js';
+import { WildPokemonRenderer } from './WildPokemonRenderer.js';
 
 export class Renderer {
     constructor(canvas, camera, wsClient) {
@@ -27,6 +28,7 @@ export class Renderer {
         this.outfitSelector = new OutfitSelector(this.ctx, canvas, wsClient);
         this.showGrid = false;
         this.wildPokemonManager = null; // Será definido depois
+        this.wildPokemonRenderer = new WildPokemonRenderer();
     }
     
     async init() {
@@ -262,6 +264,45 @@ export class Renderer {
 
         // 8. Renderiza OutfitSelector (UI de troca de sprite)
         this.outfitSelector.render(this.spriteRenderer);
+
+        // 1. Renderiza corpos mortos de pokémons selvagens (spriteDead) ANTES dos jogadores
+        if (this.wildPokemonManager && this.wildPokemonRenderer) {
+            for (let z of zsVisiveis) {
+                const wildsDead = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && wp.isDead);
+                for (const wild of wildsDead) {
+                    this.ctx.save();
+                    if (z !== entityZ) {
+                        this.ctx.globalAlpha = 0.8;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
+                    } else {
+                        this.ctx.globalAlpha = 1.0;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
+                    }
+                    this.ctx.restore();
+                }
+            }
+        }
+
+        // 2. Renderiza entidades (jogadores, npcs, pokémons vivos)
+        this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+
+        // 3. Renderiza pokémons selvagens vivos (não mortos) sobre o chão, mas sob a UI
+        if (this.wildPokemonManager && this.wildPokemonRenderer) {
+            for (let z of zsVisiveis) {
+                const wildsAlive = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && !wp.isDead);
+                for (const wild of wildsAlive) {
+                    this.ctx.save();
+                    if (z !== entityZ) {
+                        this.ctx.globalAlpha = 0.8;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
+                    } else {
+                        this.ctx.globalAlpha = 1.0;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
+                    }
+                    this.ctx.restore();
+                }
+            }
+        }
     }
 
     renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY) {

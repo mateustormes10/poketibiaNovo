@@ -117,17 +117,6 @@ export class GameState {
             }
             if (data.z !== undefined) player.z = data.z;
             if (data.direction) player.direction = data.direction;
-
-            // LOG: sprites do tile atual do player
-            // const map = window.game?.gameState?.map || this.map;
-            // if (map) {
-            //     const tile = map.getTile(player.x, player.y, player.z);
-            //     if (tile && tile.spriteIds) {
-            //         console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
-            //     } else {
-            //         console.log(`[CLIENT LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
-            //     }
-            // }
         }
     }
     
@@ -171,8 +160,9 @@ export class GameState {
                 entities.push({ ...npc, type: 'npc' });
             }
         });
+        // Só adiciona monstros vivos!
         this.monsters.forEach(monster => {
-            if (this.isInView(monster, camera, zsVisiveis)) {
+            if (!monster.isDead && this.isInView(monster, camera, zsVisiveis)) {
                 entities.push({ ...monster, type: 'monster' });
             }
         });

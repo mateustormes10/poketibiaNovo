@@ -73,8 +73,8 @@ export class WildPokemonRenderer {
         }
         if (!rendered) this.renderSpritePlaceholder(ctx, screenX, screenY);
 
-        // 2. Renderiza nome e barra de HP apenas se não estiver morto
-        if (!wildPokemon.isDead) {
+        // 2. Renderiza nome e barra de HP apenas se não estiver morto e não for ghost
+        if (!wildPokemon.isDead && !wildPokemon._noNameBar) {
             this.renderName(ctx, wildPokemon, screenX, screenY);
             this.renderHealthBar(ctx, wildPokemon, screenX, screenY);
         }
