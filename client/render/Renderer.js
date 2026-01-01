@@ -166,7 +166,28 @@ export class Renderer {
             }
         }
 
-        this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+
+        // 3. Renderiza pokémons selvagens vivos (não mortos) sobre o chão, mas sob a UI
+        if (this.wildPokemonManager && this.wildPokemonRenderer) {
+            for (let z of zsVisiveis) {
+                const wildsAlive = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && !wp.isDead);
+                for (const wild of wildsAlive) {
+                    this.ctx.save();
+                    if (z !== entityZ) {
+                        this.ctx.globalAlpha = 0.8;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
+                    } else {
+                        this.ctx.globalAlpha = 1.0;
+                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
+                    }
+                    this.ctx.restore();
+                }
+            }
+        }
+
+        if(entityZ <= 3){
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+        }
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
         if (gameState.mapUp && gameState.localPlayer) {
@@ -243,6 +264,10 @@ export class Renderer {
                 }
             }
         }
+
+        if(entityZ > 3){
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+        }
         if (this.showGrid) {
             this.tileRenderer.renderGrid(this.ctx, map, this.camera);
         }
@@ -283,26 +308,6 @@ export class Renderer {
             }
         }
 
-        // 2. Renderiza entidades (jogadores, npcs, pokémons vivos)
-        this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
-
-        // 3. Renderiza pokémons selvagens vivos (não mortos) sobre o chão, mas sob a UI
-        if (this.wildPokemonManager && this.wildPokemonRenderer) {
-            for (let z of zsVisiveis) {
-                const wildsAlive = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && !wp.isDead);
-                for (const wild of wildsAlive) {
-                    this.ctx.save();
-                    if (z !== entityZ) {
-                        this.ctx.globalAlpha = 0.8;
-                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
-                    } else {
-                        this.ctx.globalAlpha = 1.0;
-                        this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
-                    }
-                    this.ctx.restore();
-                }
-            }
-        }
     }
 
     renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY) {
