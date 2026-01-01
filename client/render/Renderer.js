@@ -109,11 +109,9 @@ export class Renderer {
                 // Seleciona o mapa correto para cada z
                 let mapForZ = map;
                 if (z === entityZ - 1 && gameState.mapDown) {
-                    // z-1: usa mapDown se disponível
                     mapForZ = new map.constructor();
                     mapForZ.updateFromServer(gameState.mapDown);
                 } else if (z === entityZ - 2 && gameState.mapDown2) {
-                    // z-2: usa mapDown2 se disponível (precisa ser enviado pelo server)
                     mapForZ = new map.constructor();
                     mapForZ.updateFromServer(gameState.mapDown2);
                 }
@@ -124,7 +122,7 @@ export class Renderer {
                         const tile = mapForZ.getTile(x, y, z);
                         // Bloqueia renderização se o tile acima for construcao/house
                         let blockAbove = false;
-                        if (dz < 2) { // só verifica se não é o topo
+                        if (dz < 2) {
                             const tileAbove = map.getTile(x, y, z+1);
                             if (tileAbove && (tileAbove.type === 'construcao' || tileAbove.type === 'CONSTRUCAO' || tileAbove.type === 'house' || tileAbove.type === 'HOUSE')) {
                                 blockAbove = true;
@@ -132,17 +130,33 @@ export class Renderer {
                         }
                         if (!blockAbove && tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
                             let spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                            // Remove zeros apenas se houver outros valores
                             if (spriteIds.length > 1) {
                                 spriteIds = spriteIds.filter(id => id !== 0 && id !== '0');
                             }
                             const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== undefined && id !== null);
                             if (groundIds.length > 0) {
-                                const groundTile = { ...tile, spriteIds: groundIds };
+                                // Renderiza o chão SEM o portal primeiro
+                                let groundTileBase = { ...tile, spriteIds: groundIds.filter(id => id !== 197) };
                                 this.ctx.save();
                                 this.ctx.globalAlpha = 1.0;
-                                this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
+                                this.tileRenderer.renderTileAt(this.ctx, groundTileBase, screenX, screenY);
                                 this.ctx.restore();
+
+                                // Agora renderiza o portal animado por cima, se existir
+                                if (groundIds.includes(197)) {
+                                    let portalTile = { ...tile, spriteIds: [197] };
+                                    const portalInstances = TileActions?.[197]?.instances;
+                                    if (portalInstances) {
+                                        const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                        if (portal && portal.idleAnimation) {
+                                            portalTile = { ...portalTile, idleAnimation: portal.idleAnimation };
+                                        }
+                                    }
+                                    this.ctx.save();
+                                    this.ctx.globalAlpha = 1.0;
+                                    this.tileRenderer.renderTileAt(this.ctx, portalTile, screenX, screenY);
+                                    this.ctx.restore();
+                                }
                             }
                         }
                     }
@@ -157,17 +171,33 @@ export class Renderer {
                     const tile = map.getTile(x, y, currentZ);
                     if (tile && tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0' && tile.spriteId !== undefined && tile.spriteId !== null) {
                         let spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                        // Remove zeros apenas se houver outros valores
                         if (spriteIds.length > 1) {
                             spriteIds = spriteIds.filter(id => id !== 0 && id !== '0');
                         }
                         const groundIds = spriteIds.filter(id => resolveTileLayer(id) !== 'overlay' && id !== undefined && id !== null);
                         if (groundIds.length > 0) {
-                            const groundTile = { ...tile, spriteIds: groundIds };
+                            // Renderiza o chão SEM o portal primeiro
+                            let groundTileBase = { ...tile, spriteIds: groundIds.filter(id => id !== 197) };
                             this.ctx.save();
                             this.ctx.globalAlpha = 1.0;
-                            this.tileRenderer.renderTileAt(this.ctx, groundTile, screenX, screenY);
+                            this.tileRenderer.renderTileAt(this.ctx, groundTileBase, screenX, screenY);
                             this.ctx.restore();
+
+                            // Agora renderiza o portal animado por cima, se existir
+                            if (groundIds.includes(197)) {
+                                let portalTile = { ...tile, spriteIds: [197] };
+                                const portalInstances = TileActions?.[197]?.instances;
+                                if (portalInstances) {
+                                    const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                    if (portal && portal.idleAnimation) {
+                                        portalTile = { ...portalTile, idleAnimation: portal.idleAnimation };
+                                    }
+                                }
+                                this.ctx.save();
+                                this.ctx.globalAlpha = 1.0;
+                                this.tileRenderer.renderTileAt(this.ctx, portalTile, screenX, screenY);
+                                this.ctx.restore();
+                            }
                         }
                     }
                 }
@@ -180,11 +210,26 @@ export class Renderer {
             for (let z of zsVisiveis) {
                 const wildsAlive = Array.from(this.wildPokemonManager.getAll().values()).filter(wp => wp.z === z && !wp.isDead);
                 for (const wild of wildsAlive) {
+                    let wildMap = map;
+if (z === entityZ - 1 && gameState.mapDown) {
+    wildMap = new map.constructor();
+    wildMap.updateFromServer(gameState.mapDown);
+} else if (z === entityZ - 2 && gameState.mapDown2) {
+    wildMap = new map.constructor();
+    wildMap.updateFromServer(gameState.mapDown2);
+}
+const wildTile = wildMap.getTile(wild.x, wild.y, wild.z);
+                    const isWildInConstrucao = wildTile && (
+                        wildTile.type === 'house' ||
+                        wildTile.type === 'HOUSE' ||
+                        wildTile.type === 'construcao' ||
+                        wildTile.type === 'CONSTRUCAO'
+                    );
                     this.ctx.save();
-                    if (z !== entityZ) {
+                    if (z !== entityZ && !isWildInConstrucao) {
                         this.ctx.globalAlpha = 0.8;
                         this.wildPokemonRenderer.renderWildPokemon(this.ctx, { ...wild, _noNameBar: true }, this.camera);
-                    } else {
+                    } else if (z === entityZ) {
                         this.ctx.globalAlpha = 1.0;
                         this.wildPokemonRenderer.renderWildPokemon(this.ctx, wild, this.camera);
                     }
@@ -194,7 +239,55 @@ export class Renderer {
         }
 
         if(entityZ <= 3){
-            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY,true);
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY, entityZ);
+        }
+
+         // 3. Renderiza portais e overlays dos tiles
+        const zsVisiveisOrdem = [...zsVisiveis].sort((a, b) => a - b); // menor z primeiro
+        for (let z of zsVisiveisOrdem) {
+            // Seleciona o mapa correto para cada z
+            let mapForZ = map;
+             for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    const tile = mapForZ.getTile(x, y, z);
+                    const screenX = (x - startX) * tileSize;
+                    const screenY = (y - startY) * tileSize;
+                  
+                    if (tile) {
+                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
+                        const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
+                        if (overlayIds.length > 0) {
+                            let overlayTile = { ...tile, spriteIds: overlayIds };
+                            // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
+                            if (overlayIds.includes(197)) {
+                                const portalInstances = TileActions?.[197]?.instances;
+                                if (portalInstances) {
+                                    const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
+                                    if (portal && portal.idleAnimation) {
+                                        overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
+                                    }
+                                }
+                            }
+                            // Todos overlays do andar SEM opacidade
+                            this.ctx.save();
+                            this.ctx.globalAlpha = 1.0;
+                            this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
+                            this.ctx.restore();
+                        }
+                    }
+                }
+            }
+            if (z === entityZ - 1 && gameState.mapDown) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapDown);
+            } else if (z === entityZ - 2 && gameState.mapDown2) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapDown2);
+            } else if (z === entityZ + 1 && gameState.mapUp) {
+                mapForZ = new map.constructor();
+                mapForZ.updateFromServer(gameState.mapUp);
+            }
+           
         }
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
@@ -222,65 +315,17 @@ export class Renderer {
                         }
                     }
                     // Após o overlay do mapa superior, renderiza entidades de z=4 (e z=5 se desejar)
-                    this.renderEntitiesByFloors(entitiesByY, startX, startY, [4, 5], endX, endY);
+                    this.renderEntitiesByFloors(entitiesByY, startX, startY, [4, 5], endX, endY, entityZ);
                 }
             }
         }
 
-        // 3. Renderiza overlays dos andares visíveis na ordem correta (de baixo para cima)
-        const zsVisiveisOrdem = [...zsVisiveis].sort((a, b) => a - b); // menor z primeiro
-        for (let z of zsVisiveisOrdem) {
-            // Seleciona o mapa correto para cada z
-            let mapForZ = map;
-            if (z === entityZ - 1 && gameState.mapDown) {
-                mapForZ = new map.constructor();
-                mapForZ.updateFromServer(gameState.mapDown);
-            } else if (z === entityZ - 2 && gameState.mapDown2) {
-                mapForZ = new map.constructor();
-                mapForZ.updateFromServer(gameState.mapDown2);
-            } else if (z === entityZ + 1 && gameState.mapUp) {
-                mapForZ = new map.constructor();
-                mapForZ.updateFromServer(gameState.mapUp);
-            }
-            for (let y = startY; y <= endY; y++) {
-                for (let x = startX; x <= endX; x++) {
-                    const tile = mapForZ.getTile(x, y, z);
-                    const screenX = (x - startX) * tileSize;
-                    const screenY = (y - startY) * tileSize;
-                    let criandoOverlay = true;
-
-                    if (tile && entityZ > 3 && isInHouseOrConstrucao) { //objTelhado
-                        criandoOverlay = false;
-                    }
-                    if (tile && criandoOverlay) {
-                        const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
-                        const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
-                        if (overlayIds.length > 0) {
-                            let overlayTile = { ...tile, spriteIds: overlayIds };
-                            // --- INJETA idleAnimation DO PORTAL SE HOUVER INSTÂNCIA NA POSIÇÃO ---
-                            if (overlayIds.includes(197)) {
-                                const portalInstances = TileActions?.[197]?.instances;
-                                if (portalInstances) {
-                                    const portal = portalInstances.find(inst => inst.x === tile.x && inst.y === tile.y && inst.z === tile.z);
-                                    if (portal && portal.idleAnimation) {
-                                        overlayTile = { ...overlayTile, idleAnimation: portal.idleAnimation };
-                                    }
-                                }
-                            }
-                            // Todos overlays do andar SEM opacidade
-                            this.ctx.save();
-                            this.ctx.globalAlpha = 1.0;
-                            this.tileRenderer.renderTileAt(this.ctx, overlayTile, screenX, screenY);
-                            this.ctx.restore();
-                        }
-                    }
-                }
-            }
-        }
+       
 
         if(entityZ > 3){
-            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY, entityZ);
         }
+
         if (this.showGrid) {
             this.tileRenderer.renderGrid(this.ctx, map, this.camera);
         }
@@ -323,7 +368,7 @@ export class Renderer {
 
     }
 
-    renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY, overlayNpcs = false) {
+    renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY, playerZ, overlayNpcs = true) {
         for (let z of zsVisiveis) {
             for (let y = startY; y <= endY; y++) {
                 for (let x = startX; x <= endX; x++) {
@@ -336,8 +381,7 @@ export class Renderer {
                                 this.spriteRenderer.renderEntity(entity, startX, startY);
                             } else if (entity.type === 'npc') {
                                 // Renderiza NPC
-
-                                if (overlayNpcs) {
+                                if (overlayNpcs && playerZ === entity.z) {
                                     this.spriteRenderer.renderEntity(entity, startX, startY);
                                 }
                             } else if (entity.type === 'monster') {

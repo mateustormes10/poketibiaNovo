@@ -28,7 +28,7 @@ export const TileActions = {
     floorDown: 3,
   },
   197: {
-    layer: "overlay",
+    layer: "ground",
     instances: [
       { x: 81, y: 25, z: 3, look: () => "Portal para a cidade .", teleportTo: [73, 34, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
       { x: 81, y: 27, z: 3, look: () => "Portal para a arena 2.", teleportTo: [50, 50, 3], idleAnimation: { frames: [197, 198, 199], interval: 200, range: 15} },
@@ -38,12 +38,12 @@ export const TileActions = {
     ]
   },
   198: {
-    layer: "overlay",
+    layer: "ground",
     look: () => "Escadas para cima",
     floorUp: 4,
   },
   199: {
-    layer: "overlay",
+    layer: "ground",
     look: () => "Escadas para baixo",
     floorDown: 3,
   },
