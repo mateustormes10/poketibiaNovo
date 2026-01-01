@@ -194,7 +194,7 @@ export class Renderer {
         }
 
         if(entityZ <= 3){
-            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY);
+            this.renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis, endX, endY,true);
         }
 
         // 2. Renderiza TODO o andar superior (mapUp) como overlay se existir
@@ -247,7 +247,12 @@ export class Renderer {
                     const tile = mapForZ.getTile(x, y, z);
                     const screenX = (x - startX) * tileSize;
                     const screenY = (y - startY) * tileSize;
-                    if (tile) {
+                    let criandoOverlay = true;
+
+                    if (tile && entityZ > 3 && isInHouseOrConstrucao) { //objTelhado
+                        criandoOverlay = false;
+                    }
+                    if (tile && criandoOverlay) {
                         const spriteIds = tile.spriteIds || (tile.spriteId ? [tile.spriteId] : []);
                         const overlayIds = spriteIds.filter(id => resolveTileLayer(id) === 'overlay');
                         if (overlayIds.length > 0) {
@@ -318,7 +323,7 @@ export class Renderer {
 
     }
 
-    renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY) {
+    renderEntitiesByFloors(entitiesByY, startX, startY, zsVisiveis,endX,endY, overlayNpcs = false) {
         for (let z of zsVisiveis) {
             for (let y = startY; y <= endY; y++) {
                 for (let x = startX; x <= endX; x++) {
@@ -331,7 +336,10 @@ export class Renderer {
                                 this.spriteRenderer.renderEntity(entity, startX, startY);
                             } else if (entity.type === 'npc') {
                                 // Renderiza NPC
-                                this.spriteRenderer.renderEntity(entity, startX, startY);
+
+                                if (overlayNpcs) {
+                                    this.spriteRenderer.renderEntity(entity, startX, startY);
+                                }
                             } else if (entity.type === 'monster') {
                                 // Renderiza pokémon selvagem (ou monstro)
                                 this.spriteRenderer.renderEntity(entity, startX, startY);
