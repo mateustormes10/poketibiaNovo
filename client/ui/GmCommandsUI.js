@@ -17,7 +17,18 @@ export class GmCommandsUI {
             document.body.appendChild(container);
         }
         container.innerHTML = '';
-        container.style = `position:fixed;top:16%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:28px 36px 24px 36px;border-radius:14px;z-index:10010;color:#fff;box-shadow:0 0 24px #0008;max-width:95vw;min-width:340px;`;
+        // Center using game canvas size if available
+        let topPx = '16%';
+        let leftPx = '50%';
+        let transform = 'translateX(-50%)';
+        if (window.game && window.game.canvas) {
+            const cw = window.game.canvas.width;
+            const ch = window.game.canvas.height;
+            topPx = Math.round(ch * 0.16) + 'px';
+            leftPx = Math.round(cw / 2) + 'px';
+            transform = 'translate(-50%,0)';
+        }
+        container.style = `position:fixed;top:${topPx};left:${leftPx};transform:${transform};background:${UIThemeConfig.getBackgroundColor()};padding:28px 36px 24px 36px;border-radius:14px;z-index:10010;color:#fff;box-shadow:0 0 24px #0008;max-width:95vw;min-width:340px;`;
 
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');

@@ -26,10 +26,54 @@ export class GraphicsConfigUI {
         }
         
         container.innerHTML = '';
-        container.style = `position:fixed;top:14%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
+        // Center using game canvas size if available
+        let topPx = '14%';
+        let leftPx = '50%';
+        let transform = 'translateX(-50%)';
+        if (window.game && window.game.canvas) {
+            const cw = window.game.canvas.width;
+            const ch = window.game.canvas.height;
+            topPx = Math.round(ch * 0.14) + 'px';
+            leftPx = Math.round(cw / 2) + 'px';
+            transform = 'translate(-50%,0)';
+        }
+        container.style = `position:fixed;top:${topPx};left:${leftPx};transform:${transform};background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
 
-          container.style.display = 'block';
+        container.style.display = 'block';
         
+        
+        // Botão de fechar (X vermelho)
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', 'Fechar');
+        closeBtn.style = `
+            position:absolute;top:10px;right:10px;width:36px;height:36px;
+            font-size:2em;line-height:32px;padding:0;
+            border-radius:50%;border:none;
+            background:#222;color:#ff4444;
+            cursor:pointer;z-index:10001;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 0 8px #0006;
+            transition: background 0.2s, color 0.2s;
+        `;
+        closeBtn.onmouseenter = () => { closeBtn.style.background = '#333'; closeBtn.style.color = '#fff'; };
+        closeBtn.onmouseleave = () => { closeBtn.style.background = '#222'; closeBtn.style.color = '#ff4444'; };
+        closeBtn.onclick = () => { container.style.display = 'none'; };
+        container.appendChild(closeBtn);
+
+        // ESC fecha a UI
+        const escListener = (e) => {
+            if (e.key === 'Escape') {
+                container.style.display = 'none';
+                window.removeEventListener('keydown', escListener);
+            }
+        };
+        setTimeout(() => window.addEventListener('keydown', escListener), 0);
+
+        const title = document.createElement('h2');
+        title.textContent = 'Configurações Gráficas';
+        container.appendChild(title);
+
         // Adiciona selectbox para cor de fundo dos painéis
         const labelColor = document.createElement('label');
         labelColor.textContent = 'Cor dos Painéis:';
@@ -66,37 +110,6 @@ export class GraphicsConfigUI {
         };
         labelColor.appendChild(selectColor);
         container.appendChild(labelColor);
-        // Botão de fechar (X vermelho)
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '&times;';
-        closeBtn.setAttribute('aria-label', 'Fechar');
-        closeBtn.style = `
-            position:absolute;top:10px;right:10px;width:36px;height:36px;
-            font-size:2em;line-height:32px;padding:0;
-            border-radius:50%;border:none;
-            background:#222;color:#ff4444;
-            cursor:pointer;z-index:10001;
-            display:flex;align-items:center;justify-content:center;
-            box-shadow:0 0 8px #0006;
-            transition: background 0.2s, color 0.2s;
-        `;
-        closeBtn.onmouseenter = () => { closeBtn.style.background = '#333'; closeBtn.style.color = '#fff'; };
-        closeBtn.onmouseleave = () => { closeBtn.style.background = '#222'; closeBtn.style.color = '#ff4444'; };
-        closeBtn.onclick = () => { container.style.display = 'none'; };
-        container.appendChild(closeBtn);
-
-        // ESC fecha a UI
-        const escListener = (e) => {
-            if (e.key === 'Escape') {
-                container.style.display = 'none';
-                window.removeEventListener('keydown', escListener);
-            }
-        };
-        setTimeout(() => window.addEventListener('keydown', escListener), 0);
-
-        const title = document.createElement('h2');
-        title.textContent = 'Configurações Gráficas';
-        container.appendChild(title);
 
         // Resolução
         const labelRes = document.createElement('label');
@@ -134,6 +147,10 @@ export class GraphicsConfigUI {
         selectRes.value = localStorage.getItem('graphics_resolution') || 'auto';
         selectRes.onchange = (e) => {
             localStorage.setItem('graphics_resolution', e.target.value);
+            // Trigger canvas resize in real time
+            if (window.game && typeof window.game.setResolution === 'function') {
+                window.game.setResolution(e.target.value);
+            }
         };
         labelRes.appendChild(selectRes);
         container.appendChild(labelRes);

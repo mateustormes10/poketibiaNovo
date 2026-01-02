@@ -173,7 +173,7 @@ export class Game {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: #222d;
+                background: ${UIThemeConfig.getBackgroundColor()};
                 color: #fff;
                 padding: 40px 60px;
                 border-radius: 16px;
@@ -183,6 +183,11 @@ export class Game {
                 text-align: center;
                 box-shadow: 0 0 32px #000a;
             `;
+            // Live update background color if theme changes
+            const updateBg = () => {
+                div.style.background = UIThemeConfig.getBackgroundColor();
+            };
+            UIThemeConfig.onColorChange(updateBg);
             div.innerHTML = '<div>Conexão perdida com o servidor.</div>';
             if (options.allowReconnect) {
                 const btn = document.createElement('button');
@@ -502,26 +507,26 @@ export class Game {
         // Evita resize desnecessários
         const width = window.innerWidth;
         const height = window.innerHeight;
-        
+
         if (this.lastResizeWidth === width && this.lastResizeHeight === height) {
             return; // Não precisa redimensionar
         }
-        
+
         this.lastResizeWidth = width;
         this.lastResizeHeight = height;
         
         // CRÍTICO: Sincroniza tamanho REAL do canvas com a viewport
         this.canvas.width = width;
         this.canvas.height = height;
-        
+
         // FORÇA tamanho CSS também (em alguns browsers é necessário)
         this.canvas.style.width = `${width}px`;
         this.canvas.style.height = `${height}px`;
-        
+
         // Atualiza a câmera
         this.camera.width = width;
         this.camera.height = height;
-        
+
         // Reaplica configurações do contexto
         const ctx = this.canvas.getContext('2d');
         ctx.imageSmoothingEnabled = false;

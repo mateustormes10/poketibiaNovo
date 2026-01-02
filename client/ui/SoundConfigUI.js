@@ -12,7 +12,18 @@ export class SoundConfigUI {
             document.body.appendChild(container);
         }
         container.innerHTML = '';
-        container.style = `position:fixed;top:12%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
+        // Center using game canvas size if available
+        let topPx = '12%';
+        let leftPx = '50%';
+        let transform = 'translateX(-50%)';
+        if (window.game && window.game.canvas) {
+            const cw = window.game.canvas.width;
+            const ch = window.game.canvas.height;
+            topPx = Math.round(ch * 0.12) + 'px';
+            leftPx = Math.round(cw / 2) + 'px';
+            transform = 'translate(-50%,0)';
+        }
+        container.style = `position:fixed;top:${topPx};left:${leftPx};transform:${transform};background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
 
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');
