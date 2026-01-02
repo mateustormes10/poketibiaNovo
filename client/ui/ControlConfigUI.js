@@ -1,9 +1,9 @@
+import { UIThemeConfig } from '../config/UIThemeConfig.js';
 // ControlConfigUI.js
 // UI de gerenciamento de controles para teclado, touch e gamepad
 // Permite mapear ações do jogo para teclas, botões touch e gamepad
 
 import { GameConstants } from '../../shared/constants/GameConstants.js';
-
 const DEFAULT_CONTROLS = {
     up: 'ArrowUp',
     down: 'ArrowDown',
@@ -62,15 +62,24 @@ export class ControlConfigUI {
             document.body.appendChild(container);
         }
         container.innerHTML = '';
-        container.style = 'position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#222;padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;';
+        container.style = `position:fixed;top:10%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;`;
 
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '&times;';
         closeBtn.setAttribute('aria-label', 'Fechar');
-        closeBtn.style = 'position:absolute;top:10px;right:10px;width:32px;height:32px;font-size:2em;line-height:28px;padding:0;border-radius:50%;border:none;background:#fff;color:#c00;cursor:pointer;z-index:10001;display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px #0003;';
-        closeBtn.onmouseenter = () => { closeBtn.style.background = '#fee'; };
-        closeBtn.onmouseleave = () => { closeBtn.style.background = '#fff'; };
+        closeBtn.style = `
+            position:absolute;top:10px;right:10px;width:36px;height:36px;
+            font-size:2em;line-height:32px;padding:0;
+            border-radius:50%;border:none;
+            background:#222;color:#ff4444;
+            cursor:pointer;z-index:10001;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 0 8px #0006;
+            transition: background 0.2s, color 0.2s;
+        `;
+        closeBtn.onmouseenter = () => { closeBtn.style.background = '#333'; closeBtn.style.color = '#fff'; };
+        closeBtn.onmouseleave = () => { closeBtn.style.background = '#222'; closeBtn.style.color = '#ff4444'; };
         closeBtn.onclick = () => { container.style.display = 'none'; };
         container.appendChild(closeBtn);
 
@@ -108,7 +117,20 @@ export class ControlConfigUI {
             const input = document.createElement('input');
             input.type = 'text';
             input.value = this.controls[action.key];
-            input.style = 'width:100px;text-align:center;';
+            input.style = `
+                width:100px;text-align:center;
+                background:#222;
+                color:#fff;
+                border:1.5px solid #444;
+                border-radius:7px;
+                padding:6px 8px;
+                font-size:1em;
+                outline:none;
+                box-shadow:0 2px 8px #0003;
+                transition: border 0.2s;
+            `;
+            input.onfocus = () => input.style.border = '1.5px solid #ff6600';
+            input.onblur = () => input.style.border = '1.5px solid #444';
             input.addEventListener('focus', () => {
                 input.value = '';
                 const onKey = e => {
@@ -150,7 +172,20 @@ export class ControlConfigUI {
             const input = document.createElement('input');
             input.type = 'number';
             input.value = this.controls[action.key];
-            input.style = 'width:60px;text-align:center;';
+            input.style = `
+                width:60px;text-align:center;
+                background:#222;
+                color:#fff;
+                border:1.5px solid #444;
+                border-radius:7px;
+                padding:6px 8px;
+                font-size:1em;
+                outline:none;
+                box-shadow:0 2px 8px #0003;
+                transition: border 0.2s;
+            `;
+            input.onfocus = () => input.style.border = '1.5px solid #ff6600';
+            input.onblur = () => input.style.border = '1.5px solid #444';
             input.addEventListener('change', () => {
                 this.controls[action.key] = parseInt(input.value, 10);
                 this.saveConfig();
@@ -169,9 +204,23 @@ export class ControlConfigUI {
 
         // Botões de ação
         const btns = document.createElement('div');
-        btns.style = 'margin-top:16px;text-align:right;';
+        btns.style = 'margin-top:16px;text-align:right;display:flex;gap:12px;justify-content:flex-end;';
         const saveBtn = document.createElement('button');
         saveBtn.textContent = 'Salvar';
+        saveBtn.style = `
+            background:#222;
+            color:#fff;
+            border:1.5px solid #444;
+            border-radius:7px;
+            padding:8px 22px;
+            font-size:1em;
+            font-weight:bold;
+            cursor:pointer;
+            box-shadow:0 2px 8px #0003;
+            transition: background 0.2s, border 0.2s, color 0.2s;
+        `;
+        saveBtn.onmouseenter = () => { saveBtn.style.background = '#333'; saveBtn.style.border = '1.5px solid #ff6600'; };
+        saveBtn.onmouseleave = () => { saveBtn.style.background = '#222'; saveBtn.style.border = '1.5px solid #444'; };
         saveBtn.onclick = () => {
             this.saveConfig();
             container.style.display = 'none';
@@ -179,6 +228,20 @@ export class ControlConfigUI {
         };
         const resetBtn = document.createElement('button');
         resetBtn.textContent = 'Restaurar padrão';
+        resetBtn.style = `
+            background:#222;
+            color:#fff;
+            border:1.5px solid #444;
+            border-radius:7px;
+            padding:8px 22px;
+            font-size:1em;
+            font-weight:bold;
+            cursor:pointer;
+            box-shadow:0 2px 8px #0003;
+            transition: background 0.2s, border 0.2s, color 0.2s;
+        `;
+        resetBtn.onmouseenter = () => { resetBtn.style.background = '#333'; resetBtn.style.border = '1.5px solid #ff6600'; };
+        resetBtn.onmouseleave = () => { resetBtn.style.background = '#222'; resetBtn.style.border = '1.5px solid #444'; };
         resetBtn.onclick = () => {
             this.resetConfig();
             container.style.display = 'none';

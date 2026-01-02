@@ -1,3 +1,4 @@
+import { UIThemeConfig } from '../config/UIThemeConfig.js';
 export class SoundConfigUI {
     constructor() {
         this.containerId = 'sound-config-ui';
@@ -11,7 +12,7 @@ export class SoundConfigUI {
             document.body.appendChild(container);
         }
         container.innerHTML = '';
-        container.style = 'position:fixed;top:12%;left:50%;transform:translateX(-50%);background:#222;padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;';
+        container.style = `position:fixed;top:12%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
 
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');

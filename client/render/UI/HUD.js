@@ -1,3 +1,4 @@
+import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 import { GameConstants } from '../../../shared/constants/GameConstants.js';
 import { PokemonSkillsUI } from './PokemonSkillsUI.js';
 
@@ -18,7 +19,29 @@ export class HUD {
 
         this.pokemonSkillsUI = new PokemonSkillsUI(ctx, uiManager);
         this.pokemonSkillsPanelBounds = null;
+
+        // Controle de visibilidade da UI do player
+        this.playerInfoVisible = true;
+        // Controle de visibilidade da battle view
+        this.battleViewVisible = true;
+        // Controle de visibilidade da lista de pokémons
+        this.pokemonListVisible = true;
+        // Filtro do battleview começa em 'all'
+        this.battleViewFilter = 'all';
+          
+        
     }
+    togglePokemonListVisible() {
+        this.pokemonListVisible = !this.pokemonListVisible;
+    }
+    toggleBattleViewVisible() {
+        const willOpen = !this.battleViewVisible;
+        this.battleViewVisible = willOpen;
+        if (willOpen) {
+            this.battleViewFilter = 'all';
+            this.battleViewScrollOffset = 0;
+        }
+        }
                 handleBattleViewClick(mouseX, mouseY) {
                 if (!this.battleViewFilterButtons) return false;
                 for (const btn of this.battleViewFilterButtons) {
@@ -52,12 +75,22 @@ export class HUD {
         const pokemons = player.pokemons || [];
         return pokemons[this.selectedPokemonIndex] || null;
     }
-    
+    togglePlayerInfoVisible() {
+        this.playerInfoVisible = !this.playerInfoVisible;
+    }
     render(gameState, wildPokemonManager = null) {
-        this.renderPlayerInfo(gameState.localPlayer);
-        this.renderPokemonList(gameState.localPlayer);
-        this.renderBattleView(gameState, wildPokemonManager);
+        if (this.playerInfoVisible) {
+            this.renderPlayerInfo(gameState.localPlayer);
+        }
+        
+        if (this.battleViewVisible) {
+            this.renderBattleView(gameState, wildPokemonManager);
+        }
+        if (this.pokemonListVisible) {
+            this.renderPokemonList(gameState.localPlayer);
+        }
         this.renderDebugInfo(gameState, wildPokemonManager);
+            
         // Renderiza painel de skills se estiver transformado em pokémon
         const player = gameState.localPlayer;
 
@@ -165,15 +198,21 @@ export class HUD {
         // Salva bounds para drag
         this.playerInfoBounds = { x, y, width, height };
         
-        // Borda de edição
+        // Borda padronizada e sombra leve
+        this.ctx.save();
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, width, height);
+        } else {
+            this.ctx.strokeStyle = '#333333';
         }
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.strokeRect(x, y, width, height);
+        this.ctx.restore();
         
-        // Background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        // Fundo configurável
+        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
         this.ctx.fillRect(x, y, width, height);
         
         // Margem interna alinhada
@@ -236,7 +275,13 @@ export class HUD {
         this.pokemonListBounds = []; // Reset bounds
         const pos = this.uiManager.getPosition('pokemonList');
         const x = pos.x !== null ? pos.x : 10;
-        const y = pos.y !== null ? pos.y : 120;
+        // Se a info do player está visível, lista fica abaixo dela; se não, fica no topo
+        let y;
+        if (this.playerInfoVisible) {
+            y = pos.y !== null ? pos.y : 120;
+        } else {
+            y = pos.y !== null ? pos.y : 10;
+        }
         const itemHeight = 60;
         const listWidth = 200;
         const maxSlots = 6; // Máximo de 6 pokémons
@@ -244,19 +289,26 @@ export class HUD {
         const pokemons = player.pokemons || [];
         // Salva bounds completos para drag
         this.pokemonListFullBounds = { x, y, width: listWidth, height: totalHeight };
-        // Borda de edição
+        // Borda padronizada e sombra leve
+        this.ctx.save();
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, listWidth, totalHeight);
+        } else {
+            this.ctx.strokeStyle = '#333333';
         }
-        // Background da lista
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.strokeRect(x, y, listWidth, totalHeight);
+        this.ctx.restore();
+        // Fundo configurável
+        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
         this.ctx.fillRect(x, y, listWidth, totalHeight);
-        // Título
+        // Título (evita duplicidade)
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ffff00';
         this.ctx.fillText(`Pokémons (${pokemons.length}/${maxSlots}):`, x + 10, y + 20);
+
         // Renderiza 6 slots (preenchidos ou vazios)
         for (let i = 0; i < maxSlots; i++) {
             const pokemon = pokemons[i];
@@ -276,12 +328,14 @@ export class HUD {
                 this.ctx.restore();
             }
 
+            // Evita duplicidade de nome e título
             if (pokemon) {
-                // Pokémon existente
-                // Nome do pokémon
-                this.ctx.font = 'bold 12px Arial';
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.fillText(pokemon.name || 'Unknown', itemX + 10, itemY + 15);
+                // Nome do pokémon só se não for o primeiro slot e não for duplicado
+                if (i === 0 || (pokemons[i] && pokemons[i].name !== pokemons[i-1]?.name)) {
+                    this.ctx.font = 'bold 12px Arial';
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.fillText(pokemon.name || 'Unknown', itemX + 10, itemY + 15);
+                }
 
                 // HP do pokémon
                 const hpBarX = itemX + 10;
@@ -369,6 +423,7 @@ export class HUD {
     }
     
     renderBattleView(gameState, wildPokemonManager = null) {
+        // (Removido: reset do filtro aqui. O filtro é resetado apenas ao abrir o battleview.)
         if (!gameState.localPlayer) return;
         const pos = this.uiManager.getPosition('battleView');
         const width = 220; // reduced width
@@ -491,7 +546,7 @@ export class HUD {
         
         // Configurações de scroll
         const maxVisibleItems = 6; // show more entities at once
-        const headerHeight = 30; // reduced header
+        const headerHeight = 38; // reduced header
         const maxViewportHeight = maxVisibleItems * itemHeight;
         const contentHeight = nearbyEntities.length * itemHeight;
         const viewportHeight = Math.min(maxViewportHeight, contentHeight);
@@ -501,15 +556,21 @@ export class HUD {
         // Salva bounds para drag e scroll
         this.battleViewBounds = { x, y, width, height: totalHeight };
 
-        // Borda de edição
+        // Borda padronizada e sombra leve
+        this.ctx.save();
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, width, totalHeight);
+        } else {
+            this.ctx.strokeStyle = '#333333';
         }
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
+        this.ctx.shadowBlur = 8;
+        this.ctx.strokeRect(x, y, width, totalHeight);
+        this.ctx.restore();
 
-        // Background
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        // Fundo configurável
+        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
         this.ctx.fillRect(x, y, width, totalHeight);
 
         // Botões de filtro visuais
@@ -540,7 +601,7 @@ export class HUD {
         // Título
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ff6600';
-        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 24);
+        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 30);
 
         // Scroll
         this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);
@@ -588,6 +649,12 @@ export class HUD {
                     const hpBarWidth = 60;
                     const hpBarHeight = 7;
                     const hpPercent = entity.hp / entity.maxHp;
+                    // Texto HP acima da barra
+                    this.ctx.font = 'bold 9px Arial';
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(`${entity.hp}/${entity.maxHp}`, hpBarX + hpBarWidth / 2, hpBarY - 4);
+                    this.ctx.textAlign = 'left';
                     // Borda
                     this.ctx.strokeStyle = '#333333';
                     this.ctx.lineWidth = 1;
@@ -598,12 +665,6 @@ export class HUD {
                     // HP atual
                     this.ctx.fillStyle = '#00ff00';
                     this.ctx.fillRect(hpBarX + 1, hpBarY + 1, (hpBarWidth - 2) * hpPercent, hpBarHeight - 2);
-                    // Texto HP
-                    this.ctx.font = '8px Arial';
-                    this.ctx.fillStyle = '#ffffff';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText(`${entity.hp}/${entity.maxHp}`, hpBarX + hpBarWidth / 2, hpBarY + hpBarHeight / 2 + 2);
-                    this.ctx.textAlign = 'left';
                 }
             });
         }

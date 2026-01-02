@@ -1,3 +1,4 @@
+import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 import { GameConstants } from '../../../shared/constants/GameConstants.js';
 
 export class ChatBox {
@@ -10,6 +11,7 @@ export class ChatBox {
         this.inputText = '';
         this.maxMessages = GameConstants.MAX_CHAT_MESSAGES || 10;
         this.bounds = null;
+        this.visible = true; // Added visible flag
     }
     
     handleMouseDown(mouseX, mouseY) {
@@ -39,13 +41,14 @@ export class ChatBox {
                 timestamp: Date.now()
             });
         }
-        
         // Remove mensagens antigas se exceder o limite
         if (this.messages.length > this.maxMessages) {
             this.messages.shift();
         }
     }
-    
+     toggleVisible() { // Added toggleVisible method
+                    this.visible = !this.visible;
+    }
     activateInput() {
         this.inputActive = true;
         this.inputText = '';
@@ -79,6 +82,7 @@ export class ChatBox {
     }
     
     render() {
+        if (!this.visible) return;
         const pos = this.uiManager.getPosition('chatBox');
         const boxWidth = 600;
         const boxHeight = 200;
@@ -88,21 +92,21 @@ export class ChatBox {
         // Salva bounds para drag
         this.bounds = { x, y, width: boxWidth, height: boxHeight };
         
-        // Borda de edição
+        // Borda verde em modo de edição
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, boxWidth, boxHeight);
+        } else {
+            // Borda padrão
+            this.ctx.strokeStyle = '#333333';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, boxWidth, boxHeight);
         }
         
-        // Background do chat (semi-transparente)
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        // Background do chat (usa cor dos painéis)
+        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
         this.ctx.fillRect(x, y, boxWidth, boxHeight);
-        
-        // Borda
-        this.ctx.strokeStyle = '#333333';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, boxWidth, boxHeight);
         
         // Renderiza mensagens (de baixo para cima)
         const lineHeight = GameConstants.CHAT_LINE_HEIGHT;

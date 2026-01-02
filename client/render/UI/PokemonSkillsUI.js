@@ -1,3 +1,4 @@
+import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 import { SkillDatabase } from '../../../shared/SkillDatabase.js';
 // Painel de skills do Pokémon
 export class PokemonSkillsUI {
@@ -81,13 +82,19 @@ export class PokemonSkillsUI {
         const width = 320;
         const height = 320;
         this.ctx.save();
-        this.ctx.globalAlpha = 0.98;
-        this.ctx.fillStyle = '#222a';
+        this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
         this.ctx.fillRect(x, y, width, height);
-        this.ctx.globalAlpha = 1;
-        this.ctx.strokeStyle = this.uiManager.isEditMode() && this.uiManager.dragging === this.elementName ? '#0ff' : '#333a';
-        this.ctx.lineWidth = 3;
-        this.ctx.strokeRect(x, y, width, height);
+        // Borda verde em modo de edição
+        if (this.uiManager.isEditMode()) {
+            this.ctx.strokeStyle = '#00ff00';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, width, height);
+        } else {
+            this.ctx.strokeStyle = this.uiManager.dragging === this.elementName ? '#0ff' : '#333a';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(x, y, width, height);
+        }
         this.ctx.font = '16px Arial';
         this.ctx.fillStyle = '#fff';
         this.ctx.textAlign = 'center';

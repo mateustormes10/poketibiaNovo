@@ -22,8 +22,8 @@ import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { SkillEffectManager } from './SkillEffectManager.js';
 import { getTypeEffectiveness } from '../../shared/TypeEffectiveness.js';
 import { MusicPlayer } from './MusicPlayer.js';
+import { UIThemeConfig } from '../config/UIThemeConfig.js';
 export class Game {
-
         // Instancie MusicPlayer como this.music
         playBackgroundMusic() {
             if (!this.music) {
@@ -41,7 +41,8 @@ export class Game {
             if (!menu) {
                 menu = document.createElement('div');
                 menu.id = 'main-menu-ui';
-                menu.style = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#222d;padding:32px 48px;border-radius:16px;z-index:10001;color:#fff;box-shadow:0 0 32px #000a;display:none;flex-direction:column;align-items:center;min-width:320px;';
+
+                menu.style = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:${UIThemeConfig.getBackgroundColor()};padding:32px 48px;border-radius:16px;z-index:10001;color:#fff;box-shadow:0 0 32px #000a;display:none;flex-direction:column;align-items:center;min-width:320px;`;
                 // Título
                 const title = document.createElement('h2');
                 title.textContent = 'Menu Principal';
@@ -146,6 +147,8 @@ export class Game {
         if (oldGmBtn) oldGmBtn.remove();
 
         if (willOpen) {
+            // Atualiza a cor de fundo ao abrir
+            this._mainMenu.style.background = UIThemeConfig.getBackgroundColor();
             // Ao abrir o menu, requisita ao servidor o vocation do player (se ainda não sabemos)
             if (typeof this._isGmVocation === 'undefined') {
                 this.wsClient.send('get_player_vocation', {});
@@ -1073,6 +1076,20 @@ export class Game {
                 return;
             }
 
+
+
+            // Permite arrastar o chatBox em modo de edição
+            if (this.renderer.chatBox.handleMouseDown(mousePos.x, mousePos.y)) {
+                this._lastMouseDown = true;
+                return;
+            }
+
+            // Permite arrastar o InfoMenuUI em modo de edição
+            if (this.renderer.infoMenuUI && this.renderer.infoMenuUI.handleMouseDown(mousePos.x, mousePos.y)) {
+                this._lastMouseDown = true;
+                return;
+            }
+
             // Sempre permite clique no HUD (skills, etc)
             if (this.renderer.hud.handleMouseDown(mousePos.x, mousePos.y)) {
                 this._lastMouseDown = true;
@@ -1315,6 +1332,12 @@ export class Game {
         }
         // Toggle do seletor de outfit com tecla p (igual ao inventário e NPC, e GM UI não está aberta)
         if (this.keyboard.isKeyPressed('p') && !gmUiOpen) {
+            // Só permite abrir se NÃO estiver transformado em monstro (pokemonName == null)
+            const player = this.gameState.localPlayer;
+            if (player && player.pokemonName) {
+                this.renderer.chatBox.addMessage('System', 'Só é possível abrir o menu de outfit na forma de jogador.', 'system');
+                return;
+            }
             console.log('[Game] OutfitSelector toggled');
             this.renderer.outfitSelector.toggle();
             return;

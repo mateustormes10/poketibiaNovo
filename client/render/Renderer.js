@@ -3,6 +3,7 @@ import { SpriteRenderer } from './SpriteRenderer.js';
 import { HUD } from './UI/HUD.js';
 import { DeathModal } from './UI/DeathModal.js';
 import { ChatBox } from './UI/ChatBox.js';
+import { InfoMenuUI } from './UI/InfoMenuUI.js';
 import { NpcDialog } from './UI/NpcDialog.js';
 import { OutfitSelector } from './UI/OutfitSelector.js';
 import { UIManager } from './UI/UIManager.js';
@@ -24,6 +25,7 @@ export class Renderer {
         this.hud = new HUD(this.ctx, canvas, this.uiManager);
         this.deathModal = new DeathModal(this.ctx, canvas);
         this.chatBox = new ChatBox(this.ctx, canvas, this.uiManager);
+        this.infoMenuUI = new InfoMenuUI(this.ctx, canvas, this.uiManager);
         this.npcDialog = new NpcDialog(this.ctx, canvas, wsClient);
         this.outfitSelector = new OutfitSelector(this.ctx, canvas, wsClient);
         this.showGrid = false;
@@ -377,6 +379,9 @@ export class Renderer {
         
         // 4. Renderiza chat
         this.chatBox.render();
+
+        // 4.1 Renderiza InfoMenuUI
+        this.infoMenuUI.render();
         
         // 5. Renderiza indicador de modo de edição
         this.uiManager.renderEditModeIndicator();

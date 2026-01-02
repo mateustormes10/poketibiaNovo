@@ -1,25 +1,87 @@
+import { UIThemeConfig } from '../config/UIThemeConfig.js';
+
 export class GraphicsConfigUI {
     constructor() {
         this.containerId = 'graphics-config-ui';
     }
 
     render() {
+        // Remove previous listener to avoid duplicates
+        if (this._colorListener) {
+            try { UIThemeConfig._onColorChange = UIThemeConfig._onColorChange.filter(cb => cb !== this._colorListener); } catch(e){}
+        }
+        this._colorListener = () => {
+            // Only rerender if panel is visible
+            const container = document.getElementById(this.containerId);
+            if (container && container.style.display !== 'none') {
+                this.render();
+            }
+        };
+        UIThemeConfig.onColorChange(this._colorListener);
         let container = document.getElementById(this.containerId);
         if (!container) {
             container = document.createElement('div');
             container.id = this.containerId;
             document.body.appendChild(container);
         }
+        
         container.innerHTML = '';
-        container.style = 'position:fixed;top:14%;left:50%;transform:translateX(-50%);background:#222;padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;';
+        container.style = `position:fixed;top:14%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:24px 32px;border-radius:12px;z-index:10000;color:#fff;box-shadow:0 0 24px #0008;max-width:90vw;min-width:320px;`;
 
+          container.style.display = 'block';
+        
+        // Adiciona selectbox para cor de fundo dos painéis
+        const labelColor = document.createElement('label');
+        labelColor.textContent = 'Cor dos Painéis:';
+        labelColor.style = 'display:block;margin-top:16px;font-weight:bold;';
+        const selectColor = document.createElement('select');
+        selectColor.style = `
+            margin-left:12px;
+            background:#222;
+            color:#fff;
+            border:1.5px solid #444;
+            border-radius:7px;
+            padding:6px 18px 6px 8px;
+            font-size:1em;
+            outline:none;
+            box-shadow:0 2px 8px #0003;
+            transition: border 0.2s;
+        `;
+        selectColor.onfocus = () => selectColor.style.border = '1.5px solid #ff6600';
+        selectColor.onblur = () => selectColor.style.border = '1.5px solid #444';
+        UIThemeConfig.options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.label;
+            selectColor.appendChild(option);
+        });
+        // Valor atual
+        selectColor.value = UIThemeConfig.getBackgroundColor();
+        selectColor.onchange = (e) => {
+            UIThemeConfig.setBackgroundColor(e.target.value);
+            // Força re-renderização dos painéis
+            if (window.game && window.game.renderer && typeof window.game.renderer.render === 'function') {
+                window.game.renderer.render(window.game.gameState, window.game.skillEffectManager, window.game.inventoryManager);
+            }
+        };
+        labelColor.appendChild(selectColor);
+        container.appendChild(labelColor);
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');
         closeBtn.innerHTML = '&times;';
         closeBtn.setAttribute('aria-label', 'Fechar');
-        closeBtn.style = 'position:absolute;top:10px;right:10px;width:32px;height:32px;font-size:2em;line-height:28px;padding:0;border-radius:50%;border:none;background:#fff;color:#c00;cursor:pointer;z-index:10001;display:flex;align-items:center;justify-content:center;box-shadow:0 0 4px #0003;';
-        closeBtn.onmouseenter = () => { closeBtn.style.background = '#fee'; };
-        closeBtn.onmouseleave = () => { closeBtn.style.background = '#fff'; };
+        closeBtn.style = `
+            position:absolute;top:10px;right:10px;width:36px;height:36px;
+            font-size:2em;line-height:32px;padding:0;
+            border-radius:50%;border:none;
+            background:#222;color:#ff4444;
+            cursor:pointer;z-index:10001;
+            display:flex;align-items:center;justify-content:center;
+            box-shadow:0 0 8px #0006;
+            transition: background 0.2s, color 0.2s;
+        `;
+        closeBtn.onmouseenter = () => { closeBtn.style.background = '#333'; closeBtn.style.color = '#fff'; };
+        closeBtn.onmouseleave = () => { closeBtn.style.background = '#222'; closeBtn.style.color = '#ff4444'; };
         closeBtn.onclick = () => { container.style.display = 'none'; };
         container.appendChild(closeBtn);
 
@@ -40,8 +102,22 @@ export class GraphicsConfigUI {
         const labelRes = document.createElement('label');
         labelRes.textContent = 'Resolução:';
         labelRes.style = 'display:block;margin-top:16px;';
+        labelRes.style = 'display:block;margin-top:16px;font-weight:bold;';
         const selectRes = document.createElement('select');
-        selectRes.style = 'margin-left:12px;';
+        selectRes.style = `
+            margin-left:12px;
+            background:#222;
+            color:#fff;
+            border:1.5px solid #444;
+            border-radius:7px;
+            padding:6px 18px 6px 8px;
+            font-size:1em;
+            outline:none;
+            box-shadow:0 2px 8px #0003;
+            transition: border 0.2s;
+        `;
+        selectRes.onfocus = () => selectRes.style.border = '1.5px solid #ff6600';
+        selectRes.onblur = () => selectRes.style.border = '1.5px solid #444';
         const resolutions = [
             { label: 'Automática', value: 'auto' },
             { label: '800x600', value: '800x600' },
@@ -66,8 +142,22 @@ export class GraphicsConfigUI {
         const labelQuality = document.createElement('label');
         labelQuality.textContent = 'Qualidade:';
         labelQuality.style = 'display:block;margin-top:16px;';
+        labelQuality.style = 'display:block;margin-top:16px;font-weight:bold;';
         const selectQuality = document.createElement('select');
-        selectQuality.style = 'margin-left:12px;';
+        selectQuality.style = `
+            margin-left:12px;
+            background:#222;
+            color:#fff;
+            border:1.5px solid #444;
+            border-radius:7px;
+            padding:6px 18px 6px 8px;
+            font-size:1em;
+            outline:none;
+            box-shadow:0 2px 8px #0003;
+            transition: border 0.2s;
+        `;
+        selectQuality.onfocus = () => selectQuality.style.border = '1.5px solid #ff6600';
+        selectQuality.onblur = () => selectQuality.style.border = '1.5px solid #444';
         const qualities = [
             { label: 'Baixa', value: 'low' },
             { label: 'Média', value: 'medium' },

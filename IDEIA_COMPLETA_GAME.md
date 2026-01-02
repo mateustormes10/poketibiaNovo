@@ -1,49 +1,29 @@
 Entendimento correto do conceito (resumido)
-
 O jogador não é um treinador
-
 O jogador é um avatar humano no “mundo real”
-
 Ele:
-
 Trabalha
-
 Ganha ouro
-
 Compra acesso às partidas
-
 Ao entrar no Mundo Pokémon:
-
 Ele se transforma em um Pokémon
-
 Controla o Pokémon diretamente (ação em tempo real)
-
 Mira habilidades (estilo LoL / top-down / skillshot)
-
 O cenário influencia stats e habilidades
-
 Ao derrotar um Pokémon:
-
 Pode escanear (liberar uso futuro)
-
 Pode vender para outros jogadores
 
 Ganha ouro
-
 Se morrer:
-
 Perde o acesso
-
 Precisa pagar ouro para entrar novamente
-
 No dia seguinte tem 1 entrada gratuita
-
 O sistema permite múltiplos universos:
 
-Pokémon
+Pokemon
 
 Tibia-like
-
 Paintball
 
 Outros no futuro

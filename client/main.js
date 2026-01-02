@@ -4,7 +4,17 @@ import { gameConfig } from './config/gameConfig.js';
 
 // Inicializa o jogo quando o DOM estiver pronto, com tela de loading de 2 segundos
 window.addEventListener('DOMContentLoaded', () => {
+     
     const canvas = document.getElementById('gameCanvas');
+       canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            if (game.handleGlobalMouseDown(mouseX, mouseY)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
     const game = new Game(canvas, gameConfig);
     window.game = game; // Torna acessível globalmente para logs de performance
 

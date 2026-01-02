@@ -1,3 +1,4 @@
+import { UIThemeConfig } from '../config/UIThemeConfig.js';
 export class GmCommandsUI {
     constructor(game) {
         this.containerId = 'gm-commands-ui';
@@ -16,7 +17,7 @@ export class GmCommandsUI {
             document.body.appendChild(container);
         }
         container.innerHTML = '';
-        container.style = 'position:fixed;top:16%;left:50%;transform:translateX(-50%);background:#222;padding:28px 36px 24px 36px;border-radius:14px;z-index:10010;color:#fff;box-shadow:0 0 24px #0008;max-width:95vw;min-width:340px;';
+        container.style = `position:fixed;top:16%;left:50%;transform:translateX(-50%);background:${UIThemeConfig.getBackgroundColor()};padding:28px 36px 24px 36px;border-radius:14px;z-index:10010;color:#fff;box-shadow:0 0 24px #0008;max-width:95vw;min-width:340px;`;
 
         // Botão de fechar (X vermelho)
         const closeBtn = document.createElement('button');
