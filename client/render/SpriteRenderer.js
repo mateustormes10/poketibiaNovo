@@ -133,6 +133,10 @@ export class SpriteRenderer {
                 ...entity,
                 sprite: entity.lookaddons || entity.sprite || 'default'
             }, screenPos);
+                // Balão de fala (speech bubble)
+                if (entity.speechBubbleText && entity.speechBubbleTimeout > Date.now()) {
+                    this.renderSpeechBubble(entity.speechBubbleText, screenPos.x, screenPos.y);
+                }
         } else {
             // Outras entidades usam sprite única
             const sprite = this.sprites.get(entity.sprite);
@@ -160,6 +164,53 @@ export class SpriteRenderer {
             this.renderName(entity.name, screenPos);
         }
     }
+
+        /** Renderiza balão de fala acima da sprite */
+        renderSpeechBubble(text, x, y) {
+            const ctx = this.ctx;
+            ctx.save();
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            const padding = 8;
+            const maxWidth = 180;
+            // Quebra texto se for muito longo
+            let lines = [];
+            let words = text.split(' ');
+            let line = '';
+            for (let i = 0; i < words.length; i++) {
+                let testLine = line + words[i] + ' ';
+                let metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && line.length > 0) {
+                    lines.push(line.trim());
+                    line = words[i] + ' ';
+                } else {
+                    line = testLine;
+                }
+            }
+            lines.push(line.trim());
+            // Calcula altura do balão
+            const lineHeight = 18;
+            const bubbleHeight = lines.length * lineHeight + padding * 2;
+            // Posição acima da sprite
+            const bubbleX = x + 16;
+            const bubbleY = y - bubbleHeight;
+            // Balão
+            ctx.globalAlpha = 0.92;
+            ctx.fillStyle = '#fff';
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(bubbleX - maxWidth/2, bubbleY, maxWidth, bubbleHeight, 12);
+            ctx.fill();
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = '#222';
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], bubbleX, bubbleY + padding + (i+1)*lineHeight - 4);
+            }
+            ctx.restore();
+        }
     
     renderPlayer(player, screenPos) {
         let sprites;

@@ -60,24 +60,12 @@ export class ChatHandler {
             timestamp: Date.now()
         };
 
-        // Broadcast para jogadores próximos (chat de proximidade)
-        const playersInRange = this.gameWorld.getPlayersInArea(
-            client.player.x,
-            client.player.y,
-            client.player.z,
-            GameConstants.CHAT_PROXIMITY_RANGE
-        );
-
-        // Envia mensagem para todos os players em range
-        playersInRange.forEach(player => {
-            // Encontra o client do player
-            const playerClient = Array.from(this.gameWorld.wsServer?.clients?.values() || [])
-                .find(c => c.player?.id === player.id);
-
-            if (playerClient) {
+        // Broadcast global: envia para todos os jogadores online
+        for (const playerClient of this.gameWorld.wsServer?.clients?.values() || []) {
+            if (playerClient.player) {
                 playerClient.send('chatMessage', chatMessage);
             }
-        });
+        }
 
         console.log(`[Chat] ${client.player.name}: ${message} (${playersInRange.length} players in range)`);
     }

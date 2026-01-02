@@ -682,6 +682,14 @@ export class Game {
     }
     
     setupNetworkHandlers() {
+                this.wsClient.on('speech_bubble', (data) => {
+                    // data: { playerId, text }
+                    const player = this.gameState.players.get(data.playerId);
+                    if (player) {
+                        player.speechBubbleText = data.text;
+                        player.speechBubbleTimeout = Date.now() + 5000;
+                    }
+                });
         this.wsClient.on('connected', (data) => {
             console.log('[Game] Connected to server');
             this.hideConnectionLostUI();
@@ -1206,11 +1214,22 @@ export class Game {
         if (this.keyboard.isKeyPressed('Enter') && !this.renderer.outfitSelector.isOpen) {
             if (this.renderer.chatBox.isInputActive()) {
                 // Envia mensagem
-                const message = this.renderer.chatBox.getInputText();
+                let message = this.renderer.chatBox.getInputText();
                 if (message.trim().length > 0) {
                     this.wsClient.send('chat', {
                         message: message,
                         type: 'say'
+                    });
+                    // Balão de fala local
+                    const player = this.gameState.localPlayer;
+                    if (player) {
+                        player.speechBubbleText = message;
+                        player.speechBubbleTimeout = Date.now() + 5000;
+                    }
+                    // Envia evento para outros players verem o balão
+                    this.wsClient.send('speech_bubble', {
+                        playerId: player.id,
+                        text: message
                     });
                 }
                 this.renderer.chatBox.deactivateInput();
@@ -1221,7 +1240,7 @@ export class Game {
             return;
         }
 
-        // Se chat está ativo, captura teclas para o input e bloqueia outros comandos
+        // Se chat está ativo, captura teclas para o input e BLOQUEIA skills/comandos do jogo
         if (this.renderer.chatBox.isInputActive()) {
             // ESC cancela
             if (this.keyboard.isKeyPressed('Escape')) {
@@ -1231,6 +1250,29 @@ export class Game {
             // Backspace remove caractere
             if (this.keyboard.isKeyPressed('Backspace')) {
                 this.renderer.chatBox.removeCharFromInput();
+                return;
+            }
+            // Enter envia mensagem
+            if (this.keyboard.isKeyPressed('Enter')) {
+                let message = this.renderer.chatBox.getInputText();
+                if (message.trim().length > 0) {
+                    this.wsClient.send('chat', {
+                        message: message,
+                        type: 'say'
+                    });
+                    // Balão de fala local
+                    const player = this.gameState.localPlayer;
+                    if (player) {
+                        player.speechBubbleText = message;
+                        player.speechBubbleTimeout = Date.now() + 5000;
+                    }
+                    // Envia evento para outros players verem o balão
+                    this.wsClient.send('speech_bubble', {
+                        playerId: player?.id,
+                        text: message
+                    });
+                }
+                this.renderer.chatBox.deactivateInput();
                 return;
             }
             // Captura letras, números e símbolos para digitar

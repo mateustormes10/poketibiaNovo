@@ -5,6 +5,10 @@ export class PokemonSkillsUI {
             if (this._keyListener) return;
             this._keyListener = (e) => {
                 if (!this.visible) return;
+                // Bloqueia skills se chat estiver ativo
+                if (window.game && window.game.renderer && window.game.renderer.chatBox && window.game.renderer.chatBox.isInputActive && window.game.renderer.chatBox.isInputActive()) {
+                    return;
+                }
                 // Teclas 1 a 9, 0, -, = para skills 1 a 12
                 const keyMap = {
                     '1': 0, '2': 1, '3': 2, '4': 3, '5': 4, '6': 5, '7': 6, '8': 7, '9': 8, '0': 9, '-': 10, '=': 11

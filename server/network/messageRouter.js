@@ -13,6 +13,9 @@ import { setupWildPokemonHandler } from '../handlers/wildPokemonHandler.js';
 import { InventoryService } from '../services/InventoryService.js';
 import { handleChangeOutfit } from '../handlers/outfitHandler.js';
 import { TurnHandler } from '../handlers/turnHandler.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -24,6 +27,43 @@ export class MessageRouter {
     }
     
     setupHandlers() {
+        // Carrega lista de badwords (ES modules)
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        let badwords = [];
+        try {
+            badwords = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../config/badwords.json'), 'utf8'));
+        } catch (e) {
+            badwords = [];
+            console.warn('[MessageRouter] Não foi possível carregar badwords.json');
+        }
+
+            // Handler para balão de fala (speech bubble)
+            this.handlers.set('speech_bubble', (client, data) => {
+                // data: { playerId, text }
+                if (!data || !data.playerId || !data.text) return;
+                const msgLower = data.text.toLowerCase();
+                if (badwords.some(bad => msgLower.includes(bad))) {
+                    if (client && typeof client.send === 'function') {
+                        client.send('speech_bubble', {
+                            playerId: 0,
+                            text: 'Mensagem bloqueada: linguagem inadequada.'
+                        });
+                    }
+                    return;
+                }
+                if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
+                    this.wsServer.broadcast('speech_bubble', {
+                        playerId: data.playerId,
+                        text: data.text
+                    });
+                } else if (client && typeof client.send === 'function') {
+                    client.send('speech_bubble', {
+                        playerId: data.playerId,
+                        text: data.text
+                    });
+                }
+            });
 
         // Handler para uso de skill (animação multiplayer)
         this.handlers.set('use_skill', (client, data) => {

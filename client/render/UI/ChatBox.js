@@ -111,28 +111,30 @@ export class ChatBox {
         for (let i = this.messages.length - 1; i >= 0; i--) {
             const msg = this.messages[i];
             const msgY = messageStartY - ((this.messages.length - 1 - i) * lineHeight);
-            
-            if (msgY < y + 10) break; // Não renderiza se sair do box
-            
-            // Cor baseada no tipo ou customizada
-            let color = msg.color || '#ffffff';
-            if (!msg.color) {
-                if (msg.type === 'system') {
-                    color = '#ffff00';
-                } else if (msg.type === 'whisper') {
-                    color = '#ff00ff';
-                }
-            }
-            
+            if (msgY < y + 10) break;
+
+            // Formata horário
+            const date = new Date(msg.timestamp || Date.now());
+            const pad = n => n.toString().padStart(2, '0');
+            const timeStr = `${pad(date.getDate())}/${pad(date.getMonth()+1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+
+            // Monta texto: horário + nome em amarelo, mensagem em branco
             this.ctx.font = '12px Arial';
-            this.ctx.fillStyle = color;
-            
-            // Renderiza nome + mensagem
-            const text = msg.playerName === 'System' 
-                ? `* ${msg.message}` 
-                : `${msg.playerName}: ${msg.message}`;
-            
-            this.ctx.fillText(text, x + 10, msgY);
+            let prefix = '';
+            if (msg.playerName === 'System') {
+                prefix = 'Sistema:';
+            } else {
+                prefix = `${timeStr} ${msg.playerName}:`;
+            }
+
+            // Medir largura do prefixo para posicionar mensagem
+            this.ctx.fillStyle = '#ffff00';
+            const prefixWidth = this.ctx.measureText(prefix).width;
+            this.ctx.fillText(prefix, x + 10, msgY);
+
+            // Mensagem em branco na mesma linha
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.fillText(msg.message, x + 10 + prefixWidth + 8, msgY);
         }
         
         // Input box

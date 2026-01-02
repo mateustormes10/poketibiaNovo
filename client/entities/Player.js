@@ -1,4 +1,8 @@
 export class Player {
+        /** Texto do balão de fala (chat) */
+        speechBubbleText = '';
+        /** Timestamp de expiração do balão de fala */
+        speechBubbleTimeout = 0;
     constructor(data) {
         this.id = data.id;
         this.name = data.name;
