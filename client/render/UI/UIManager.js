@@ -117,14 +117,28 @@ export class UIManager {
         const x = (this.canvas.width - width) / 2;
         const y = 10;
         
-        // Background
+        // Bordas arredondadas
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, width, height, 16);
+        } else {
+            const r = 16;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + width - r, y);
+            this.ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+            this.ctx.lineTo(x + width, y + height - r);
+            this.ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+            this.ctx.lineTo(x + r, y + height);
+            this.ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
         this.ctx.fillStyle = 'rgba(255, 100, 0, 0.8)';
-        this.ctx.fillRect(x, y, width, height);
-        
-        // Borda
+        this.ctx.fill();
         this.ctx.strokeStyle = '#ff6600';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, width, height);
+        this.ctx.stroke();
         
         // Texto
         this.ctx.font = 'bold 16px Arial';

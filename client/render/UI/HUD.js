@@ -209,12 +209,27 @@ export class HUD {
         this.ctx.lineWidth = 2;
         this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
         this.ctx.shadowBlur = 8;
-        this.ctx.strokeRect(x, y, width, height);
-        this.ctx.restore();
-        
-        // Fundo configurável
+        // Bordas arredondadas
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, width, height, 18);
+        } else {
+            const r = 18;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + width - r, y);
+            this.ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+            this.ctx.lineTo(x + width, y + height - r);
+            this.ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+            this.ctx.lineTo(x + r, y + height);
+            this.ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
+        this.ctx.stroke();
         this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
-        this.ctx.fillRect(x, y, width, height);
+        this.ctx.fill();
+        this.ctx.restore();
         
         // Margem interna alinhada
         const marginX = x + 10;
@@ -300,11 +315,27 @@ export class HUD {
         this.ctx.lineWidth = 2;
         this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
         this.ctx.shadowBlur = 8;
-        this.ctx.strokeRect(x, y, listWidth, totalHeight);
-        this.ctx.restore();
-        // Fundo configurável
+        // Bordas arredondadas
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, listWidth, totalHeight, 14);
+        } else {
+            const r = 14;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + listWidth - r, y);
+            this.ctx.quadraticCurveTo(x + listWidth, y, x + listWidth, y + r);
+            this.ctx.lineTo(x + listWidth, y + totalHeight - r);
+            this.ctx.quadraticCurveTo(x + listWidth, y + totalHeight, x + listWidth - r, y + totalHeight);
+            this.ctx.lineTo(x + r, y + totalHeight);
+            this.ctx.quadraticCurveTo(x, y + totalHeight, x, y + totalHeight - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
         this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
-        this.ctx.fillRect(x, y, listWidth, totalHeight);
+        this.ctx.fill();
+        this.ctx.stroke();
+        this.ctx.restore();
         // Título (evita duplicidade)
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ffff00';
@@ -427,11 +458,10 @@ export class HUD {
         // (Removido: reset do filtro aqui. O filtro é resetado apenas ao abrir o battleview.)
         if (!gameState.localPlayer) return;
         const pos = this.uiManager.getPosition('battleView');
-        const width = 220; // reduced width
+        const width = 250; // reduced width
         const x = pos.x !== null ? pos.x : this.canvas.width - width - 10;
         const y = pos.y !== null ? pos.y : 100;
         const itemHeight = 28; // reduced height for each entity row
-        const maxVisible = 10;
         const maxDistance = 15;
 
         // Filtro de entidades
@@ -442,8 +472,8 @@ export class HUD {
             { label: 'Players', value: 'Player' }
         ];
         this.battleViewFilterButtons = [];
-        const buttonWidth = 44; // smaller filter buttons
-        const buttonHeight = 16;
+        const buttonWidth = 55; // smaller filter buttons
+        const buttonHeight = 20;
         const buttonSpacing = 5;
         let bx = x + 10;
         let by = y + 2;
@@ -547,7 +577,7 @@ export class HUD {
         
         // Configurações de scroll
         const maxVisibleItems = 6; // show more entities at once
-        const headerHeight = 38; // reduced header
+        const headerHeight = 45; // reduced header
         const maxViewportHeight = maxVisibleItems * itemHeight;
         const contentHeight = nearbyEntities.length * itemHeight;
         const viewportHeight = Math.min(maxViewportHeight, contentHeight);
@@ -567,12 +597,27 @@ export class HUD {
         this.ctx.lineWidth = 2;
         this.ctx.shadowColor = 'rgba(0,0,0,0.4)';
         this.ctx.shadowBlur = 8;
-        this.ctx.strokeRect(x, y, width, totalHeight);
-        this.ctx.restore();
-
-        // Fundo configurável
+        // Bordas arredondadas
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, width, totalHeight, 14);
+        } else {
+            const r = 14;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + width - r, y);
+            this.ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+            this.ctx.lineTo(x + width, y + totalHeight - r);
+            this.ctx.quadraticCurveTo(x + width, y + totalHeight, x + width - r, y + totalHeight);
+            this.ctx.lineTo(x + r, y + totalHeight);
+            this.ctx.quadraticCurveTo(x, y + totalHeight, x, y + totalHeight - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
+        this.ctx.stroke();
         this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
-        this.ctx.fillRect(x, y, width, totalHeight);
+        this.ctx.fill();
+        this.ctx.restore();
 
         // Botões de filtro visuais
         filterTypes.forEach((ft, idx) => {
@@ -602,7 +647,7 @@ export class HUD {
         // Título
         this.ctx.font = 'bold 14px Arial';
         this.ctx.fillStyle = '#ff6600';
-        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 30);
+        this.ctx.fillText(`Battle View (${nearbyEntities.length}):`, x + 10, y + 40);
 
         // Scroll
         this.battleViewMaxScroll = Math.max(0, contentHeight - viewportHeight);

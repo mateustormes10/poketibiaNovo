@@ -93,20 +93,33 @@ export class ChatBox {
         this.bounds = { x, y, width: boxWidth, height: boxHeight };
         
         // Borda verde em modo de edição
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, boxWidth, boxHeight, 16);
+        } else {
+            const r = 16;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + boxWidth - r, y);
+            this.ctx.quadraticCurveTo(x + boxWidth, y, x + boxWidth, y + r);
+            this.ctx.lineTo(x + boxWidth, y + boxHeight - r);
+            this.ctx.quadraticCurveTo(x + boxWidth, y + boxHeight, x + boxWidth - r, y + boxHeight);
+            this.ctx.lineTo(x + r, y + boxHeight);
+            this.ctx.quadraticCurveTo(x, y + boxHeight, x, y + boxHeight - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
+        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
+        this.ctx.fill();
+        this.ctx.save();
         if (this.uiManager.isEditMode()) {
             this.ctx.strokeStyle = '#00ff00';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, boxWidth, boxHeight);
         } else {
-            // Borda padrão
             this.ctx.strokeStyle = '#333333';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, boxWidth, boxHeight);
         }
-        
-        // Background do chat (usa cor dos painéis)
-        this.ctx.fillStyle = UIThemeConfig.getBackgroundColor();
-        this.ctx.fillRect(x, y, boxWidth, boxHeight);
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+        this.ctx.restore();
         
         // Renderiza mensagens (de baixo para cima)
         const lineHeight = GameConstants.CHAT_LINE_HEIGHT;
@@ -145,16 +158,30 @@ export class ChatBox {
         if (this.inputActive) {
             const inputY = y + boxHeight - 35;
             const inputHeight = 25;
-            
-            // Background do input
+            // Bordas arredondadas para input
+            this.ctx.beginPath();
+            if (typeof this.ctx.roundRect === 'function') {
+                this.ctx.roundRect(x + 5, inputY, boxWidth - 10, inputHeight, 10);
+            } else {
+                const r = 10;
+                this.ctx.moveTo(x + 5 + r, inputY);
+                this.ctx.lineTo(x + 5 + boxWidth - 10 - r, inputY);
+                this.ctx.quadraticCurveTo(x + 5 + boxWidth - 10, inputY, x + 5 + boxWidth - 10, inputY + r);
+                this.ctx.lineTo(x + 5 + boxWidth - 10, inputY + inputHeight - r);
+                this.ctx.quadraticCurveTo(x + 5 + boxWidth - 10, inputY + inputHeight, x + 5 + boxWidth - 10 - r, inputY + inputHeight);
+                this.ctx.lineTo(x + 5 + r, inputY + inputHeight);
+                this.ctx.quadraticCurveTo(x + 5, inputY + inputHeight, x + 5, inputY + inputHeight - r);
+                this.ctx.lineTo(x + 5, inputY + r);
+                this.ctx.quadraticCurveTo(x + 5, inputY, x + 5 + r, inputY);
+            }
+            this.ctx.closePath();
             this.ctx.fillStyle = 'rgba(50, 50, 50, 0.9)';
-            this.ctx.fillRect(x + 5, inputY, boxWidth - 10, inputHeight);
-            
-            // Borda do input (destacada)
+            this.ctx.fill();
+            this.ctx.save();
             this.ctx.strokeStyle = '#00ff00';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x + 5, inputY, boxWidth - 10, inputHeight);
-            
+            this.ctx.stroke();
+            this.ctx.restore();
             // Texto do input
             this.ctx.font = '14px Arial';
             this.ctx.fillStyle = '#ffffff';

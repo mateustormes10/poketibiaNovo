@@ -78,13 +78,27 @@ export class OutfitSelector {
         
         // Fundo do modal: usa cor do tema
         const bg = UIThemeConfig.getBackgroundColor ? UIThemeConfig.getBackgroundColor() : '#2c2c2c';
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, this.width, this.height, 18);
+        } else {
+            const r = 18;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + this.width - r, y);
+            this.ctx.quadraticCurveTo(x + this.width, y, x + this.width, y + r);
+            this.ctx.lineTo(x + this.width, y + this.height - r);
+            this.ctx.quadraticCurveTo(x + this.width, y + this.height, x + this.width - r, y + this.height);
+            this.ctx.lineTo(x + r, y + this.height);
+            this.ctx.quadraticCurveTo(x, y + this.height, x, y + this.height - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
         this.ctx.fillStyle = bg;
-        this.ctx.fillRect(x, y, this.width, this.height);
-        
-        // Borda
+        this.ctx.fill();
         this.ctx.strokeStyle = '#FFD700';
         this.ctx.lineWidth = 3;
-        this.ctx.strokeRect(x, y, this.width, this.height);
+        this.ctx.stroke();
         
         // Título
         this.ctx.fillStyle = '#FFD700';

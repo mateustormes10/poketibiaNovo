@@ -126,13 +126,27 @@ export class NpcDialog {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Caixa do diálogo
+        this.ctx.beginPath();
+        if (typeof this.ctx.roundRect === 'function') {
+            this.ctx.roundRect(x, y, dialogWidth, dialogHeight, 16);
+        } else {
+            const r = 16;
+            this.ctx.moveTo(x + r, y);
+            this.ctx.lineTo(x + dialogWidth - r, y);
+            this.ctx.quadraticCurveTo(x + dialogWidth, y, x + dialogWidth, y + r);
+            this.ctx.lineTo(x + dialogWidth, y + dialogHeight - r);
+            this.ctx.quadraticCurveTo(x + dialogWidth, y + dialogHeight, x + dialogWidth - r, y + dialogHeight);
+            this.ctx.lineTo(x + r, y + dialogHeight);
+            this.ctx.quadraticCurveTo(x, y + dialogHeight, x, y + dialogHeight - r);
+            this.ctx.lineTo(x, y + r);
+            this.ctx.quadraticCurveTo(x, y, x + r, y);
+        }
+        this.ctx.closePath();
         this.ctx.fillStyle = '#2a2a2a';
-        this.ctx.fillRect(x, y, dialogWidth, dialogHeight);
-        
-        // Borda
+        this.ctx.fill();
         this.ctx.strokeStyle = '#4a4a4a';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, dialogWidth, dialogHeight);
+        this.ctx.stroke();
 
         // Nome do NPC
         this.ctx.fillStyle = '#ffd700';
