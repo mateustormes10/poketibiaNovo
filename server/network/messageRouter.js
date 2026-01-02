@@ -1,4 +1,5 @@
-import { ClientEvents } from '../../shared/protocol/actions.js';
+import { ClientEvents, ServerEvents } from '../../shared/protocol/actions.js';
+import { scanDefeatedMonsters } from '../handlers/scanHandler.js';
 import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
@@ -37,6 +38,19 @@ export class MessageRouter {
             badwords = [];
             console.warn('[MessageRouter] Não foi possível carregar badwords.json');
         }
+
+        // Handler para scan de Pokémon derrotados
+        this.handlers.set(ClientEvents.SCAN, async (client, data) => {
+            const playerId = client.player?.dbId || client.player?.id;
+            if (!playerId) {
+                client.send(ServerEvents.SCAN_RESULT, { success: false, reason: 'not_authenticated' });
+                return;
+            }
+            // ScannerType pode vir do client futuramente (ex: BASIC, ADVANCED)
+            const scannerType = (data && data.scannerType) || 'BASIC';
+            const result = await scanDefeatedMonsters(playerId, this.gameWorld.inventoryRepository, scannerType);
+            client.send(ServerEvents.SCAN_RESULT, result);
+        });
 
             // Handler para balão de fala (speech bubble)
             this.handlers.set('speech_bubble', (client, data) => {

@@ -6,6 +6,7 @@
 
 import { WildPokemonClientEvents, WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { Logger } from '../utils/Logger.js';
+import { registerDefeatedMonster } from './scanHandler.js';
 
 const logger = new Logger('WildPokemonHandler');
 
@@ -44,6 +45,13 @@ export function setupWildPokemonHandler(gameWorld) {
             if (!wild) return;
             const morreu = wild.takeDamage(damage);
             logger.info(`[WILD] ${client.player.name} causou ${damage} de dano ao Pokémon selvagem ${wild.name} (id=${wild.id}) com ${skillName || 'ataque'}`);
+            // Se morreu, registra para o scanner
+            if (morreu) {
+                registerDefeatedMonster(client.player.dbId || client.player.id, {
+                    name: wild.name,
+                    level: wild.level || 1
+                });
+            }
             // Broadcast update para todos os players
             gameWorld.wildPokemonManager.broadcastUpdate(wild);
             // (Opcional) Se morreu, pode fazer despawn ou lógica extra
