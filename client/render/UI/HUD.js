@@ -426,6 +426,7 @@ export class HUD {
         });
         // Monsters/Pokémons próximos
         gameState.monsters.forEach(monster => {
+            if (monster.hp <= 0) return; // Oculta monstros mortos
             const dx = Math.abs(gameState.localPlayer.x - monster.x);
             const dy = Math.abs(gameState.localPlayer.y - monster.y);
             const distance = Math.max(dx, dy);

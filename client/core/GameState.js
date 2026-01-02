@@ -93,16 +93,34 @@ export class GameState {
     }
     
     updateMonsters(monsters) {
+        const receivedIds = new Set();
         monsters.forEach(monsterData => {
             let monster = this.monsters.get(monsterData.id);
-            
+            if (monsterData.hp <= 0) {
+                // Remove do mapa se estiver morto
+                if (monster) this.monsters.delete(monsterData.id);
+                return;
+            }
             if (!monster) {
                 monster = new Monster(monsterData);
                 this.monsters.set(monsterData.id, monster);
             } else {
                 monster.update(monsterData);
             }
+            receivedIds.add(monsterData.id);
         });
+        // Remove monstros que não vieram do servidor (despawns)
+        for (let id of this.monsters.keys()) {
+            if (!receivedIds.has(id)) {
+                this.monsters.delete(id);
+            }
+        }
+        // Limpa todos os monstros mortos (hp <= 0) do mapa
+        for (let [id, monster] of this.monsters.entries()) {
+            if (monster.hp <= 0) {
+                this.monsters.delete(id);
+            }
+        }
     }
     
     updatePlayerPosition(data) {

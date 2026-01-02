@@ -139,9 +139,23 @@ export class WildPokemonManager {
             const oldState = wildPokemon.state;
             const oldX = wildPokemon.x;
             const oldY = wildPokemon.y;
-            
+
+            // Respawn automático após 40s morto
+            if (wildPokemon.isDead && wildPokemon.deadSince && currentTime - wildPokemon.deadSince >= 40000) {
+                // Respawn: restaura HP, posição e estado
+                wildPokemon.hp = wildPokemon.maxHp;
+                wildPokemon.x = wildPokemon.spawnX;
+                wildPokemon.y = wildPokemon.spawnY;
+                wildPokemon.z = wildPokemon.spawnZ;
+                wildPokemon.isDead = false;
+                wildPokemon.deadSince = null;
+                this.broadcastUpdate(wildPokemon);
+                logger.info(`[WILD] Respawn automático de ${wildPokemon.name} (id=${wildPokemon.id})`);
+                continue;
+            }
+
             wildPokemon.update(players, currentTime);
-            
+
             // Se mudou de estado ou posição, notifica clientes
             if (wildPokemon.state !== oldState || wildPokemon.x !== oldX || wildPokemon.y !== oldY) {
                 this.broadcastUpdate(wildPokemon);

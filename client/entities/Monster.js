@@ -33,16 +33,19 @@ export class Monster {
     }
     
     update(data) {
-        if (data.hp !== undefined) this.hp = data.hp;
+        if (data.hp !== undefined) {
+            this.hp = data.hp;
+            this.isDead = this.hp <= 0;
+        }
         if (data.maxHp !== undefined) this.maxHp = data.maxHp;
         if (data.direction !== undefined) this.direction = data.direction;
-        
+
         if (data.x !== undefined && data.y !== undefined) {
             if (data.x !== this.x || data.y !== this.y) {
                 this.startMove(data.x, data.y);
             }
         }
-        
+
         if (data.z !== undefined) this.z = data.z;
     }
     
