@@ -2,6 +2,8 @@ import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 import { SkillDatabase } from '../../../shared/SkillDatabase.js';
 // Painel de skills do Pokémon
 export class PokemonSkillsUI {
+    // Cache de imagens para skills
+    static _skillImageCache = {};
         attachKeyListeners() {
             if (this._keyListener) return;
             this._keyListener = (e) => {
@@ -170,11 +172,31 @@ export class PokemonSkillsUI {
             this.ctx.lineWidth = 3;
             this.ctx.stroke();
             this.ctx.restore();
-            // Ícone (placeholder: primeira letra)
-            this.ctx.font = `bold ${fontSize}px Arial`;
-            this.ctx.fillStyle = '#fff';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(skillName ? skillName[0] : '?', btnX + size / 2, btnY + size / 2 + (fontSize/2.5));
+            // Ícone: sprite da skill (imagePath)
+            if (skill && skill.imagePath) {
+                let img = PokemonSkillsUI._skillImageCache[skill.imagePath];
+                if (!img) {
+                    img = new window.Image();
+                    img.src = skill.imagePath;
+                    PokemonSkillsUI._skillImageCache[skill.imagePath] = img;
+                }
+                if (img.complete && img.naturalWidth > 0) {
+                    const iconSize = Math.round(size * 0.8);
+                    this.ctx.drawImage(img, btnX + (size - iconSize) / 2, btnY + (size - iconSize) / 2, iconSize, iconSize);
+                } else {
+                    // fallback: letra enquanto carrega
+                    this.ctx.font = `bold ${fontSize}px Arial`;
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(skillName ? skillName[0] : '?', btnX + size / 2, btnY + size / 2 + (fontSize/2.5));
+                }
+            } else {
+                // Fallback: letra
+                this.ctx.font = `bold ${fontSize}px Arial`;
+                this.ctx.fillStyle = '#fff';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(skillName ? skillName[0] : '?', btnX + size / 2, btnY + size / 2 + (fontSize/2.5));
+            }
             // Número
             this.ctx.font = `${numberFontSize}px Arial`;
             this.ctx.fillStyle = '#ff0';

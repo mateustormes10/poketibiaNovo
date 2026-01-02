@@ -1,5 +1,5 @@
 export default class Skill {
-  constructor({ name, type, element, power, manaCost, spriteSkillList, targetArea, cowndown }) {
+  constructor({ name, type, element, power, manaCost, spriteSkillList, targetArea, cowndown, imagePath }) {
     this.name = name;
     this.type = type;
     this.element = element;
@@ -8,5 +8,6 @@ export default class Skill {
     this.spriteSkillList = spriteSkillList;
     this.targetArea = targetArea;
     this.cowndown = cowndown;
+    this.imagePath = imagePath;
   }
 }

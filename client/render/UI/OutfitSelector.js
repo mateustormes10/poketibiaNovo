@@ -1,4 +1,6 @@
+
 import { getAvailableSpriteTypes, getPlayerSprites } from '../../config/SpritePlayerList.js';
+import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 
 export class OutfitSelector {
     constructor(ctx, canvas, wsClient) {
@@ -74,8 +76,9 @@ export class OutfitSelector {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Fundo do modal
-        this.ctx.fillStyle = '#2c2c2c';
+        // Fundo do modal: usa cor do tema
+        const bg = UIThemeConfig.getBackgroundColor ? UIThemeConfig.getBackgroundColor() : '#2c2c2c';
+        this.ctx.fillStyle = bg;
         this.ctx.fillRect(x, y, this.width, this.height);
         
         // Borda

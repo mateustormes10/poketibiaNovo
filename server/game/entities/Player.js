@@ -117,7 +117,8 @@ export class Player extends Entity {
                 cowndown: skill.cowndown,
                 manaCost: skill.manaCost,
                 spriteSkillList: skill.spriteSkillList,
-                targetArea: skill.targetArea
+                targetArea: skill.targetArea,
+                imagePath: skill.imagePath // Ensure imagePath is sent to client
             })) : []
         };
     }

@@ -132,7 +132,8 @@ export class MessageRouter {
                         cowndown: skillObj.cowndown,
                         manaCost: skillObj.manaCost,
                         spriteSkillList: skillObj.spriteSkillList,
-                        targetArea: skillObj.targetArea
+                        targetArea: skillObj.targetArea,
+                        imagePath: skillObj.imagePath // novo campo para o client
                     };
                 }).filter(Boolean);
                 // HP: soma vida base do player + vida do Pokémon selecionado

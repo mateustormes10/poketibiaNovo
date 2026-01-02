@@ -5,7 +5,9 @@
  * Grade de 40 slots (5 colunas x 8 linhas)
  */
 
+
 import { InventoryConfig } from '../../../shared/protocol/InventoryProtocol.js';
+import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 
 export class InventoryUI {
     constructor(ctx, canvas) {
@@ -107,6 +109,7 @@ export class InventoryUI {
         console.log('[InventoryUI] Renderizando inventário. isOpen:', this.isOpen, 'items:', this.inventory.items?.length || 0);
 
         // Overlay escuro de fundo
+        // Fundo escuro de fundo (mantém para overlay, não painel)
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -126,8 +129,9 @@ export class InventoryUI {
      * Renderiza a janela principal
      */
     renderWindow() {
-        // Fundo da janela
-        this.ctx.fillStyle = 'rgba(20, 20, 30, 0.95)';
+        // Fundo da janela: usa cor do tema
+        const bg = UIThemeConfig.getBackgroundColor ? UIThemeConfig.getBackgroundColor() : 'rgba(20, 20, 30, 0.95)';
+        this.ctx.fillStyle = bg;
         this.ctx.fillRect(this.windowX, this.windowY, this.windowWidth, this.windowHeight);
         
         // Borda da janela
