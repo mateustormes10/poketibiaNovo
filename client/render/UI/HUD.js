@@ -1,6 +1,7 @@
 import { UIThemeConfig } from '../../config/UIThemeConfig.js';
 import { GameConstants } from '../../../shared/constants/GameConstants.js';
 import { PokemonSkillsUI } from './PokemonSkillsUI.js';
+import { GraphicsSettings } from '../../config/GraphicsSettings.js';
 
 export class HUD {
     constructor(ctx, canvas, uiManager) {
@@ -705,13 +706,16 @@ export class HUD {
         
         // Background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(x, y, 190, 60);
+        this.ctx.fillRect(x, y, 190, 80);
         
         // Debug info
         this.ctx.font = '12px Arial';
         this.ctx.fillStyle = '#ffffff';
         this.ctx.fillText(`Players: ${gameState.players.size}`, x + 10, y + 20);
         this.ctx.fillText(`NPCs: ${gameState.npcs.size}`, x + 10, y + 35);
-        this.ctx.fillText(`Monsters: ${wildPokemonCount}`, x + 10, y + 50);
+        this.ctx.fillText(`Monsters: ${wildPokemonCount}`, x + 10, y + 50);        
+        // Mostra qualidade e FPS
+        const fps = (window.game && typeof window.game._fps === 'number') ? window.game._fps : 0;
+        this.ctx.fillText('Qualidade: ' + (GraphicsSettings.quality || 'alta') + ' | FPS: ' + fps, x + 10, y + 65);
     }
 }

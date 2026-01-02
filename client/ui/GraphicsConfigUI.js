@@ -1,4 +1,5 @@
 import { UIThemeConfig } from '../config/UIThemeConfig.js';
+import { GraphicsSettings } from '../config/GraphicsSettings.js';
 
 export class GraphicsConfigUI {
     constructor() {
@@ -186,9 +187,20 @@ export class GraphicsConfigUI {
             option.textContent = opt.label;
             selectQuality.appendChild(option);
         });
-        selectQuality.value = localStorage.getItem('graphics_quality') || 'high';
+        // Mapear valores do select para os nomes internos do GraphicsSettings
+        const valueToQuality = { low: 'baixa', medium: 'media', high: 'alta' };
+        const qualityToValue = { baixa: 'low', media: 'medium', alta: 'high' };
+
+        // Inicializar select com valor atual
+        let saved = localStorage.getItem('graphics_quality');
+        let initialQuality = valueToQuality[saved] || 'alta';
+        selectQuality.value = qualityToValue[initialQuality];
+        GraphicsSettings.quality = initialQuality;
+
         selectQuality.onchange = (e) => {
             localStorage.setItem('graphics_quality', e.target.value);
+            const q = valueToQuality[e.target.value] || 'alta';
+            GraphicsSettings.setQuality(q);
         };
         labelQuality.appendChild(selectQuality);
         container.appendChild(labelQuality);

@@ -23,7 +23,118 @@ import { SkillEffectManager } from './SkillEffectManager.js';
 import { getTypeEffectiveness } from '../../shared/TypeEffectiveness.js';
 import { MusicPlayer } from './MusicPlayer.js';
 import { UIThemeConfig } from '../config/UIThemeConfig.js';
+import { GraphicsSettings } from '../config/GraphicsSettings.js';
 export class Game {
+    constructor(canvas, config) {
+        // Não define window.game globalmente
+        this.canvas = canvas;
+        this.config = config;
+        this.running = false;
+        this.infoPanelUI = new InfoPanelUI();
+
+        this._targetFPS = 60;
+        this._minFrameTime = 1000 / 60;
+        this._lastRender = 0;
+        this._effectsEnabled = true;
+        this.applyGraphicsQuality(GraphicsSettings.quality);
+        // Permite ajuste dinâmico pela UI
+        window.applyGraphicsQuality = (q) => this.applyGraphicsQuality(q);
+        
+        // Inicializa dimensões dinâmicas
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        // Core systems
+        this.gameState = new GameState();
+        this.camera = new Camera({
+            width: width,
+            height: height,
+            tileSize: config.camera.tileSize,
+            smooth: config.camera.smooth,
+            followSpeed: config.camera.followSpeed
+        });
+        this.time = new Time();
+        this.wsClient = new WsClient(config.server.url);
+        
+        // Input
+        this.keyboard = new Keyboard();
+        this.mouse = new Mouse(canvas);
+        
+        // Callback para spawnar pokemon
+        this.onPokemonSpawn = null;
+
+        // FPS tracking
+        this._fps = 0;
+        this._fpsFrames = 0;
+        this._fpsLastTime = performance.now();
+        if (typeof window !== 'undefined') window.game = this;
+        
+        // Rendering
+        this.renderer = new Renderer(canvas, this.camera, this.wsClient);
+
+        // Gerenciador de animações de skills multiplayer (deve ser criado após this.renderer)
+        this.skillEffectManager = new SkillEffectManager(this.renderer.spriteRenderer, this.camera);
+        // Integrar callback de clique de skill IMEDIATAMENTE
+        if (this.renderer && this.renderer.hud && this.renderer.hud.pokemonSkillsUI) {
+            this.renderer.hud.pokemonSkillsUI.onSkillClick = (skillName, skill, index) => {
+                try {
+                    const player = this.gameState.localPlayer;
+                    if (player) {
+                        this.useSkillWithCooldown(skillName, skill, player);
+                    }
+                } catch (err) {
+                    console.error('[ERRO] ao processar clique de skill:', err);
+                }
+                this._lastMouseDown = false;
+            };
+        }
+         
+        
+        // Inventory system
+        this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
+        this.inventoryManager = new InventoryManager(this.wsClient, this.inventoryUI);
+        
+        // Wild Pokémon system
+        this.wildPokemonManager = new WildPokemonManager(this.wsClient);
+        this.wildPokemonRenderer = new WildPokemonRenderer();
+        
+        // Passa wildPokemonManager para o Renderer
+        this.renderer.wildPokemonManager = this.wildPokemonManager;
+        
+        // Callback para bloquear movimento quando inventário aberto
+        this.inventoryManager.onToggle((isOpen) => {
+            this.isInventoryBlocking = isOpen;
+        });
+        this.isInventoryBlocking = false;
+        
+        this.lastFrameTime = 0;
+        this.resizeTimeout = null;
+        this.lastResizeWidth = 0;
+        this.lastResizeHeight = 0;
+        
+        // Sistema de atualização periódica do mapa
+        this.mapUpdateInterval = null;
+        this.mapUpdateFrequency = GameConstants.MAP_UPDATE_FREQUENCY;
+        this.isRequestingMap = false;
+
+        // Mapa UI
+        this.mapUI = null;
+    }
+
+    applyGraphicsQuality(quality) {
+        // Define FPS e efeitos conforme qualidade
+        if (quality === 'baixa') {
+            this._targetFPS = 30;
+            this._effectsEnabled = false;
+        } else if (quality === 'media') {
+            this._targetFPS = 45;
+            this._effectsEnabled = true;
+        } else {
+            this._targetFPS = 60;
+            this._effectsEnabled = true;
+        }
+        this._minFrameTime = 1000 / this._targetFPS;
+    }
         // Instancie MusicPlayer como this.music
         playBackgroundMusic() {
             if (!this.music) {
@@ -272,87 +383,7 @@ export class Game {
         };
         this._mainMenu.insertBefore(btnGm, this._mainMenu.lastChild);
     }
-    constructor(canvas, config) {
-        // Não define window.game globalmente
-        this.canvas = canvas;
-        this.config = config;
-        this.running = false;
-        this.infoPanelUI = new InfoPanelUI();
-        
-        // Inicializa dimensões dinâmicas
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        
-        // Core systems
-        this.gameState = new GameState();
-        this.camera = new Camera({
-            width: width,
-            height: height,
-            tileSize: config.camera.tileSize,
-            smooth: config.camera.smooth,
-            followSpeed: config.camera.followSpeed
-        });
-        this.time = new Time();
-        this.wsClient = new WsClient(config.server.url);
-        
-        // Input
-        this.keyboard = new Keyboard();
-        this.mouse = new Mouse(canvas);
-        
-        // Callback para spawnar pokemon
-        this.onPokemonSpawn = null;
-        
-        // Rendering
-        this.renderer = new Renderer(canvas, this.camera, this.wsClient);
-
-        // Gerenciador de animações de skills multiplayer (deve ser criado após this.renderer)
-        this.skillEffectManager = new SkillEffectManager(this.renderer.spriteRenderer, this.camera);
-        // Integrar callback de clique de skill IMEDIATAMENTE
-        if (this.renderer && this.renderer.hud && this.renderer.hud.pokemonSkillsUI) {
-            this.renderer.hud.pokemonSkillsUI.onSkillClick = (skillName, skill, index) => {
-                try {
-                    const player = this.gameState.localPlayer;
-                    if (player) {
-                        this.useSkillWithCooldown(skillName, skill, player);
-                    }
-                } catch (err) {
-                    console.error('[ERRO] ao processar clique de skill:', err);
-                }
-                this._lastMouseDown = false;
-            };
-        }
-         
-        
-        // Inventory system
-        this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
-        this.inventoryManager = new InventoryManager(this.wsClient, this.inventoryUI);
-        
-        // Wild Pokémon system
-        this.wildPokemonManager = new WildPokemonManager(this.wsClient);
-        this.wildPokemonRenderer = new WildPokemonRenderer();
-        
-        // Passa wildPokemonManager para o Renderer
-        this.renderer.wildPokemonManager = this.wildPokemonManager;
-        
-        // Callback para bloquear movimento quando inventário aberto
-        this.inventoryManager.onToggle((isOpen) => {
-            this.isInventoryBlocking = isOpen;
-        });
-        this.isInventoryBlocking = false;
-        
-        this.lastFrameTime = 0;
-        this.resizeTimeout = null;
-        this.lastResizeWidth = 0;
-        this.lastResizeHeight = 0;
-        
-        // Sistema de atualização periódica do mapa
-        this.mapUpdateInterval = null;
-        this.mapUpdateFrequency = GameConstants.MAP_UPDATE_FREQUENCY;
-        this.isRequestingMap = false;
-
-        // Mapa UI
-        this.mapUI = null;
-    }
+    
 
         // Método central para uso de skill com cooldown
     useSkillWithCooldown(skillName, skill, player) {
@@ -961,14 +992,25 @@ export class Game {
     
     gameLoop() {
         if (!this.running) return;
-        
         const currentTime = performance.now();
         const deltaTime = (currentTime - this.lastFrameTime) / 1000;
+        // Limita FPS conforme qualidade
+        if (currentTime - this._lastRender < this._minFrameTime) {
+            requestAnimationFrame(() => this.gameLoop());
+            return;
+        }
         this.lastFrameTime = currentTime;
-        
+        this._lastRender = currentTime;
+        // FPS counter
+        this._fpsFrames++;
+        if (currentTime - this._fpsLastTime >= 1000) {
+            this._fps = this._fpsFrames;
+            this._fpsFrames = 0;
+            this._fpsLastTime = currentTime;
+            if (typeof window !== 'undefined') window.game._fps = this._fps;
+        }
         this.update(deltaTime);
         this.render();
-        
         requestAnimationFrame(() => this.gameLoop());
     }
     
