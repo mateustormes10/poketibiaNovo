@@ -26,6 +26,14 @@ import { UIThemeConfig } from '../config/UIThemeConfig.js';
 import { GraphicsSettings } from '../config/GraphicsSettings.js';
 export class Game {
     constructor(canvas, config) {
+                // Atalho: pressionar T para escanear Pokémon derrotados
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 't' || e.key === 'T') {
+                        if (this.protocolHandler && typeof this.protocolHandler.sendScan === 'function') {
+                            this.protocolHandler.sendScan('BASIC');
+                        }
+                    }
+                });
         // Não define window.game globalmente
         this.canvas = canvas;
         this.config = config;
@@ -93,6 +101,11 @@ export class Game {
         // Inventory system
         this.inventoryUI = new InventoryUI(this.renderer.ctx, canvas);
         this.inventoryManager = new InventoryManager(this.wsClient, this.inventoryUI);
+
+        // Inicializa protocolHandler com suporte ao scanner
+        import('../network/ProtocolHandler.js').then(({ ProtocolHandler }) => {
+            this.protocolHandler = new ProtocolHandler(this.wsClient, this.gameState, this.inventoryManager);
+        });
         
         // Wild Pokémon system
         this.wildPokemonManager = new WildPokemonManager(this.wsClient);

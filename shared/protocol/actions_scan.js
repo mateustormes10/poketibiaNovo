@@ -1,4 +1,4 @@
-// Eventos enviados pelo CLIENTE
+// Adiciona evento de scan para o ClientEvents
 export const ClientEvents = {
     PORTAL: 'portal',
     LOGIN: 'login',
@@ -9,10 +9,9 @@ export const ClientEvents = {
     USE_ITEM: 'useItem',
     INTERACT: 'interact',
     CHANGE_FLOOR: 'changeFloor',
-    SCAN: 'scan' // Adicionado evento de scan
+    SCAN: 'scan' // Novo evento para scanner
 };
 
-// Eventos enviados pelo SERVIDOR
 export const ServerEvents = {
     CONNECTED: 'connected',
     LOGIN_SUCCESS: 'loginSuccess',
@@ -25,5 +24,5 @@ export const ServerEvents = {
     ATTACK_RESULT: 'attackResult',
     CHAT_MESSAGE: 'chatMessage',
     ERROR: 'error',
-    SCAN_RESULT: 'scanResult' // Adicionado evento de resposta do scan
+    SCAN_RESULT: 'scanResult' // Novo evento para resposta do scan
 };
