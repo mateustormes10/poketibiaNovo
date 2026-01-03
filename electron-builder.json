@@ -1,0 +1,22 @@
+{
+  "appId": "com.chaoswar.desktop",
+  "productName": "ChaosWar",
+  "directories": {
+    "output": "dist"
+  },
+  "files": [
+    "client/**/*",
+    "abrirExe.js",
+    "preload.js",
+    "package.json"
+  ],
+  "win": {
+    "icon": "client/assets/icon.ico",
+    "target": ["nsis"]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

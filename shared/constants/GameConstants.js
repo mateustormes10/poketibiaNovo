@@ -88,7 +88,7 @@ export const GameConstants = {
     
     // Client
     // O mapa NÃO deve ser atualizado por frequência fixa, e sim por evento (andar, teleporte, mudança de visão)
-    MAP_UPDATE_FREQUENCY: 3000, // (LEGADO, não usar para polling)
+    MAP_UPDATE_FREQUENCY: 500, // (LEGADO, não usar para polling)
     RESIZE_DEBOUNCE: 100, // ms - Debounce para redimensionamento de janela
     
     // UI

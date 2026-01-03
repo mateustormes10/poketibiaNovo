@@ -126,7 +126,7 @@ const tileContentSpan = document.getElementById("tileContent");
 
 let spriteFilter = ""; // filtro de busca
 let spriteGroupFilter = null;
-const totalSprites = 65000;
+const totalSprites = 102000;
 
 // Inicializa matriz
 for (let y = 0; y < mapSize; y++) {
@@ -490,18 +490,20 @@ function render() {
                 tile.ground.forEach(id => {
                     let spritePath = null;
                     let found = false;
-                    if (typeof id === 'number' || (/^\d+$/.test(id))) {
-                        const folder = spriteIndex[id];
+                    // Garante que o id seja string para buscar no index
+                    const idStr = String(id);
+                    if (typeof id === 'number' || (/^\d+$/.test(idStr))) {
+                        const folder = spriteIndex[idStr];
                         if (folder !== undefined && folder !== null && folder !== "") {
-                            spritePath = `${folder}/${id}.png`;
+                            spritePath = `${folder}/${idStr}.png`;
                             found = true;
                         } else if (folder === "") {
-                            spritePath = `${id}.png`;
+                            spritePath = `${idStr}.png`;
                             found = true;
                         } else {
                             // Tenta buscar em todas as pastas
                             for (const f of spriteFolders) {
-                                const testPath = `${f}/${id}.png`;
+                                const testPath = `${f}/${idStr}.png`;
                                 let img = loadedSprites.get(testPath);
                                 if (!img) {
                                     img = new Image();
@@ -777,16 +779,39 @@ document.addEventListener("keydown", (e) => {
         console.log("Undo");
     }
   if (e.key === "ArrowUp") cursorY = Math.max(0, cursorY - 1);
-  if (e.key === "ArrowDown") cursorY = Math.min(mapSize - 1, cursorY + 1);
-  if (e.key === "ArrowLeft") cursorX = Math.max(0, cursorX - 1);
-  if (e.key === "ArrowRight") cursorX = Math.min(mapSize - 1, cursorX + 1);
-  if (e.key === "Delete") {
-    const tile = mapData[cursorY][cursorX];
-    tile.ground = [];
-    tile.walkable = true;
-    tile.spawn = null;
-    tile.entities = [];
-  }
+    if (e.key === "ArrowDown") cursorY = Math.min(mapSize - 1, cursorY + 1);
+    if (e.key === "ArrowLeft") cursorX = Math.max(0, cursorX - 1);
+    if (e.key === "ArrowRight") cursorX = Math.min(mapSize - 1, cursorX + 1);
+    if (e.key === "Delete") {
+        const size = parseInt(brushSizeSelect.value);
+        const half = Math.floor(size / 2);
+        const undoBlock = [];
+        for (let dy = -half; dy <= half; dy++) {
+            for (let dx = -half; dx <= half; dx++) {
+                const nx = cursorX + dx;
+                const ny = cursorY + dy;
+                if (nx < 0 || ny < 0 || nx >= mapSize || ny >= mapSize) continue;
+                const tile = mapData[ny][nx];
+                // Salva estado para undo
+                undoBlock.push({
+                    x: nx,
+                    y: ny,
+                    tile: {
+                        ground: [...tile.ground],
+                        walkable: tile.walkable,
+                        spawn: tile.spawn,
+                        entities: [...tile.entities.map(e => ({...e}))]
+                    }
+                });
+                tile.ground = [];
+                tile.walkable = true;
+                tile.spawn = null;
+                tile.entities = [];
+            }
+        }
+        undoStack.push(undoBlock);
+        render();
+    }
 
   // Ajusta câmera para manter cursor visível
   if (cursorX < cameraX) cameraX = cursorX;
