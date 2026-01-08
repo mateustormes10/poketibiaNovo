@@ -18,9 +18,9 @@ INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
 
 -- Player 2 - Inventário Inicial
 INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
-(2, 'consumable', 'Poção', 5),
-(2, 'battle', 'Pokébola', 10),
-(2, 'misc', 'Gold Coin', 500);
+(1, 'consumable', 'Poção', 5),
+(1, 'battle', 'Pokébola', 10),
+(1, 'misc', 'Gold Coin', 500);
 
 -- Player 3 - Inventário Vazio (para testar)
 -- Não insere nada, inventário virá vazio

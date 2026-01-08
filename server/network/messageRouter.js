@@ -185,9 +185,7 @@ export class MessageRouter {
                                 if (data.direction === 'down') newZ = player.z - 1;
                                 // Clamp z to valid range if needed (optional)
                                 player.z = newZ;
-                                if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
-                                    this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
-                                }
+                                // Lógica de mapa removida do servidor
                                 const gameState = this.gameWorld.getGameState(player);
                                 client.send('gameState', gameState);
                                 client.send('system_message', { message: `Andar alterado para z=${player.z}`, color: 'yellow' });
@@ -272,42 +270,17 @@ export class MessageRouter {
             console.warn('[MessageRouter] changeFloor: player not found');
             return;
         }
-        // Atualiza posição do player primeiro
-        player.x = data.x;
-        player.y = data.y;
-
-        // Busca tile atual
-        const tile = this.gameWorld.mapManager.getTile(player.x, player.y, player.z);
-        let novoZ = player.z;
-        if (tile && tile.spriteIds) {
-            for (const sprite of tile.spriteIds) {
-                if (data.direction === 'up' && typeof sprite === 'string' && sprite.startsWith('UP(')) {
-                    const match = sprite.match(/UP\((\d+)\)/);
-                    if (match) {
-                        novoZ = parseInt(match[1]);
-                        break;
-                    }
-                }
-                if (data.direction === 'down' && typeof sprite === 'string' && sprite.startsWith('DOWN(')) {
-                    const match = sprite.match(/DOWN\((\d+)\)/);
-                    if (match) {
-                        novoZ = parseInt(match[1]);
-                        break;
-                    }
-                }
-            }
-            console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
-        } else {
-            console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
+        // Nunca altera x/y do player, apenas z
+        if (data.direction === 'up') {
+            player.z += 1;
+        } else if (data.direction === 'down') {
+            player.z -= 1;
         }
-
-        // Atualiza z do player conforme tile
-        player.z = novoZ;
+        // Não faz nenhuma checagem de existência de floor/txt, aceita qualquer z
+        console.log(`[LOG CHANGEFLOOR] Player ${player.name} mudou para andar z=${player.z}`);
 
         // Garante que chunks do novo andar estão carregados antes de enviar o mapa
-        if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
-            this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
-        }
+        // Lógica de mapa removida do servidor
 
         // Envia novo estado do jogo
         const gameState = this.gameWorld.getGameState(player);

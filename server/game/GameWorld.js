@@ -85,10 +85,7 @@ export class GameWorld {
      * Considera type: 'roof' ou 'house' no tile
      */
     isPlayerUnderRoof(player) {
-        const tileAbove = this.mapManager.getTile(player.x, player.y, player.z + 1);
-        if (!tileAbove) return false;
-        // Pode ajustar para outros tipos se necessário
-        return tileAbove.type === 'roof' || tileAbove.type === 'house';
+        return false;
     }
     
     async savePlayer(player) {
@@ -208,10 +205,6 @@ export class GameWorld {
         
         // Adiciona ao spatial grid
         this.spatialGrid.insert(player);
-        
-        // Registra no sistema de streaming de mapa e aguarda carregamento dos chunks
-        await this.mapManager.registerPlayerPosition(player.id, player.x, player.y, player.z);
-        
         logger.info(`Player added: ${player.name} (${player.id})`);
         return player;
     }
@@ -221,8 +214,7 @@ export class GameWorld {
         if (player) {
             // Remove do spatial grid
             this.spatialGrid.remove(playerId);
-            // Remove do sistema de streaming
-            this.mapManager.unregisterPlayer(playerId);
+            // Lógica de mapa removida do servidor
             // Limpa estados de delta
             this.deltaManager.clearObserver(playerId);
             // Notifica todos os clientes que viam esse player para remover sprite
@@ -295,22 +287,14 @@ export class GameWorld {
         // Retorna o estado do jogo visível para o player
         const visionRange = 24;
         
-        // Inclui todos os players próximos em X/Y, independente do andar (z),
-        // mas se o player local está em tile house/construcao, não vê players em z acima
+        // Inclui todos os players próximos em X/Y, independente do andar (z)
         const playersInView = [];
-        const tileAtual = this.mapManager.getTile(player.x, player.y, player.z);
-        // Track previous visible players for this client
         if (!player._lastVisiblePlayers) player._lastVisiblePlayers = new Set();
         const currentVisiblePlayers = new Set();
         for (const p of this.players.values()) {
             const dx = Math.abs(p.x - player.x);
             const dy = Math.abs(p.y - player.y);
             if (dx <= visionRange && dy <= visionRange) {
-                const tileP = this.mapManager.getTile(p.x, p.y, p.z);
-                const isLocalHouse = tileAtual && (tileAtual.type === 'house' || tileAtual.type === 'HOUSE' || tileAtual.type === 'construcao' || tileAtual.type === 'CONSTRUCAO');
-                const isPHouse = tileP && (tileP.type === 'house' || tileP.type === 'HOUSE' || tileP.type === 'construcao' || tileP.type === 'CONSTRUCAO');
-                // Só podem se ver se ambos estiverem em tile normal OU no mesmo andar
-                if ((isLocalHouse || isPHouse) && p.z !== player.z) continue;
                 playersInView.push(p);
                 currentVisiblePlayers.add(p.id);
             }
@@ -332,22 +316,7 @@ export class GameWorld {
         // Obtém tiles visíveis (28 tiles largura x 15 tiles altura)
         const mapData = this.visionSystem.getVisibleTiles(player, 32, 17);
         // Só envia mapUp se o player NÃO estiver sob roof/house/construcao
-        let mapDataUp = null;
-        let mapDataDown = null;
-        let mapDataDown2 = null;
-        const isUnderRoof = this.isPlayerUnderRoof(player);
-        if (!isUnderRoof && player.z + 1 < maxMapUp) {
-            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z + 1, this.mapManager.mapLoader);
-            mapDataUp = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z + 1 }, 32, 17);
-        }
-        if (player.z - 1 > minMapDown) {
-            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z - 1, this.mapManager.mapLoader);
-            mapDataDown = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z - 1 }, 32, 17);
-        }
-        if (player.z - 2 > minMapDown) {
-            this.mapManager.chunkManager.loadChunksAround(player.x, player.y, player.z - 2, this.mapManager.mapLoader);
-            mapDataDown2 = this.visionSystem.getVisibleTiles({ x: player.x, y: player.y, z: player.z - 2 }, 32, 17);
-        }
+        // Lógica de mapa removida do servidor
 
         const serializedPlayers = playersInView.map(p => {
             const data = p.serialize();
@@ -364,10 +333,13 @@ export class GameWorld {
             serializedPlayers.push(localData);
         }
         
-        // Serializa NPCs visíveis no mesmo andar
+        // Serializa apenas NPCs próximos (<=10 tiles em x ou y, mesmo z)
         const serializedNpcs = [];
         this.npcs.forEach(npc => {
-            if (npc.z === player.z) {
+            if (
+                npc.z === player.z &&
+                (Math.abs(npc.x - player.x) <= 10 && Math.abs(npc.y - player.y) <= 10)
+            ) {
                 serializedNpcs.push(npc.toClientData());
             }
         });
@@ -376,11 +348,7 @@ export class GameWorld {
             tick: this.tick,
             players: serializedPlayers,
             npcs: serializedNpcs,
-            monsters: [], // Implementar visão de monstros
-            map: mapData, // Dados de mapa com tiles
-            mapUp: mapDataUp,
-            mapDown: mapDataDown,
-            mapDown2: mapDataDown2
+            monsters: []
         };
     }
     
@@ -425,15 +393,7 @@ export class GameWorld {
         this.deltaManager.forceFullUpdate(playerId);
 
         // LOG: sprites do tile atual do player
-        const player = this.players.get(playerId);
-        if (player) {
-            const tile = this.mapManager.getTile(player.x, player.y, player.z);
-            if (tile && tile.spriteIds) {
-                console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sprites:`, tile.spriteIds);
-            } else {
-                console.log(`[LOG SPRITES] Player ${player.name} (${player.x},${player.y},${player.z}) sem tile ou sprites.`);
-            }
-        }
+        // ...removed tile logging...
     }
     
     getStats() {

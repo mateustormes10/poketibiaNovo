@@ -25,18 +25,46 @@ export class PortalHandler {
             console.warn('[MessageRouter] portal: player not found');
             return;
         }
-        // Atualiza posição do player para o destino do portal
+
         if (data && data.to && typeof data.to.x === 'number' && typeof data.to.y === 'number' && typeof data.to.z === 'number') {
-                            player.x = data.to.x;
-                            player.y = data.to.y;
-                            player.z = data.to.z;
-                            if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
-                                this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
-                            }
-                            // Envia novo estado do jogo
-                            const gameState = this.gameWorld.getGameState(player);
-                            client.send('gameState', gameState);
-                            console.log(`[PORTAL] Player ${player.name} teleportado para (${player.x},${player.y},${player.z}) via portal.`);
+            // Só teleporta se a posição de destino for diferente da atual
+            if (player.x !== data.to.x || player.y !== data.to.y || player.z !== data.to.z) {
+                // Log antes da mudança
+                console.log('[PORTAL] Antes do teleporte:', {
+                    id: player.id,
+                    x: player.x,
+                    y: player.y,
+                    z: player.z
+                });
+
+                // Atualiza a posição do player para a posição de destino do portal
+                player.x = data.to.x;
+                player.y = data.to.y;
+                player.z = data.to.z;
+                if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
+                    this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
+                }
+
+                // Log depois da mudança
+                console.log('[PORTAL] Depois do teleporte:', {
+                    id: player.id,
+                    x: player.x,
+                    y: player.y,
+                    z: player.z
+                });
+
+                // Envia o novo gameState para o player
+                const gameState = this.gameWorld.getGameState(player);
+                // Log do gameState enviado
+                console.log('[PORTAL] Enviando gameState para player:', player.id, JSON.stringify(gameState.players.find(p => p.id === player.id)));
+                client.send('gameState', gameState);
+                console.log(`[PORTAL] Player ${player.name} teleportado para (${player.x},${player.y},${player.z}) via portal.`);
+            } else {
+                // Se já está na posição, apenas envia o gameState para garantir atualização de configuração
+                const gameState = this.gameWorld.getGameState(player);
+                console.log('[PORTAL] Player já está na posição de destino. Enviando gameState para atualização de configuração.', player.id);
+                client.send('gameState', gameState);
+            }
         } else {
             console.warn('[MessageRouter] portal: dados de destino inválidos', data);
         }

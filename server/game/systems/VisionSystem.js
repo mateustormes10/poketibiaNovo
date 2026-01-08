@@ -59,13 +59,8 @@ export class VisionSystem {
 
         // Log detalhado
         // Obtém tiles do ChunkManager
-        const tiles = this.gameWorld.mapManager.chunkManager.getTilesInArea(
-            startX,
-            startY,
-            player.z,
-            areaWidth,
-            areaHeight
-        );
+            // Lógica de mapa removida do servidor
+            return [];
         
         console.log(`[VisionSystem] Got ${tiles.length} tiles from ChunkManager`);
         

@@ -103,13 +103,13 @@ INSERT INTO players (
 ) VALUES
 (
     'TormesBr', 0, 1, 1,
-    1, 0,
+    1, 4,
     100, 100,
     0,
     10, 10, 10, 10, 136, 'default',
     0, 100, 100, 0,
     0, 1,
-    100, 100, 7,
+    0, 0, 2,
     '',
     0, 0,
     0
@@ -122,7 +122,7 @@ INSERT INTO players (
     10, 10, 10, 10, 136, 'default',
     0, 100, 100, 0,
     0, 1,
-    105, 100, 7,
+    3, 3, 2,
     '',
     0, 0,
     0
@@ -566,6 +566,9 @@ CREATE TABLE player_inventory (
     FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
     INDEX idx_player_inventory (player_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+ALTER TABLE player_inventory
+ADD COLUMN slot_order INT NOT NULL DEFAULT 0 AFTER item_name;
+
 
 -- Adiciona itens de teste para o player 1
 INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES

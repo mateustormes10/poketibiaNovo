@@ -11,9 +11,9 @@ export class Zone {
     }
     
     contains(x, y, z) {
-        return x >= this.x1 && x <= this.x2 &&
-               y >= this.y1 && y <= this.y2 &&
-               z === this.z;
+         return (x >= this.x1) && (x <= this.x2) &&
+             (y >= this.y1) && (y <= this.y2) &&
+             (z === this.z);
     }
     
     update(deltaTime) {

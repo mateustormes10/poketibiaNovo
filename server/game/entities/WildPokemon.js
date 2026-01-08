@@ -80,14 +80,14 @@ export class WildPokemon {
         
         // Verifica players
         for (const [id, player] of this.gameWorld.players) {
-            if (player.x === x && player.y === y && player.z === z) {
+            if ((player.x === x) && (player.y === y) && (player.z === z)) {
                 return true;
             }
         }
         
         // Verifica NPCs
         for (const [id, npc] of this.gameWorld.npcs) {
-            if (npc.x === x && npc.y === y && npc.z === z) {
+            if ((npc.x === x) && (npc.y === y) && (npc.z === z)) {
                 return true;
             }
         }
@@ -95,7 +95,7 @@ export class WildPokemon {
         // Verifica outros wild pokémons
         if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
             for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
-                if (wildPokemon.id !== this.id && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
+                if ((wildPokemon.id !== this.id) && (wildPokemon.x === x) && (wildPokemon.y === y) && (wildPokemon.z === z)) {
                     // Permite passar por cima de corpos mortos
                     if (!wildPokemon.isDead) {
                         return true;
@@ -173,7 +173,7 @@ export class WildPokemon {
             if (closestPlayer) {
                 const dx = Math.abs(this.x - closestPlayer.x);
                 const dy = Math.abs(this.y - closestPlayer.y);
-                isAdjacent = (dx <= 1 && dy <= 1 && (dx !== 0 || dy !== 0));
+                isAdjacent = ((dx <= 1) && (dy <= 1) && ((dx !== 0) || (dy !== 0)));
             }
             if (currentTime - this.lastMoveTime >= this.movementSpeed) {
                 if (!isAdjacent) {
@@ -187,7 +187,7 @@ export class WildPokemon {
                 // logger.debug(`[UPDATE] ${this.name} (${this.id}) aguardando cooldown de movimento.`);
             }
             // Se está na distância de ataque E tem linha de visão, ataca
-            if (minDistance <= this.attackRange && closestPlayer && this.hasLineOfSightTo(closestPlayer)) {
+            if ((minDistance <= this.attackRange) && closestPlayer && this.hasLineOfSightTo(closestPlayer)) {
                 // logger.debug(`[UPDATE] ${this.name} (${this.id}) vai atacar player ${closestPlayer.id}`);
                 const skillResult = this.useRandomSkill(closestPlayer, currentTime);
                 if (skillResult && this.gameWorld && this.gameWorld.wildPokemonManager) {
@@ -211,14 +211,14 @@ export class WildPokemon {
                     const minY = Math.min(this.y, target.y);
                     const maxY = Math.max(this.y, target.y);
                     for (let y = minY + 1; y < maxY; y++) {
-                        if (!this.gameWorld.mapManager.isWalkable(this.x, y, this.z)) return false;
+                        // Lógica de colisão removida do servidor
                     }
                     return true;
                 } else if (this.y === target.y) {
                     const minX = Math.min(this.x, target.x);
                     const maxX = Math.max(this.x, target.x);
                     for (let x = minX + 1; x < maxX; x++) {
-                        if (!this.gameWorld.mapManager.isWalkable(x, this.y, this.z)) return false;
+                        // Lógica de colisão removida do servidor
                     }
                     return true;
                 }
@@ -283,8 +283,7 @@ export class WildPokemon {
         );
         // Verifica se pode mover (distância do spawn + colisão + walkable)
         const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
-        const isWalkable = mapManager ? mapManager.isWalkable(newX, newY, this.z) : true;
-        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z) && isWalkable) {
+        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z)) {
             this.x = newX;
             this.y = newY;
         }
@@ -296,8 +295,6 @@ export class WildPokemon {
      */
     moveTowards(target) {
         // Pathfinding A* aprimorado para garantir encostar no player
-        const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
-        if (!mapManager) return;
         logger.debug(`[WILD] ${this.name} (${this.id}) tentando mover de (${this.x},${this.y}) para (${target.x},${target.y})`);
 
         // Tiles adjacentes ao player (incluindo diagonais)
@@ -310,7 +307,7 @@ export class WildPokemon {
         }
         // Filtra apenas os walkable e não ocupados
         const validAdjacents = adjacents.filter(pos =>
-            mapManager.isWalkable(pos.x, pos.y, this.z) &&
+            // Lógica de colisão removida do servidor
             !this.isPositionOccupied(pos.x, pos.y, this.z)
         );
 
@@ -354,10 +351,9 @@ export class WildPokemon {
                     const ny = current.y + d.dy;
                     const nkey = `${nx},${ny}`;
                     if (closed.has(nkey)) continue;
-                    if (!mapManager.isWalkable(nx, ny, this.z)) {
-                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) não é walkable.`);
-                        continue;
-                    }
+                    // Lógica de colisão removida do servidor
+                    // logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) não é walkable.`);
+                    // continue;
                     if (this.isPositionOccupied(nx, ny, this.z)) {
                         logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) está ocupado.`);
                         continue;

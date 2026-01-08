@@ -34,8 +34,8 @@ export class Npc {
     toClientData() {
         // Define sprite/outfit fixa para NPCs conhecidos
         let sprite = this.sprite;
-        if (this.type === 'nurse' || this.name?.toLowerCase().includes('enfermeira')) sprite = 'summonerMale';
-        if (this.type === 'vendor' || this.name?.toLowerCase().includes('vendedor')) sprite = 'maletaMale';
+        if (this.type === 'nurse' || this.name?.toLowerCase().includes('enfermeira')) sprite = 'mageFemale';
+        if (this.type === 'vendor' || this.name?.toLowerCase().includes('vendedor')) sprite = 'mageFemale';
         return {
             id: this.id,
             name: this.name,

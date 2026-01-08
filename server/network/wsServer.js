@@ -92,6 +92,12 @@ export class WsServer {
             this.gameWorld.removePlayer(client.player.id);
         }
         this.clients.delete(client.id);
+
+        // Broadcast para todos os clientes: lista de jogadores
+        if (this.gameWorld && this.gameWorld.wsServer) {
+            const allPlayers = Array.from(this.gameWorld.players.values()).map(p => p.serialize());
+            this.gameWorld.wsServer.broadcast('players_update', JSON.stringify(allPlayers));
+        }
     }
     
     broadcast(type, data, excludeClient = null) {

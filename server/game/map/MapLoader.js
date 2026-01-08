@@ -99,8 +99,8 @@ export class MapLoader {
         
         // Filtra tiles do chunk
         mapData.tiles.forEach(tile => {
-            if (tile.x >= startX && tile.x < endX && 
-                tile.y >= startY && tile.y < endY) {
+            if ((tile.x >= startX) && (tile.x < endX) && 
+                (tile.y >= startY) && (tile.y < endY)) {
                 
                 // Adiciona com coordenadas locais
                 chunk.addTile({
@@ -157,7 +157,7 @@ export class MapLoader {
                 // Sprite principal (primeiro ID numérico, ou string se não houver)
                 const mainSpriteId = spriteIds.find(sid => typeof sid === 'number') ?? spriteIds[0];
                 // Só adiciona tile se houver spriteId válido (não 0, não undefined)
-                if (mainSpriteId && mainSpriteId !== 0 && mainSpriteId !== '0' && mainSpriteId !== undefined) {
+                if ((mainSpriteId && mainSpriteId !== 0 && mainSpriteId !== '0' && mainSpriteId !== undefined)) {
                     tiles.push({
                         x,
                         y,
@@ -198,7 +198,7 @@ export class MapLoader {
             width: data.width || 0,
             height: data.height || 0,
             tiles: data.tiles
-                .filter(tile => tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0')
+                .filter(tile => (tile.spriteId && tile.spriteId !== 0 && tile.spriteId !== '0'))
                 .map(tile => ({
                     x: tile.x,
                     y: tile.y,

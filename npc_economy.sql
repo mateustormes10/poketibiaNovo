@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS player_inventory (
 -- Insere NPCs iniciais
 INSERT INTO npcs (name, type, x, y, z, sprite, world_id)
 VALUES 
-('Vendedor', 'shop', 10, 15, 3, 0, 0),
-('Enfermeira', 'heal', 12, 15, 3, 0, 0)
+('Vendedor', 'shop', 9, 2, 2, 0, 0),
+('Enfermeira', 'heal', 18, 2, 2, 0, 0)
 ON DUPLICATE KEY UPDATE name=name;
 
 -- Insere itens da loja do Vendedor

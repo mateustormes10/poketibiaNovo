@@ -63,7 +63,7 @@ export const GameConstants = {
     
     // Spawn
     DEFAULT_SPAWN: { x: 50, y: 50, z: 1 },
-    TEMPLE_SPAWN: { x: 72, y: 33, z: 3 }, // Spawn após morte
+    TEMPLE_SPAWN: { x: 0, y: 0, z: 2 }, // Spawn após morte
     
     // NPCs
     NPC_INTERACTION_RANGE: 1, // Distância máxima para interagir com NPC (tiles adjacentes)

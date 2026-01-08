@@ -117,6 +117,12 @@ export class AuthHandler {
             
             logger.info(`Game state sent to ${player.name} at (${player.x}, ${player.y}, ${player.z}) with ${player.pokemons.length} pokemons`);
             logger.info(`Sent ${wildPokemons.length} wild Pokémon to ${player.name}`);
+
+            // Broadcast para todos os clientes: lista de jogadores
+            if (this.wsServer) {
+                const allPlayers = Array.from(this.gameWorld.players.values()).map(p => p.serialize());
+                this.wsServer.broadcast('players_update', JSON.stringify(allPlayers));
+            }
             
         } catch (error) {
             logger.error('Login error:', error);

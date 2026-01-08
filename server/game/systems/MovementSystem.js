@@ -5,15 +5,10 @@ export class MovementSystem {
     
     moveEntity(entity, direction) {
         const newPos = this.getNewPosition(entity, direction);
-        
-        if (!this.canMove(entity, newPos)) {
-            return false;
-        }
-        
+        // Sem validação: aceita qualquer movimento
         entity.x = newPos.x;
         entity.y = newPos.y;
         entity.direction = direction;
-        
         return true;
     }
     
@@ -39,16 +34,7 @@ export class MovementSystem {
     }
     
     canMove(entity, newPos) {
-        // Verifica colisão com mapa
-        if (!this.gameWorld.mapManager.isWalkable(newPos.x, newPos.y, newPos.z)) {
-            return false;
-        }
-        
-        // Verifica colisão com outras entidades
-        if (this.hasEntityAt(newPos.x, newPos.y, newPos.z, entity.id)) {
-            return false;
-        }
-        
+        // Sempre retorna true: sem validação de colisão ou walkable
         return true;
     }
     

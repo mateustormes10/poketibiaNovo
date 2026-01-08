@@ -67,7 +67,7 @@ export class ChatHandler {
             }
         }
 
-        console.log(`[Chat] ${client.player.name}: ${message} (${playersInRange.length} players in range)`);
+        console.log(`[Chat] ${client.player.name}: ${message} (broadcast global)`);
     }
     
     handleCommand(client, message) {
