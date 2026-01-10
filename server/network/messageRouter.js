@@ -201,7 +201,18 @@ export class MessageRouter {
                 });
                     
               
-                
+              
+        this.handlers.set('get_game_state', (client, data) => {
+            // Busca o player associado ao client
+            const player = client.player;
+            if (!player) return;
+
+            // Busca o estado do jogo para esse player
+            const gameState = this.gameWorld.getGameState(player);
+
+            // Envia o estado do jogo para o client
+            client.send('gameState', gameState);
+        });  
         const portalHandler = new PortalHandler(this.gameWorld, this.wsServer);
         const authHandler = new AuthHandler(this.gameWorld, this.wsServer);
         const movementHandler = new MovementHandler(this.gameWorld);

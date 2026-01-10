@@ -9,72 +9,90 @@ export class MovementHandler {
     }
     
     handleMove(client, data) {
-        if (!client.player) return;
+            // Loga as coordenadas recebidas do client
+            console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}`);
+        
+        // Busca o player pelo playerId do pacote, se existir, senão usa client.player
+        let player = client.player;
+        if (data.playerId && this.gameWorld.players && this.gameWorld.players.has(data.playerId)) {
+            player = this.gameWorld.players.get(data.playerId);
+        }
+        if (!player) return;
+
+        // Se x, y, z vierem do client, atualiza diretamente
+        if (
+            typeof data.x === 'number' &&
+            typeof data.y === 'number' &&
+            typeof data.z === 'number'
+        ) {
+            player.x = data.x;
+            player.y = data.y;
+            player.z = data.z;
+        }
 
         const { direction } = data;
-        const success = this.movementSystem.moveEntity(client.player, direction);
+        if (direction) {
+            player.direction = direction;
+        }
 
         // Log detalhado do movimento
-        console.log(`[MOVE] Player ${client.player.name} moveu para (${client.player.x},${client.player.y},${client.player.z})`);
+        console.log(`[MOVE] Player ${player.name} moveu para (${player.x},${player.y},${player.z})`);
 
         // Se o player está transformado em pokémon, atualiza a sprite conforme a direção
-        if (client.player && client.player.sprite && Array.isArray(client.player.sprite)) {
+        if (player && player.sprite && Array.isArray(player.sprite)) {
             // Descobre o nome do pokémon atual
-            const pokeName = client.player.pokemonName || client.player.name;
+            const pokeName = player.pokemonName || player.name;
             const pokeData = PokemonEntities[pokeName];
-            if (pokeData) {
+            if (pokeData && direction) {
                 let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
-                client.player.sprite = spriteArr;
-                client.send('player_outfit_update', { playerId: client.player.id, lookaddons: spriteArr });
+                player.sprite = spriteArr;
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
             }
         }
 
-        if (success) {
-            // Nenhuma verificação de tile, lógica de mapa removida do servidor
+        // Atualiza no spatial grid
+        this.gameWorld.spatialGrid.update(player);
 
-            // Atualiza no spatial grid
-            this.gameWorld.spatialGrid.update(client.player);
+        // Atualiza streaming de mapa
+        // Lógica de mapa removida do servidor
 
-            // Atualiza streaming de mapa
-            // Lógica de mapa removida do servidor
+        // Cria delta de movimento
+        const moveDelta = {
+            playerId: player.id,
+            x: player.x,
+            y: player.y,
+            z: player.z,
+            direction: player.direction
+        };
 
-            // Cria delta de movimento
-            const moveDelta = {
-                playerId: client.player.id,
-                x: client.player.x,
-                y: client.player.y,
-                z: client.player.z,
-                direction
-            };
+        // Notifica o cliente (sempre envia movimento próprio)
+        client.send(ServerEvents.PLAYER_MOVE, moveDelta);
 
-            // Notifica o cliente (sempre envia movimento próprio)
-            client.send(ServerEvents.PLAYER_MOVE, moveDelta);
+        // Envia gameState atualizado (inclui npcs próximos)
+        const gameState = this.gameWorld.getGameState(player);
+        client.send('gameState', gameState);
 
-            // Envia gameState atualizado (inclui npcs próximos)
-            const gameState = this.gameWorld.getGameState(client.player);
-            client.send('gameState', gameState);
-
-            // Notifica jogadores na área (apenas delta)
-            const playersInRange = this.gameWorld.getPlayersInArea(
-                client.player.x,
-                client.player.y,
-                client.player.z,
-                15
-            );
-            
-            // Envia para outros jogadores próximos (exceto self)
-            playersInRange.forEach(player => {
-                if (player.id !== client.player.id) {
-                    // TODO: Broadcast para outros clientes
-                    // wsServer.sendToPlayer(player.id, ServerEvents.PLAYER_MOVE, moveDelta);
-                }
-            });
-
-            // Broadcast para todos os clientes: lista de jogadores
-            if (this.gameWorld.wsServer) {
-                const allPlayers = Array.from(this.gameWorld.players.values()).map(p => p.serialize());
-                this.gameWorld.wsServer.broadcast('players_update', JSON.stringify(allPlayers));
+        // Notifica jogadores na área (apenas delta)
+        const playersInRange = this.gameWorld.getPlayersInArea(
+            player.x,
+            player.y,
+            player.z,
+            15
+        );
+        // Envia para outros jogadores próximos (exceto self)
+        playersInRange.forEach(p => {
+            if (p.id !== player.id) {
+                // TODO: Broadcast para outros clientes
+                // wsServer.sendToPlayer(p.id, ServerEvents.PLAYER_MOVE, moveDelta);
             }
+        });
+
+        // Broadcast para todos os clientes: lista de jogadores
+        if (this.gameWorld.wsServer) {
+            const allPlayers = Array.from(this.gameWorld.players.values()).map(p => p.serialize());
+            this.gameWorld.wsServer.broadcast('players_update', JSON.stringify(allPlayers));
         }
+
+        
     }
 }

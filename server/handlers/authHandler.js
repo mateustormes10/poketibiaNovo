@@ -15,15 +15,20 @@ export class AuthHandler {
     
     async handleLogin(client, data) {
         const { username, password, playerId } = data;
-        
         try {
             // Usa o playerId enviado pelo cliente ou padrão 1
             const playerIdToUse = playerId || 1;
             const accountId = 1;
-            
+
+            // LOG EXTRA: Mostra o playerId recebido
+            console.log('[AuthHandler][DEBUG] playerId recebido do cliente:', playerId, '| Usado:', playerIdToUse);
+
             // Busca player do banco de dados
             const playerData = await this.playerRepository.findById(playerIdToUse);
-            
+
+            // LOG EXTRA: Mostra o nome do personagem retornado
+            console.log('[AuthHandler][DEBUG] playerData retornado:', playerData ? playerData.name : 'NULO');
+
             console.log('[AuthHandler] Raw playerData from DB:', JSON.stringify({
                 name: playerData?.name,
                 lookaddons: playerData?.lookaddons,
