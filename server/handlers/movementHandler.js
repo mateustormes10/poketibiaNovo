@@ -10,7 +10,7 @@ export class MovementHandler {
     
     handleMove(client, data) {
             // Loga as coordenadas recebidas do client
-            console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}`);
+            console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}, mapaAtual=${data.mapaAtual}`);
         
         // Busca o player pelo playerId do pacote, se existir, senão usa client.player
         let player = client.player;
@@ -19,18 +19,28 @@ export class MovementHandler {
         }
         if (!player) return;
 
-        // Se x, y, z vierem do client, atualiza diretamente
+
+        // Checa colisão de mapa antes de atualizar posição
+        const { direction } = data;
+        let city = data.mapaAtual || player.city || player.mapaAtual || (player.name && player.name.split('_')[0]) || 'CidadeInicial';
         if (
             typeof data.x === 'number' &&
             typeof data.y === 'number' &&
             typeof data.z === 'number'
         ) {
+            if (
+                this.gameWorld.mapManager &&
+                typeof this.gameWorld.mapManager.isWalkable === 'function' &&
+                !this.gameWorld.mapManager.isWalkable(city, data.z, data.x, data.y)
+            ) {
+                // Tile bloqueado, ignora movimento
+                client.send('system_message', { message: 'Movimento bloqueado por colisão!', color: 'red' });
+                return;
+            }
             player.x = data.x;
             player.y = data.y;
             player.z = data.z;
         }
-
-        const { direction } = data;
         if (direction) {
             player.direction = direction;
         }

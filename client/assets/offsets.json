@@ -1,0 +1,31 @@
+{
+    "keys": [
+        "CidadeInicial_andar_0",
+        "CidadeInicial_andar_1",
+        "CidadeInicial_andar_2",
+        "CidadeInicial_andar_3",
+        "CidadeInicial_andar_4"
+    ],
+    "values": [
+        {
+            "offsetX": -1,
+            "offsetY": -5
+        },
+        {
+            "offsetX": -20,
+            "offsetY": -11
+        },
+        {
+            "offsetX": 0,
+            "offsetY": -6
+        },
+        {
+            "offsetX": -158,
+            "offsetY": -127
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        }
+    ]
+}

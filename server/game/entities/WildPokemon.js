@@ -281,9 +281,15 @@ export class WildPokemon {
             Math.abs(newX - this.spawnX),
             Math.abs(newY - this.spawnY)
         );
-        // Verifica se pode mover (distância do spawn + colisão + walkable)
         const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
-        if (distanceFromSpawn <= this.moveRange && !this.isPositionOccupied(newX, newY, this.z)) {
+        // Corrige para garantir que o nome da cidade/mapa seja sempre o correto, nunca o nome do monstro
+        let city = this.city || this.mapaAtual || (this.gameWorld && this.gameWorld.currentMapName) || 'CidadeInicial';
+        if (
+            distanceFromSpawn <= this.moveRange &&
+            !this.isPositionOccupied(newX, newY, this.z) &&
+            mapManager && typeof mapManager.isWalkable === 'function' &&
+            mapManager.isWalkable(city, this.z, newX, newY)
+        ) {
             this.x = newX;
             this.y = newY;
         }
@@ -298,6 +304,9 @@ export class WildPokemon {
         logger.debug(`[WILD] ${this.name} (${this.id}) tentando mover de (${this.x},${this.y}) para (${target.x},${target.y})`);
 
         // Tiles adjacentes ao player (incluindo diagonais)
+        const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
+        // Corrige para garantir que o nome da cidade/mapa seja sempre o correto, nunca o nome do monstro
+        let city = this.city || this.mapaAtual || (this.gameWorld && this.gameWorld.currentMapName) || 'CidadeInicial';
         const adjacents = [];
         for (let dx = -1; dx <= 1; dx++) {
             for (let dy = -1; dy <= 1; dy++) {
@@ -307,8 +316,9 @@ export class WildPokemon {
         }
         // Filtra apenas os walkable e não ocupados
         const validAdjacents = adjacents.filter(pos =>
-            // Lógica de colisão removida do servidor
-            !this.isPositionOccupied(pos.x, pos.y, this.z)
+            !this.isPositionOccupied(pos.x, pos.y, this.z) &&
+            mapManager && typeof mapManager.isWalkable === 'function' &&
+            mapManager.isWalkable(city, this.z, pos.x, pos.y)
         );
 
         // Função heurística Manhattan
@@ -351,11 +361,11 @@ export class WildPokemon {
                     const ny = current.y + d.dy;
                     const nkey = `${nx},${ny}`;
                     if (closed.has(nkey)) continue;
-                    // Lógica de colisão removida do servidor
-                    // logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) não é walkable.`);
-                    // continue;
-                    if (this.isPositionOccupied(nx, ny, this.z)) {
-                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) está ocupado.`);
+                    if (
+                        (mapManager && typeof mapManager.isWalkable === 'function' && !mapManager.isWalkable(city, this.z, nx, ny)) ||
+                        this.isPositionOccupied(nx, ny, this.z)
+                    ) {
+                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) está ocupado ou não é walkable.`);
                         continue;
                     }
                     open.push({ x: nx, y: ny, path: [...current.path, d] });

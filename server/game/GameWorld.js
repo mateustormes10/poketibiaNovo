@@ -157,16 +157,14 @@ export class GameWorld {
 
     async init() {
         logger.info('Initializing game world...');
-        
-        await this.mapManager.loadMaps();
+        if (this.mapManager && typeof this.mapManager.loadMaps === 'function') {
+            await this.mapManager.loadMaps();
+        }
         await this.zoneManager.init();
-        
         // Carrega NPCs do banco de dados
         await this.loadNpcs();
-        
         // Inicializa Pokémon selvagens
         await this.wildPokemonManager.initialize();
-        
         logger.info('Game world initialized');
     }
     

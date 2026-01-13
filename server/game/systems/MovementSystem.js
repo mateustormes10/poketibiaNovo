@@ -5,7 +5,18 @@ export class MovementSystem {
     
     moveEntity(entity, direction) {
         const newPos = this.getNewPosition(entity, direction);
-        // Sem validação: aceita qualquer movimento
+        // Checa colisão de mapa
+        const city = entity.city || entity.mapaAtual || (entity.name && entity.name.split('_')[0]) || 'CidadeInicial';
+        const andar = newPos.z;
+        if (!this.canMove(entity, newPos)) return false;
+        if (
+            this.gameWorld.mapManager &&
+            typeof this.gameWorld.mapManager.isWalkable === 'function' &&
+            !this.gameWorld.mapManager.isWalkable(city, andar, newPos.x, newPos.y)
+        ) {
+            // Tile bloqueado
+            return false;
+        }
         entity.x = newPos.x;
         entity.y = newPos.y;
         entity.direction = direction;
@@ -34,8 +45,8 @@ export class MovementSystem {
     }
     
     canMove(entity, newPos) {
-        // Sempre retorna true: sem validação de colisão ou walkable
-        return true;
+        // Checa colisão com entidades
+        return !this.hasEntityAt(newPos.x, newPos.y, newPos.z, entity.id);
     }
     
     hasEntityAt(x, y, z, excludeId) {
