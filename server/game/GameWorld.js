@@ -2,7 +2,6 @@ import { MapManager } from './map/MapManager.js';
 import { ZoneManager } from './zones/ZoneManager.js';
 import { Player } from './entities/Player.js';
 import { Npc } from './entities/Npc.js';
-import { SpatialGrid } from './systems/SpatialGrid.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
 import { WildPokemonManager } from './systems/WildPokemonManager.js';
@@ -38,7 +37,6 @@ export class GameWorld {
         this.inventoryRepository = new InventoryRepository(database);
         
         // Sistemas de otimização
-        this.spatialGrid = new SpatialGrid(GameConstants.SPATIAL_GRID_SIZE);
         this.deltaManager = new DeltaManager();
         this.visionSystem = new VisionSystem(this); // Sistema de visão
         
@@ -185,7 +183,7 @@ export class GameWorld {
                     sprite: data.sprite,
                     worldId: data.world_id
                 });
-                
+
                 this.npcs.set(npc.id, npc);
                 logger.info(`[NPC] Spawnado: ${npc.name} (id=${npc.id}) em x=${npc.x}, y=${npc.y}, z=${npc.z}`);
             }
@@ -202,7 +200,6 @@ export class GameWorld {
         this.players.set(player.id, player);
         
         // Adiciona ao spatial grid
-        this.spatialGrid.insert(player);
         logger.info(`Player added: ${player.name} (${player.id})`);
         return player;
     }
@@ -210,9 +207,6 @@ export class GameWorld {
     removePlayer(playerId) {
         const player = this.players.get(playerId);
         if (player) {
-            // Remove do spatial grid
-            this.spatialGrid.remove(playerId);
-            // Lógica de mapa removida do servidor
             // Limpa estados de delta
             this.deltaManager.clearObserver(playerId);
             // Notifica todos os clientes que viam esse player para remover sprite
@@ -230,20 +224,71 @@ export class GameWorld {
     }
     
     getPlayersInArea(x, y, z, range) {
-        // Usa spatial grid para busca O(1) ao invés de O(n)
-        const entities = this.spatialGrid.queryRange(x, y, z, range);
-        return entities.filter(e => e.type === 'player');
+        // Busca todos os players dentro do range (quadrado)
+        const result = [];
+        for (const player of this.players.values()) {
+            if (player.x !== undefined && player.y !== undefined && player.z !== undefined) {
+                if (player.z === z && Math.abs(player.x - x) <= range && Math.abs(player.y - y) <= range) {
+                    result.push(player);
+                }
+            }
+        }
+        return result;
     }
-    
+
     getEntitiesInArea(x, y, z, range) {
-        // Retorna todas as entidades na área
-        return this.spatialGrid.queryRange(x, y, z, range);
+        // Retorna todos players, npcs, monsters e wildpokemons na área
+        const result = [];
+        for (const player of this.players.values()) {
+            if (player.x !== undefined && player.y !== undefined && player.z !== undefined) {
+                if (player.z === z && Math.abs(player.x - x) <= range && Math.abs(player.y - y) <= range) {
+                    result.push(player);
+                }
+            }
+        }
+        for (const npc of this.npcs.values()) {
+            if (npc.x !== undefined && npc.y !== undefined && npc.z !== undefined) {
+                if (npc.z === z && Math.abs(npc.x - x) <= range && Math.abs(npc.y - y) <= range) {
+                    result.push(npc);
+                }
+            }
+        }
+        for (const monster of this.monsters.values()) {
+            if (monster.x !== undefined && monster.y !== undefined && monster.z !== undefined) {
+                if (monster.z === z && Math.abs(monster.x - x) <= range && Math.abs(monster.y - y) <= range) {
+                    result.push(monster);
+                }
+            }
+        }
+        if (this.wildPokemonManager && this.wildPokemonManager.wildPokemons) {
+            for (const wild of this.wildPokemonManager.wildPokemons.values()) {
+                if (wild.x !== undefined && wild.y !== undefined && wild.z !== undefined) {
+                    if (wild.z === z && Math.abs(wild.x - x) <= range && Math.abs(wild.y - y) <= range) {
+                        result.push(wild);
+                    }
+                }
+            }
+        }
+        return result;
     }
-    
+
     getEntityAt(x, y, z) {
         // Busca entidade exata na posição
-        const entities = this.spatialGrid.queryExact(x, y, z);
-        return entities[0] || null;
+        for (const player of this.players.values()) {
+            if (player.x === x && player.y === y && player.z === z) return player;
+        }
+        for (const npc of this.npcs.values()) {
+            if (npc.x === x && npc.y === y && npc.z === z) return npc;
+        }
+        for (const monster of this.monsters.values()) {
+            if (monster.x === x && monster.y === y && monster.z === z) return monster;
+        }
+        if (this.wildPokemonManager && this.wildPokemonManager.wildPokemons) {
+            for (const wild of this.wildPokemonManager.wildPokemons.values()) {
+                if (wild.x === x && wild.y === y && wild.z === z) return wild;
+            }
+        }
+        return null;
     }
     
     update(deltaTime) {
@@ -254,26 +299,20 @@ export class GameWorld {
         // Atualiza todas as entidades
         this.players.forEach(player => {
             player.update(deltaTime);
-            // Atualiza no spatial grid se mudou de posição
-            this.spatialGrid.update(player);
         });
         
         this.npcs.forEach(npc => {
             npc.update(deltaTime);
-            this.spatialGrid.update(npc);
         });
         
         this.monsters.forEach(monster => {
             monster.update(deltaTime);
-            this.spatialGrid.update(monster);
         });
-        
         // Atualiza Pokémon selvagens
         this.wildPokemonManager.update(currentTime);
         
         // Atualiza zonas
         this.zoneManager.update(deltaTime);
-        
         // Log de performance a cada 100 ticks
         if (this.tick % 100 === 0) {
             const stats = this.spatialGrid.getStats();

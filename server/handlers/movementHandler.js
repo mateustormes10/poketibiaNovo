@@ -9,16 +9,15 @@ export class MovementHandler {
     }
     
     handleMove(client, data) {
-            // Loga as coordenadas recebidas do client
-            console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}, mapaAtual=${data.mapaAtual}`);
-        
+        // Loga as coordenadas recebidas do client
+        console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}, mapaAtual=${data.mapaAtual}`);
+
         // Busca o player pelo playerId do pacote, se existir, senão usa client.player
         let player = client.player;
         if (data.playerId && this.gameWorld.players && this.gameWorld.players.has(data.playerId)) {
             player = this.gameWorld.players.get(data.playerId);
         }
         if (!player) return;
-
 
         // Checa colisão de mapa antes de atualizar posição
         const { direction } = data;
@@ -28,6 +27,7 @@ export class MovementHandler {
             typeof data.y === 'number' &&
             typeof data.z === 'number'
         ) {
+            // 1. Checa colisão de mapa
             if (
                 this.gameWorld.mapManager &&
                 typeof this.gameWorld.mapManager.isWalkable === 'function' &&
@@ -37,6 +37,43 @@ export class MovementHandler {
                 client.send('system_message', { message: 'Movimento bloqueado por colisão!', color: 'red' });
                 return;
             }
+
+
+            // 2. Checa colisão simples por coordenada (sem SpatialGrid)
+            // Players
+            for (const [id, otherPlayer] of this.gameWorld.players) {
+                if (otherPlayer.id !== player.id && otherPlayer.x === data.x && otherPlayer.y === data.y && otherPlayer.z === data.z) {
+                    client.send('system_message', { message: 'Movimento bloqueado: outro jogador está neste tile!', color: 'red' });
+                    return;
+                }
+            }
+            // NPCs
+            for (const [id, npc] of this.gameWorld.npcs) {
+                if (npc.x === data.x && npc.y === data.y && npc.z === data.z) {
+                    client.send('system_message', { message: 'Movimento bloqueado: um NPC está neste tile!', color: 'red' });
+                    return;
+                }
+            }
+            // Monsters
+            if (this.gameWorld.monsters) {
+                for (const [id, monster] of this.gameWorld.monsters) {
+                    if (monster.x === data.x && monster.y === data.y && monster.z === data.z) {
+                        client.send('system_message', { message: 'Movimento bloqueado: um monstro está neste tile!', color: 'red' });
+                        return;
+                    }
+                }
+            }
+            // WildPokemons
+            if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
+                for (const [id, wild] of this.gameWorld.wildPokemonManager.wildPokemons) {
+                    if (wild.x === data.x && wild.y === data.y && wild.z === data.z) {
+                        client.send('system_message', { message: 'Movimento bloqueado: um Pokémon selvagem está neste tile!', color: 'red' });
+                        return;
+                    }
+                }
+            }
+
+            // 3. Atualiza posição
             player.x = data.x;
             player.y = data.y;
             player.z = data.z;
@@ -60,8 +97,6 @@ export class MovementHandler {
             }
         }
 
-        // Atualiza no spatial grid
-        this.gameWorld.spatialGrid.update(player);
 
         // Atualiza streaming de mapa
         // Lógica de mapa removida do servidor

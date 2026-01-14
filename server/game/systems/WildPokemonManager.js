@@ -219,7 +219,7 @@ export class WildPokemonManager {
      */
     broadcastUpdate(wildPokemon) {
         const data = wildPokemon.toDTO();
-        console.log('[WildPokemonManager] broadcastUpdate DTO:', JSON.stringify(data, null, 2));
+        console.log('[WildPokemonManager] broadcastUpdate DTO:', JSON.stringify(data));
         let clientCount = 0;
         for (const client of this.gameWorld.server.clients.values()) {
             if (client.player) {

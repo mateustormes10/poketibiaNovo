@@ -91,7 +91,7 @@ export class CollisionLoader {
             return true;
         }
         const walkable = matrix[my][mx] === 0;
-        console.log(`[isWalkable] city='${city}', andar=${andar}, x=${x}, y=${y}, offsetX=${offsetX}, offsetY=${offsetY}, mx=${mx}, my=${my}, walkable=${walkable}`);
+        // console.log(`[isWalkable] city='${city}', andar=${andar}, x=${x}, y=${y}, offsetX=${offsetX}, offsetY=${offsetY}, mx=${mx}, my=${my}, walkable=${walkable}`); // log removido para limpar terminal
         return walkable;
     }
 }
