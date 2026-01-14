@@ -21,7 +21,8 @@ export class WsClient {
     setPlayer(player) {
         this.player = player;
         this.playerId = player.id; // Adiciona também como playerId para compatibilidade
-        console.log(`[WsClient] Player set: ${player.name} (ID: ${player.id})`);
+        player.clientState = this; // Vincula o WsClient ao player
+        console.log(`[WsClient] Player set: ${player.name} (ID: ${player.id}) | clientState vinculado`);
     }
     
     authenticate() {

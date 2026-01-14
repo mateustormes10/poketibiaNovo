@@ -23,7 +23,9 @@ export class GameWorld {
         this.npcs = new Map();
         this.monsters = new Map();
         this.items = new Map();
+
         
+    
         this.mapManager = new MapManager();
         this.zoneManager = new ZoneManager();
         this.wildPokemonManager = new WildPokemonManager(this);
@@ -197,8 +199,8 @@ export class GameWorld {
     async addPlayer(playerData) {
         const player = new Player(playerData);
         player.gameWorld = this; // Referência ao GameWorld
+        player.clientState = null; // Garante que clientState começa nulo
         this.players.set(player.id, player);
-        
         // Adiciona ao spatial grid
         logger.info(`Player added: ${player.name} (${player.id})`);
         return player;
@@ -313,11 +315,6 @@ export class GameWorld {
         
         // Atualiza zonas
         this.zoneManager.update(deltaTime);
-        // Log de performance a cada 100 ticks
-        if (this.tick % 100 === 0) {
-            const stats = this.spatialGrid.getStats();
-            logger.debug(`Grid stats: ${stats.cells} cells, ${stats.entities} entities, avg ${stats.avgEntitiesPerCell.toFixed(2)}/cell`);
-        }
     }
     
     getGameState(player) {

@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger.js';
 const logger = new Logger('OutfitHandler');
 
 export async function handleChangeOutfit(clientState, data) {
-    const { lookaddons } = data;
+    let { lookaddons } = data;
     
     if (!clientState || !clientState.player) {
         logger.error('[OutfitHandler] Cliente não está autenticado');
@@ -12,8 +12,8 @@ export async function handleChangeOutfit(clientState, data) {
     const player = clientState.player;
     
     // Valida se o lookaddons é válido
-    const validOutfits = ['default', 'summonerMale', 'mageMale', 'warriorMale', 'maletaMale'];
-    if (!validOutfits.includes(lookaddons)) {
+    const validOutfits = ['default', 'summonerMale', 'mageMale', 'warriorMale', 'maletaMale', 'citizenFemale', 'mageFemale'];
+    if (typeof lookaddons !== 'string' || !validOutfits.includes(lookaddons)) {
         logger.warn(`[OutfitHandler] Outfit inválido: ${lookaddons}`);
         clientState.send('outfit_changed', {
             success: false,
@@ -24,7 +24,7 @@ export async function handleChangeOutfit(clientState, data) {
     
     try {
         // Atualiza a sprite do player
-        player.sprite = lookaddons;
+        player.sprite = lookaddons; // sempre string
         
         // Salva no banco de dados (usando gameWorld)
         if (clientState.gameWorld && clientState.gameWorld.playerRepository) {
@@ -51,13 +51,22 @@ export async function handleChangeOutfit(clientState, data) {
             // Usa o mesmo range de visão do getGameState
             const visionRange = 24;
             const playersInRange = clientState.gameWorld.getPlayersInArea(player.x, player.y, player.z, visionRange);
+            logger.info(`[SINCRONIA_OUTF_PLAYER][SERVER][AREA] Encontrados ${playersInRange.length} jogadores no range para playerId=${player.id} (x=${player.x}, y=${player.y}, z=${player.z})`);
             playersInRange.forEach(otherPlayer => {
-                if (otherPlayer.id !== player.id && otherPlayer.clientState) {
-                    otherPlayer.clientState.send('player_outfit_update', {
-                        playerId: player.id,
-                        lookaddons: lookaddons
-                    });
+                logger.info(`[SINCRONIA_OUTF_PLAYER][SERVER][LOOP] playerId=${otherPlayer.id}, clientState=${!!otherPlayer.clientState}`);
+                if (otherPlayer.id === player.id) {
+                    logger.info(`[SINCRONIA_OUTF_PLAYER][SERVER][SKIP] Pulando o próprio playerId=${otherPlayer.id}`);
+                    return;
                 }
+                if (!otherPlayer.clientState) {
+                    logger.warn(`[SINCRONIA_OUTF_PLAYER][SERVER][SKIP] clientState nulo para playerId=${otherPlayer.id}`);
+                    return;
+                }
+                logger.info(`[SINCRONIA_OUTF_PLAYER][SERVER][BROADCAST] Enviando player_outfit_update para playerId=${otherPlayer.id} (outfit: ${lookaddons}) do playerId=${player.id}`);
+                otherPlayer.clientState.send('player_outfit_update', {
+                    playerId: player.id,
+                    lookaddons: lookaddons
+                });
             });
         }
         

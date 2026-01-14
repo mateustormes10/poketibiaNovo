@@ -4,7 +4,8 @@ import { GameConstants } from '../../../shared/constants/GameConstants.js';
 export class Player extends Entity {
     constructor(data) {
         super({ ...data, type: 'player' });
-        
+        // ...existing code...
+        this.clientState = null; // Referência ao WsClient (socket), usada para broadcast
         this.dbId = data.dbId; // ID do banco de dados
         this.name = data.name || 'Player';
         this.level = data.level || GameConstants.DEFAULT_PLAYER_LEVEL;
@@ -14,21 +15,7 @@ export class Player extends Entity {
         this.mp = data.mp || GameConstants.DEFAULT_PLAYER_MP;
         this.maxMp = data.maxMp || GameConstants.DEFAULT_PLAYER_MAX_MP;
         this.exp = data.exp || 0;
-        
-        this.attack = data.attack || GameConstants.DEFAULT_PLAYER_ATTACK;
-        this.defense = data.defense || GameConstants.DEFAULT_PLAYER_DEFENSE;
-        this.attackRange = data.attackRange || GameConstants.DEFAULT_ATTACK_RANGE;
-        this.attackCooldown = 0;
-        this.attackSpeed = data.attackSpeed || GameConstants.DEFAULT_ATTACK_SPEED; // ms
-        
-        this.inventory = data.inventory || [];
-        this.equipment = data.equipment || {};
-        this.pokemons = []; // Será carregado do banco
-        this.direction = data.direction || 'down'; // up, down, left, right
-        this.sprite = data.sprite || 'default'; // lookaddons
-        this.isDead = false;
-        this.gameWorld = null; // Será setado quando adicionado ao mundo
-        this.wsServer = null; // Será setado quando adicionado ao mundo
+        // ...existing code...
     }
     
     update(deltaTime) {

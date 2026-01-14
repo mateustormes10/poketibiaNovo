@@ -91,9 +91,10 @@ export class MovementHandler {
             const pokeName = player.pokemonName || player.name;
             const pokeData = PokemonEntities[pokeName];
             if (pokeData && direction) {
+                let outfitName = pokeName; // sempre string, nome do pokémon/outfit
                 let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
                 player.sprite = spriteArr;
-                client.send('player_outfit_update', { playerId: player.id, lookaddons: spriteArr });
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: outfitName });
             }
         }
 
