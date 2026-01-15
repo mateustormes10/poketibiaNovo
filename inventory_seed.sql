@@ -7,20 +7,16 @@
 
 -- Player 1 - Inventário Variado
 INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
-(1, 'consumable', 'Poção', 15),
-(1, 'consumable', 'Super Poção', 8),
-(1, 'consumable', 'Hyper Poção', 3),
-(1, 'consumable', 'Revive', 5),
-(1, 'battle', 'Pokébola', 25),
-(1, 'battle', 'Great Ball', 10),
-(1, 'battle', 'Ultra Ball', 5),
-(1, 'misc', 'Gold Coin', 10000);
+(1, 'potion', 'Poção', 15),
+(1, 'potion', 'Super Poção', 8),
+(1, 'potion', 'Hyper Poção', 3),
+(1, 'revive', 'Revive', 5),
+(1, 'gold', 'Gold Coin', 10000);
 
 -- Player 2 - Inventário Inicial
 INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
-(1, 'consumable', 'Poção', 5),
-(1, 'battle', 'Pokébola', 10),
-(1, 'misc', 'Gold Coin', 500);
+(1, 'potion', 'Poção', 5),
+(1, 'gold', 'Gold Coin', 500);
 
 -- Player 3 - Inventário Vazio (para testar)
 -- Não insere nada, inventário virá vazio

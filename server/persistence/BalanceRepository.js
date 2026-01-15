@@ -28,12 +28,15 @@ export class BalanceRepository {
      * Adiciona gold coin ao player
      */
     async addGold(playerId, amount) {
-        await this.db.query(
+        console.log(`[BalanceRepository] addGold chamado: playerId=${playerId}, amount=${amount}`);
+        const updateResult = await this.db.query(
             'UPDATE balance SET gold_coin = gold_coin + ? WHERE player_id = ?',
             [amount, playerId]
         );
-
-        return await this.getBalance(playerId);
+        console.log(`[BalanceRepository] UPDATE result:`, updateResult);
+        const newBalance = await this.getBalance(playerId);
+        console.log(`[BalanceRepository] Novo saldo de gold_coin para playerId=${playerId}: ${newBalance}`);
+        return newBalance;
     }
 
     /**

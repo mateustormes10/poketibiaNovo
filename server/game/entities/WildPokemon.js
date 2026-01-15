@@ -347,7 +347,6 @@ export class WildPokemon {
                     break;
                 }
                 if (current.path.length >= maxSteps) {
-                    logger.debug(`[WILD] ${this.name} (${this.id}) atingiu o limite de passos (${maxSteps}) tentando chegar em (${dest.x},${dest.y})`);
                     continue;
                 }
                 const directions = [
@@ -365,7 +364,6 @@ export class WildPokemon {
                         (mapManager && typeof mapManager.isWalkable === 'function' && !mapManager.isWalkable(city, this.z, nx, ny)) ||
                         this.isPositionOccupied(nx, ny, this.z)
                     ) {
-                        logger.debug(`[WILD] ${this.name} (${this.id}) tile (${nx},${ny}) está ocupado ou não é walkable.`);
                         continue;
                     }
                     open.push({ x: nx, y: ny, path: [...current.path, d] });

@@ -59,108 +59,122 @@ export class GMCommandHandler {
      * @param {string} message - Mensagem original
      */
     async handleCommand(client, message) {
-        const player = client.player;
-        
-        if (!player) {
-            return;
-        }
-
-        // Valida permissão
-        if (!this.isGM(player)) {
-            client.send('system_message', {
-                message: '❌ Você não tem permissão para usar comandos GM.',
-                color: 'red'
-            });
-            logger.warn(`Player ${player.name} (id=${player.id}) tentou usar comando GM sem permissão`);
-            return;
-        }
-
-        // Parse do comando
-        const parsed = this.parseCommand(message);
-        if (!parsed) {
-            client.send('system_message', {
-                message: '❌ Comando inválido.',
-                color: 'red'
-            });
-            return;
-        }
-
-        const { command, params } = parsed;
-
-        try {
-            // Roteamento de comandos
-            switch (command) {
-                case 'teleport':
-                    await this.handleTeleport(client, params);
-                    break;
-                case 'spawn':
-                    await this.handleSpawn(client, params);
-                    break;
-                case 'heal':
-                    await this.handleHeal(client, params);
-                    break;
-                case 'kick':
-                    await this.handleKick(client, params);
-                    break;
-                case 'ban':
-                    await this.handleBan(client, params);
-                    break;
-                case 'item':
-                    await this.handleItem(client, params);
-                    break;
-                case 'setlevel':
-                    await this.handleSetLevel(client, params);
-                    break;
-                case 'broadcast':
-                    await this.handleBroadcast(client, params);
-                    break;
-                case 'addgold':
-                    await this.handleAddGold(client, params);
-                    break;
-                default:
-                    client.send('system_message', {
-                        message: `❌ Comando desconhecido: /${command}`,
-                        color: 'red'
-                    });
+            const player = client.player;
+            logger.info(`[GMCommandHandler] Comando recebido: ${message}`);
+            if (!player) {
+                logger.warn('[GMCommandHandler] client.player não existe!');
+                return;
             }
-        } catch (error) {
-            logger.error(`Erro ao executar comando /${command}:`, error);
-            client.send('system_message', {
-                message: `❌ Erro ao executar comando: ${error.message}`,
-                color: 'red'
-            });
+
+            // Loga info do player GM
+            logger.info(`[GMCommandHandler] GM: ${player.name} (id=${player.id}, dbId=${player.dbId}, vocation=${player.vocation})`);
+
+            // Loga todos os players online
+            logger.info('[GMCommandHandler] Players online:');
+            for (const p of this.gameWorld.players.values()) {
+                logger.info(`- ${p.name} (id=${p.id}, dbId=${p.dbId}, vocation=${p.vocation})`);
+            }
+
+            // Valida permissão
+            if (!this.isGM(player)) {
+                client.send('system_message', {
+                    message: '❌ Você não tem permissão para usar comandos GM.',
+                    color: 'red'
+                });
+                logger.warn(`[GMCommandHandler] Player ${player.name} (id=${player.id}) tentou usar comando GM sem permissão`);
+                return;
+            }
+
+            // Parse do comando
+            const parsed = this.parseCommand(message);
+            logger.info(`[GMCommandHandler] Parse result: ${JSON.stringify(parsed)}`);
+            if (!parsed) {
+                client.send('system_message', {
+                    message: '❌ Comando inválido.',
+                    color: 'red'
+                });
+                logger.warn('[GMCommandHandler] Comando inválido!');
+                return;
+            }
+
+            const { command, params } = parsed;
+
+            try {
+                // Roteamento de comandos
+                switch (command) {
+                    case 'teleport':
+                        await this.handleTeleport(client, params);
+                        break;
+                    case 'spawn':
+                        await this.handleSpawn(client, params);
+                        break;
+                    case 'heal':
+                        await this.handleHeal(client, params);
+                        break;
+                    case 'kick':
+                        await this.handleKick(client, params);
+                        break;
+                    case 'ban':
+                        await this.handleBan(client, params);
+                        break;
+                    case 'item':
+                        await this.handleItem(client, params);
+                        break;
+                    case 'setlevel':
+                        await this.handleSetLevel(client, params);
+                        break;
+                    case 'broadcast':
+                        await this.handleBroadcast(client, params);
+                        break;
+                    case 'addgold':
+                        logger.info(`[GMCommandHandler] Executando addgold com params: ${JSON.stringify(params)}`);
+                        await this.handleAddGold(client, params);
+                        break;
+                    default:
+                        client.send('system_message', {
+                            message: `❌ Comando desconhecido: /${command}`,
+                            color: 'red'
+                        });
+                        logger.warn(`[GMCommandHandler] Comando desconhecido: /${command}`);
+                }
+            } catch (error) {
+                logger.error(`[GMCommandHandler] Erro ao executar comando /${command}:`, error);
+                client.send('system_message', {
+                    message: `❌ Erro ao executar comando: ${error.message}`,
+                    color: 'red'
+                });
+            }
         }
-    }
 
     /**
      * /teleport x(coord) y(coord) z(floor)
      */
     async handleTeleport(client, params) {
-        const { x, y, z } = params;
-        
-        if (!x || !y || !z) {
+        const { cidade, andar, x, y } = params;
+        if (!cidade || !andar || !x || !y) {
             client.send('system_message', {
-                message: '❌ Uso: /teleport x(coord) y(coord) z(floor)',
+                message: '❌ Uso: /teleport cidade(nome) andar(z) x(x) y(y)',
                 color: 'red'
             });
             return;
         }
 
+        const newCidade = cidade;
+        const newAndar = parseInt(andar);
         const newX = parseInt(x);
         const newY = parseInt(y);
-        const newZ = parseInt(z);
 
         // Valida coordenadas
-        if (isNaN(newX) || isNaN(newY) || isNaN(newZ)) {
+        if (!newCidade || isNaN(newAndar) || isNaN(newX) || isNaN(newY)) {
             client.send('system_message', {
-                message: '❌ Coordenadas inválidas.',
+                message: '❌ Coordenadas/cidade inválidas.',
                 color: 'red'
             });
             return;
         }
 
         // Verifica se é walkable
-        if (!this.gameWorld.mapManager.isWalkable(newX, newY, newZ)) {
+        if (!this.gameWorld.mapManager.isWalkable(newCidade, newAndar, newX, newY)) {
             client.send('system_message', {
                 message: '⚠️ Posição não é walkable, mas teleportando mesmo assim...',
                 color: 'yellow'
@@ -168,29 +182,36 @@ export class GMCommandHandler {
         }
 
         // Teleporta
+        client.player.city = newCidade;
+        client.player.z = newAndar;
         client.player.x = newX;
         client.player.y = newY;
-        client.player.z = newZ;
 
         // Atualiza spatial grid
-        this.gameWorld.spatialGrid.update(client.player);
+        if (this.gameWorld.spatialGrid && typeof this.gameWorld.spatialGrid.update === 'function') {
+            this.gameWorld.spatialGrid.update(client.player);
+        }
 
         // Atualiza map manager
-        this.gameWorld.mapManager.updatePlayerPosition(
-            client.player.id,
-            newX,
-            newY,
-            newZ
-        );
+        if (this.gameWorld.mapManager && typeof this.gameWorld.mapManager.updatePlayerPosition === 'function') {
+            this.gameWorld.mapManager.updatePlayerPosition(
+                client.player.id,
+                newCidade,
+                newAndar,
+                newX,
+                newY
+            );
+        }
 
         // Envia feedback
         client.send('system_message', {
-            message: `✅ Teleportado para (${newX}, ${newY}, ${newZ})`,
+            message: `✅ Teleportado para cidade=${newCidade}, andar=${newAndar}, x=${newX}, y=${newY}`,
             color: 'green'
         });
 
         // Log
-        logger.info(`[GM] Teleport: ${client.player.name} (id=${client.player.id}) para x=${newX}, y=${newY}, z=${newZ}`);
+        logger.info(`[GM] Teleport: ${client.player.name} (id=${client.player.id}) para cidade=${newCidade}, andar=${newAndar}, x=${newX}, y=${newY}`);
+        // ...existing code...
     }
 
      async handleAddGold(client, params) {
@@ -216,7 +237,7 @@ export class GMCommandHandler {
                 // Busca player pelo ID do banco (dbId)
                 let targetPlayer = null;
                 for (const player of this.gameWorld.players.values()) {
-                    if (player.dbId === targetId) {
+                    if (player.dbId == targetId) {
                         targetPlayer = player;
                         break;
                     }
@@ -227,11 +248,11 @@ export class GMCommandHandler {
                         message: `❌ Player com ID ${playerId} não encontrado ou offline.`,
                         color: 'red'
                     });
+                    logger.warn(`[handleAddGold] Player alvo não encontrado ou offline: dbId=${targetId}`);
                     return;
                 }
 
                 try {
-                    // Adiciona gold ao balance
                     const newBalance = await this.gameWorld.balanceRepository.addGold(targetId, amount);
                     // Atualiza goldCoin em tempo real se player estiver online
                     targetPlayer.goldCoin = newBalance;
@@ -254,8 +275,6 @@ export class GMCommandHandler {
                         message: `✅ ${amount} gold adicionados ao player ${targetPlayer.name} (ID ${playerId}). Novo saldo: ${newBalance}`,
                         color: 'green'
                     });
-
-                    // Log
                     logger.info(`[GM] ${client.player.name} adicionou ${amount} gold ao player ${targetPlayer.name} (id=${playerId})`);
                 } catch (error) {
                     logger.error(`[GM] Erro ao adicionar gold:`, error);
