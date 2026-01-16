@@ -138,11 +138,12 @@ export class GameWorld {
             // Salva nova posição no banco
             await this.savePlayer(player);
             
-            // Envia evento de morte para o cliente
+            // Envia evento de morte para o cliente, incluindo status isDead
             const client = Array.from(wsServer.clients.values()).find(c => c.player?.id === player.id);
             if (client) {
                 client.send('playerDeath', {
                     message: 'Você morreu!',
+                    isDead: true,
                     respawnX: templeX,
                     respawnY: templeY,
                     respawnZ: templeZ

@@ -103,65 +103,59 @@ export class MessageRouter {
         // Handler para transformação do player em Pokémon
         this.handlers.set('request_transform_pokemon', (client, data) => {
             const playerId = client.player?.id || client.playerId;
-            if (!playerId) return;
+            if (!playerId) {
+                return;
+            }
             const player = this.gameWorld.players.get(playerId);
-            if (!player) return;
+            if (!player) {
+                console.log('[SERVER DEBUG] player não encontrado no gameWorld!');
+                return;
+            }
+            console.log('[SERVER DEBUG] player encontrado:', player.name);
             if (!data.pokemonName) {
-                    // Voltar a ser player normal
-                    player.pokemonName = null;
-                    // Usa a sprite anterior enviada pelo cliente, se existir
-                    if (data.lastSprite) {
-                        player.sprite = data.lastSprite;
-                    } else {
-                        player.sprite = 'default';
-                    }
-                    player.skills = [];
-                    // Ao voltar a ser humano, volta para o HP base do player
-                    player.maxHp = player.baseMaxHp || player.maxHp || 100;
-                    player.hp = Math.min(player.hp, player.maxHp);
-                    client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
-                    const gameState = this.gameWorld.getGameState(player);
-                    client.send('gameState', gameState);
+                player.pokemonName = null;
+                if (data.lastSprite) {
+                    player.sprite = data.lastSprite;
+                    console.log('[SERVER DEBUG] Sprite anterior restaurada:', data.lastSprite);
+                } else {
+                    player.sprite = 'default';
+                }
+                player.skills = [];
+                player.maxHp = player.baseMaxHp || player.maxHp || 100;
+                player.hp = Math.min(player.hp, player.maxHp);
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
+                const gameState = this.gameWorld.getGameState(player);
+                client.send('gameState', gameState);
+                return;
+            }
+            try {
+                player.pokemonName = data.pokemonName;
+                const pokeData = PokemonEntities[data.pokemonName];
+                if (!pokeData) {
+                    console.log('[SERVER DEBUG] Definição do Pokémon não encontrada:', data.pokemonName);
                     return;
                 }
-                try {
-                    player.pokemonName = data.pokemonName;
-                    const pokeData = PokemonEntities[data.pokemonName];
-                    if (!pokeData) return;
-                    let direction = player.direction || 'down';
-                    let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
-                    player.sprite = spriteArr;
-                    // DEBUG: loga skills do pokeData e resultado do SkillDatabase
-                    player.skills = (pokeData.skills || []).map(skillName => {
-                        const skillObj = SkillDatabase[skillName];
-                        if (!skillObj) {
-                            console.log('[SERVER DEBUG] Skill não encontrada no SkillDatabase:', skillName);
-                            return null;
-                        }
-                        return {
-                            name: skillObj.name,
-                            type: skillObj.type,
-                            element: skillObj.element,
-                            power: skillObj.power,
-                            cowndown: skillObj.cowndown,
-                            manaCost: skillObj.manaCost,
-                            spriteSkillList: skillObj.spriteSkillList,
-                            targetArea: skillObj.targetArea,
-                            imagePath: skillObj.imagePath /* Lines 150-151 omitted */
-                        };
-                    }).filter(Boolean);
-                    // HP: soma vida base do player + vida do Pokémon selecionado
-                    if (!player.baseMaxHp) player.baseMaxHp = player.maxHp || 100;
-                    player.maxHp = player.baseMaxHp + (pokeData.maxHp || pokeData.hp || 0);
-                    player.hp = player.maxHp;
-                    // Envia atualização de outfit para o próprio player
-                    client.send('player_outfit_update', { playerId: player.id, lookaddons: data.pokemonName });
-                    // Envia novo estado do jogo
-                    const gameState = this.gameWorld.getGameState(player);
-                    client.send('gameState', gameState);
-                } catch (e) {
-                    console.error('Erro ao transformar player em Pokémon:', e);
-                }
+                let direction = player.direction || 'down';
+                let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
+                // Corrige: envia sprite como string, não array
+                player.sprite = Array.isArray(spriteArr) ? String(spriteArr[0]) : String(spriteArr);
+                player.skills = (pokeData.skills || []).map(skillName => {
+                    const skillObj = SkillDatabase[skillName];
+                    if (!skillObj) {
+                        console.log('[SERVER DEBUG] Skill não encontrada no SkillDatabase:', skillName);
+                        return skillName;
+                    }
+                    return JSON.stringify(skillObj);
+                });
+                if (!player.baseMaxHp) player.baseMaxHp = player.maxHp || 100;
+                player.maxHp = player.baseMaxHp + (pokeData.maxHp || pokeData.hp || 0);
+                player.hp = player.maxHp;
+                client.send('player_outfit_update', { playerId: player.id, lookaddons: data.pokemonName });
+                const gameState = this.gameWorld.getGameState(player);
+                client.send('gameState', gameState);
+            } catch (e) {
+                console.error('[SERVER DEBUG] Erro ao transformar player em Pokémon:', e);
+            }
         });
 
                             // Handler for GM/ADM manual z-level change

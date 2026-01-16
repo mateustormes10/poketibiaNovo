@@ -95,18 +95,8 @@ export class Player extends Entity {
             goldCoin: this.goldCoin || 0,
             pokemons: this.pokemons || [],
             pokemonName: this.pokemonName || null,
-            // Send array of skill objects (not just names)
-            skills: this.skills ? this.skills.map(skill => ({
-                name: skill.name,
-                type: skill.type,
-                element: skill.element,
-                power: skill.power,
-                cowndown: skill.cowndown,
-                manaCost: skill.manaCost,
-                spriteSkillList: skill.spriteSkillList,
-                targetArea: skill.targetArea,
-                imagePath: skill.imagePath // Ensure imagePath is sent to client
-            })) : []
+            // Corrige: envia skills como array de strings (JSON serializados)
+            skills: this.skills ? this.skills.map(skill => typeof skill === 'string' ? skill : JSON.stringify(skill)) : []
         };
     }
 }

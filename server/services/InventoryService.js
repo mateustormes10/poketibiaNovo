@@ -141,6 +141,20 @@ export class InventoryService {
             const coinValue = itemDef.value || 1;
             // Atualiza saldo no banco
             const newBalance = await gameWorld.balanceRepository.addGold(playerId, coinValue);
+            // Atualiza o campo goldCoin do player em memória (GameWorld)
+            if (gameWorld.players) {
+                let playerObj = gameWorld.players.get(playerId);
+                // Se não achou, tenta por string ou id/dbId
+                if (!playerObj) {
+                    for (const p of gameWorld.players.values()) {
+                        if (p.dbId == playerId || p.id == playerId || p.id == String(playerId) || p.dbId == String(playerId)) {
+                            playerObj = p;
+                            break;
+                        }
+                    }
+                }
+                if (playerObj) playerObj.goldCoin = newBalance;
+            }
             // Remove o item do inventário
             await this.inventoryRepository.removeItem(playerId, itemName, 1);
             return {
@@ -192,9 +206,14 @@ export class InventoryService {
         }
         let player = gameWorld.players.get(playerId);
         if (!player) {
-            // Tenta buscar por id string (caso a chave seja diferente)
+            // Tenta buscar por id/dbId como string ou número
             for (const p of gameWorld.players.values()) {
-                if (p.dbId == playerId || p.id == playerId) {
+                if (
+                    p.dbId == playerId ||
+                    p.id == playerId ||
+                    p.id == String(playerId) ||
+                    p.dbId == String(playerId)
+                ) {
                     player = p;
                     break;
                 }
