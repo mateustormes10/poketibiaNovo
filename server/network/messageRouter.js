@@ -88,22 +88,65 @@ export class MessageRouter {
             }
             // Busca targetArea no SkillDatabase
             let targetArea = '';
+            let damage = 0;
             try {
-                if (SkillDatabase[data.skillName] && SkillDatabase[data.skillName].targetArea) {
-                    targetArea = SkillDatabase[data.skillName].targetArea;
+                if (SkillDatabase[data.skillName]) {
+                    if (SkillDatabase[data.skillName].targetArea) {
+                        targetArea = SkillDatabase[data.skillName].targetArea;
+                    }
+                    if (typeof SkillDatabase[data.skillName].power === 'number') {
+                        damage = SkillDatabase[data.skillName].power;
+                    }
                 }
             } catch (e) {
-                console.warn('[use_skill] Erro ao buscar targetArea:', e);
+                console.warn('[use_skill] Erro ao buscar targetArea/power:', e);
             }
-            console.log(`[use_skill] Broadcast skill_animation: playerId=${data.playerId}, skillName=${data.skillName}, tile=${JSON.stringify(data.tile)}, targetArea=${targetArea}`);
+            // Aplica dano nos monstros selvagens reais do wildPokemonManager
+            let affectedMonsters = [];
+            try {
+                const wildPokemonsMap = this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons;
+                if (!wildPokemonsMap) throw new Error('wildPokemonManager.wildPokemons não encontrado');
+                const wildPokemons = Array.from(wildPokemonsMap.values());
+                const originTile = data.tile;
+                let areaTiles = [originTile];
+                if (typeof targetArea === 'string' && targetArea !== '') {
+                    if (targetArea === '3x3') {
+                        areaTiles = [];
+                        for (let dx = -1; dx <= 1; dx++) {
+                            for (let dy = -1; dy <= 1; dy++) {
+                                areaTiles.push({ x: originTile.x + dx, y: originTile.y + dy, z: originTile.z });
+                            }
+                        }
+                    }
+                }
+                wildPokemons.forEach(monster => {
+                    if (areaTiles.some(tile => tile.x === monster.x && tile.y === monster.y && tile.z === monster.z)) {
+                        if (typeof monster.hp === 'number') {
+                            monster.hp -= damage;
+                            if (monster.hp < 0) monster.hp = 0;
+                            // Marca como morto se hp zerar
+                            if (monster.hp === 0 && !monster.isDead) {
+                                monster.isDead = true;
+                                monster.deadSince = Date.now();
+                            }
+                        }
+                        affectedMonsters.push({ id: monster.id, hp: monster.hp });
+                        // Notifica update para todos os clientes
+                        if (this.gameWorld.wildPokemonManager.broadcastUpdate) {
+                            this.gameWorld.wildPokemonManager.broadcastUpdate(monster);
+                        }
+                    }
+                });
+            } catch (e) {
+                console.warn('[use_skill] Erro ao aplicar dano nos wildPokemons:', e);
+            }
+            // Broadcast da animação
             if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
                 if (this.wsServer.clients && typeof this.wsServer.clients.forEach === 'function') {
                     let count = 0;
                     this.wsServer.clients.forEach((clientObj, clientId) => {
                         count++;
-                        console.log(`[use_skill] Enviando skill_animation para clientId=${clientId}, playerId=${clientObj.player?.id}`);
                     });
-                    console.log(`[use_skill] Total de clientes para broadcast: ${count}`);
                 } else {
                     console.log('[use_skill] wsServer.clients não é um Map ou não existe.');
                 }
@@ -111,7 +154,8 @@ export class MessageRouter {
                     playerId: data.playerId,
                     skillName: data.skillName,
                     tile: data.tile,
-                    targetArea: targetArea
+                    targetArea: targetArea,
+                    affectedMonsters: affectedMonsters
                 });
                 console.log('[use_skill] Broadcast skill_animation enviado para todos os clientes.');
             } else if (client && typeof client.send === 'function') {
@@ -121,7 +165,8 @@ export class MessageRouter {
                     playerId: data.playerId,
                     skillName: data.skillName,
                     tile: data.tile,
-                    targetArea: targetArea
+                    targetArea: targetArea,
+                    affectedMonsters: affectedMonsters
                 });
             }
         });
