@@ -79,7 +79,7 @@ export const SkillDatabase = {
   "Garra Furiosa": new Skill({ name: "Garra Furiosa", type: "damage", element: "normal", power: 55, cowndown: 12, spriteSkillList: ["56827","56827"], targetArea: "single", imagePath: getSkillImagePath("Garra Furiosa") }),
   "Golpe Karate": new Skill({ name: "Golpe Karate", type: "damage", element: "fighting", power: 45, cowndown: 10, spriteSkillList: ["52506","52507","52508","52509","52510","52511"], targetArea: "single", imagePath: getSkillImagePath("Golpe Karate") }),
   "Fúria": new Skill({ name: "Fúria", type: "damage", element: "fighting", power: 60, cowndown: 15, spriteSkillList: ["56827","56827"], targetArea: "single", imagePath: getSkillImagePath("Fúria") }),
-  "Bolhas": new Skill({ name: "Bolhas", type: "damage", element: "water", power: 30, cowndown: 8, spriteSkillList: ["56827","56827"], targetArea: "3x3", imagePath: getSkillImagePath("Bolhas") }),
+  "Bolha": new Skill({ name: "Bolha", type: "damage", element: "water", power: 30, cowndown: 8, spriteSkillList: ["56827","56827"], targetArea: "3x3", imagePath: getSkillImagePath("Bolhas") }),
   "Hipnose": new Skill({ name: "Hipnose", type: "status", element: "psychic", power: 20, cowndown: 18, spriteSkillList: ["56827","56827"], targetArea: "single", imagePath: getSkillImagePath("Hipnose") }),
   "Soco Dinâmico": new Skill({ name: "Soco Dinâmico", type: "damage", element: "fighting", power: 85, cowndown: 22, spriteSkillList: ["56827","56827"], targetArea: "single", imagePath: getSkillImagePath("Soco Dinâmico") }),
   "Teleporte": new Skill({ name: "Teleporte", type: "utility", element: "psychic", power: 10, cowndown: 20, spriteSkillList: ["56827","56827"], targetArea: "self", imagePath: getSkillImagePath("Teleporte") }),

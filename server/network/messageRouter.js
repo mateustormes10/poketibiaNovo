@@ -82,20 +82,46 @@ export class MessageRouter {
         // Handler para uso de skill (animação multiplayer)
         this.handlers.set('use_skill', (client, data) => {
             // data: { playerId, skillName, tile }
-            if (!data || !data.playerId || !data.skillName || !data.tile) return;
-            // Broadcast para todos os jogadores próximos (ou todos, para simplificar)
+            if (!data || !data.playerId || !data.skillName || !data.tile) {
+                console.log('[use_skill] Dados inválidos recebidos:', data);
+                return;
+            }
+            // Busca targetArea no SkillDatabase
+            let targetArea = '';
+            try {
+                if (SkillDatabase[data.skillName] && SkillDatabase[data.skillName].targetArea) {
+                    targetArea = SkillDatabase[data.skillName].targetArea;
+                }
+            } catch (e) {
+                console.warn('[use_skill] Erro ao buscar targetArea:', e);
+            }
+            console.log(`[use_skill] Broadcast skill_animation: playerId=${data.playerId}, skillName=${data.skillName}, tile=${JSON.stringify(data.tile)}, targetArea=${targetArea}`);
             if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
+                if (this.wsServer.clients && typeof this.wsServer.clients.forEach === 'function') {
+                    let count = 0;
+                    this.wsServer.clients.forEach((clientObj, clientId) => {
+                        count++;
+                        console.log(`[use_skill] Enviando skill_animation para clientId=${clientId}, playerId=${clientObj.player?.id}`);
+                    });
+                    console.log(`[use_skill] Total de clientes para broadcast: ${count}`);
+                } else {
+                    console.log('[use_skill] wsServer.clients não é um Map ou não existe.');
+                }
                 this.wsServer.broadcast('skill_animation', {
                     playerId: data.playerId,
                     skillName: data.skillName,
-                    tile: data.tile
+                    tile: data.tile,
+                    targetArea: targetArea
                 });
+                console.log('[use_skill] Broadcast skill_animation enviado para todos os clientes.');
             } else if (client && typeof client.send === 'function') {
                 // Fallback: envia só para o próprio jogador
+                console.log(`[use_skill] wsServer.broadcast não disponível, enviando apenas para o próprio jogador.`);
                 client.send('skill_animation', {
                     playerId: data.playerId,
                     skillName: data.skillName,
-                    tile: data.tile
+                    tile: data.tile,
+                    targetArea: targetArea
                 });
             }
         });

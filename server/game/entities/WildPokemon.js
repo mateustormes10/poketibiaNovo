@@ -250,13 +250,22 @@ export class WildPokemon {
             // TODO: status, área, buffs, etc.
             this.skillCooldowns[skillName] = skill.cowndown;
 
-            // Envia evento de animação de skill para todos os clientes
+            // Envia evento de animação de skill para todos os clientes, incluindo targetArea
+            let targetArea = '';
+            try {
+                if (skill && skill.targetArea) {
+                    targetArea = skill.targetArea;
+                }
+            } catch (e) {
+                console.warn('[WildPokemon] Erro ao buscar targetArea:', e);
+            }
             if (this.gameWorld && this.gameWorld.server) {
                 for (const client of this.gameWorld.server.clients.values()) {
                     client.send('skill_animation', {
                         skillName,
                         tile: { x: targetPlayer.x, y: targetPlayer.y, z: targetPlayer.z },
-                        attackerId: this.id
+                        attackerId: this.id,
+                        targetArea: targetArea
                     });
                 }
             }
