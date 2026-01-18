@@ -81,46 +81,66 @@ export class NpcHandler {
      * Handler de compra de item
      */
     async handleBuy(client, data) {
-        if (!client.player) return;
-        
-        const player = client.player;
-        const { npcId, itemType, itemName, price } = data;
+        try {
 
-        logger.info(`[NpcHandler] Player ${player.name} trying to buy ${itemName} for ${price} gold`);
+            if (!client.player) {
+                logger.warn('[NpcHandler] [DEBUG] handleBuy: client.player não existe');
+                return;
+            }
+            const player = client.player;
+            const { npcId, itemType, itemName, price } = data;
 
-        // Verifica NPC
-        const npc = this.gameWorld.npcs.get(npcId);
-        if (!npc || !npc.isPlayerNear(player)) {
-            client.send('system_message', {
-                message: 'Você está muito longe.'
+            logger.info(`[NpcHandler] Player ${player.name} trying to buy ${itemName} for ${price} gold`);
+
+            // Verifica NPC (NÃO checa mais isPlayerNear)
+            const npc = this.gameWorld.npcs.get(npcId);
+            if (!npc) {
+                logger.warn(`[NpcHandler] [DEBUG] handleBuy: NPC ${npcId} não encontrado`);
+                client.send('system_message', {
+                    message: 'NPC não encontrado.'
+                });
+                return;
+            }
+
+
+            const balance = await this.balanceRepository.getBalance(player.dbId);
+            if (balance < price) {
+                client.send('system_message', {
+                    message: 'Gold insuficiente.'
+                });
+                logger.warn(`[NpcHandler] ${player.name} has insufficient gold: ${balance} < ${price}`);
+                return;
+            }
+
+            const newBalance = await this.balanceRepository.removeGold(player.dbId, price);
+            // Atualiza o campo goldCoin do player em memória (GameWorld)
+            if (this.gameWorld.players) {
+                let playerObj = this.gameWorld.players.get(player.dbId) || this.gameWorld.players.get(player.id);
+                // Se não achou, tenta por string ou id/dbId
+                if (!playerObj) {
+                    for (const p of this.gameWorld.players.values()) {
+                        if (p.dbId == player.dbId || p.id == player.id || p.id == String(player.dbId) || p.dbId == String(player.id)) {
+                            playerObj = p;
+                            break;
+                        }
+                    }
+                }
+                if (playerObj) playerObj.goldCoin = newBalance;
+            }
+
+            await this.inventoryRepository.addItem(player.dbId, itemType, itemName, 1);
+
+            // Notifica player
+            client.send('purchase_success', {
+                itemName: itemName,
+                price: price,
+                newBalance: newBalance
             });
-            return;
+
+            logger.info(`[NpcHandler] ${player.name} comprou ${itemName} por ${price} gold (novo balance: ${newBalance})`);
+        } catch (err) {
+            logger.error(`[NpcHandler] Erro em handleBuy: ${err && err.stack ? err.stack : err}`);
         }
-
-        // Verifica balance
-        const balance = await this.balanceRepository.getBalance(player.dbId);
-        if (balance < price) {
-            client.send('system_message', {
-                message: 'Gold insuficiente.'
-            });
-            logger.warn(`[NpcHandler] ${player.name} has insufficient gold: ${balance} < ${price}`);
-            return;
-        }
-
-        // Remove gold
-        const newBalance = await this.balanceRepository.removeGold(player.dbId, price);
-
-        // Adiciona item ao inventário
-        await this.inventoryRepository.addItem(player.dbId, itemType, itemName, 1);
-
-        // Notifica player
-        client.send('purchase_success', {
-            itemName: itemName,
-            price: price,
-            newBalance: newBalance
-        });
-
-        logger.info(`[NpcHandler] ${player.name} comprou ${itemName} por ${price} gold (novo balance: ${newBalance})`);
     }
 
     /**

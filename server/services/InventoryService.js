@@ -102,10 +102,7 @@ export class InventoryService {
      */
     async useItem(playerId, itemName, context = {}) {
         // Verifica se o player possui o item
-        console.log('[InventoryService] playerId recebido em useItem:', playerId);
         const items = await this.inventoryRepository.getInventory(playerId);
-        console.log('[InventoryService] Tentando usar item:', itemName);
-        console.log('[InventoryService] Inventário do player:', items.map(i => i.item_name));
         const hasItem = items.some(i => i.item_name === itemName);
         if (!hasItem) {
             return {

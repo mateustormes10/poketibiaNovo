@@ -219,8 +219,14 @@ export class MessageRouter {
                     return JSON.stringify(skillObj);
                 });
                 if (!player.baseMaxHp) player.baseMaxHp = player.maxHp || 100;
-                player.maxHp = player.baseMaxHp + (pokeData.maxHp || pokeData.hp || 0);
-                player.hp = player.maxHp;
+
+
+                // Ajuste: soma a vida do Pokémon apenas ao maxHp, hp permanece igual
+                const pokemonHp = pokeData.maxHp || pokeData.hp || 0;
+                player.maxHp = player.baseMaxHp + pokemonHp;
+                // Garante que hp não ultrapasse o novo maxHp
+                if (player.hp > player.maxHp) player.hp = player.maxHp;
+
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: data.pokemonName });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
