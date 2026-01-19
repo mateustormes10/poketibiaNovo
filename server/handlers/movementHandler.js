@@ -66,7 +66,7 @@ export class MovementHandler {
             // WildPokemons
             if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
                 for (const [id, wild] of this.gameWorld.wildPokemonManager.wildPokemons) {
-                    if (wild.x === data.x && wild.y === data.y && wild.z === data.z) {
+                    if (wild.x === data.x && wild.y === data.y && wild.z === data.z && wild.hp > 0) {
                         client.send('system_message', { message: 'Movimento bloqueado: um Pokémon selvagem está neste tile!', color: 'red' });
                         return;
                     }

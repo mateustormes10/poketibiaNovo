@@ -68,13 +68,12 @@ export class MovementSystem {
         if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
             for (const wildPokemon of this.gameWorld.wildPokemonManager.wildPokemons.values()) {
                 if (wildPokemon.id !== excludeId && wildPokemon.x === x && wildPokemon.y === y && wildPokemon.z === z) {
-                    if (!wildPokemon.isDead) {
-                        return true;
-                    }
+                        if (wildPokemon.hp > 0) {
+                            return true;
+                        }
                 }
             }
         }
-        
         return false;
     }
 }

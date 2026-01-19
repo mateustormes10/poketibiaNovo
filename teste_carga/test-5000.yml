@@ -1,8 +1,8 @@
 config:
   target: "ws://localhost:3000"
   phases:
-    - duration: 120   # 2 minutos de teste
-      arrivalRate: 42 # 42 novos jogadores por segundo x 120s ≈ 5000
+    - duration: 600   # 10 minutos de teste
+      arrivalRate: 20
 scenarios:
   - engine: ws
     name: "Player Simulado"
@@ -10,6 +10,57 @@ scenarios:
       - send:
           text: '{"type":"login","username":"Player{{ $randomInt(1,100000) }}","playerId":{{ $randomInt(1,100000) }}}'
       - think: 1
+      - send:
+          text: '{"type":"get_game_state"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"scan"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"speech_bubble","playerId":{{ $randomInt(1,100000) }},"text":"Olá mundo!"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"use_skill","playerId":{{ $randomInt(1,100000) }},"skillName":"Tackle","tile":{"x":{{ $randomInt(1,50) }},"y":{{ $randomInt(1,50) }},"z":7}}'
+      - think: 0.5
+      - send:
+          text: '{"type":"request_transform_pokemon","pokemonName":"Pidgey"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"gm_change_z","direction":"up"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"get_player_vocation"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"portal","portalId":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"npc_interact","npcId":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"npc_buy","npcId":1,"itemId":1,"amount":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"request_inventory"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"use_item","itemId":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"drop_item","itemId":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"change_outfit","outfitId":1}'
+      - think: 0.5
+      - send:
+          text: '{"type":"change_floor","direction":"down"}'
+      - think: 0.5
+      - send:
+          text: '{"type":"requestMapUpdate","x":{{ $randomInt(1,50) }},"y":{{ $randomInt(1,50) }},"z":7}'
+      - think: 0.5
+      - send:
+          text: '{"type":"turn","direction":"left"}'
+      - think: 0.5
       - loop:
           - send:
               text: '{"type":"move","direction":"up"}'
@@ -23,7 +74,7 @@ scenarios:
           - send:
               text: '{"type":"move","direction":"right"}'
           - think: 0.2
-        count: 10
+        count: 1000 # Mantém o usuário ativo por mais tempo
       - think: 1
       - send:
           text: '{"type":"chat","message":"Teste de carga!"}'
