@@ -53,6 +53,23 @@ export class Player extends Entity {
         this.exp += amount;
         // Implementar level up
     }
+
+    /**
+     * Ganha exp, faz level up se necessário, retorna true se upou
+     */
+    gainExpAndCheckLevelUp(amount) {
+        this.exp += amount;
+        let leveledUp = false;
+        // Level up: 1000 + level*1000
+        let nextLevelExp = 1000 + this.level * 1000;
+        while (this.exp >= nextLevelExp) {
+            this.exp -= nextLevelExp;
+            this.level += 1;
+            leveledUp = true;
+            nextLevelExp = 1000 + this.level * 1000;
+        }
+        return leveledUp;
+    }
     
     toDirectionNumber() {
         // Converte direção string para número do banco
@@ -89,6 +106,7 @@ export class Player extends Entity {
             hp: this.hp,
             maxHp: this.maxHp,
             mp: this.mp,
+            exp: this.exp,
             maxMp: this.maxMp,
             sprite: this.sprite,
             direction: this.direction,

@@ -82,10 +82,13 @@ export class MessageRouter {
         // Handler para uso de skill (animação multiplayer)
         this.handlers.set('use_skill', (client, data) => {
             // data: { playerId, skillName, tile }
-            if (!data || !data.playerId || !data.skillName || !data.tile) {
+            if (!data || !data.skillName || !data.tile) {
                 console.log('[use_skill] Dados inválidos recebidos:', data);
                 return;
             }
+            // Sempre usa o playerId autenticado do socket
+            const playerId = client.player?.id || client.playerId;
+            if (!playerId) return;
             // Busca targetArea no SkillDatabase
             let targetArea = '';
             let damage = 0;
@@ -101,7 +104,8 @@ export class MessageRouter {
             } catch (e) {
                 console.warn('[use_skill] Erro ao buscar targetArea/power:', e);
             }
-            // Aplica dano nos monstros selvagens reais do wildPokemonManager
+            // --- Controle de dano e XP por atacante (corrigido: só envia XP para quem finaliza) ---
+            if (!this.monsterAttackers) this.monsterAttackers = new Map();
             let affectedMonsters = [];
             try {
                 const wildPokemonsMap = this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons;
@@ -122,16 +126,40 @@ export class MessageRouter {
                 wildPokemons.forEach(monster => {
                     if (areaTiles.some(tile => tile.x === monster.x && tile.y === monster.y && tile.z === monster.z)) {
                         if (typeof monster.hp === 'number') {
-                            monster.hp -= damage;
+                            if (!this.monsterAttackers.has(monster.id)) {
+                                this.monsterAttackers.set(monster.id, new Map());
+                            }
+                            const attackers = this.monsterAttackers.get(monster.id);
+                            let prev = attackers.get(playerId) || 0;
+                            let danoReal = Math.min(damage, monster.hp); // não pode passar do hp atual
+                            attackers.set(playerId, prev + danoReal);
+                            monster.hp -= danoReal;
                             if (monster.hp < 0) monster.hp = 0;
                             // Marca como morto se hp zerar
                             if (monster.hp === 0 && !monster.isDead) {
                                 monster.isDead = true;
                                 monster.deadSince = Date.now();
+                                // --- Só adiciona XP ao player que finalizou ---
+                                const monsterXp = monster.exp || 0;
+                                const totalDano = Array.from(attackers.values()).reduce((a, b) => a + b, 0);
+                                const danoPlayer = attackers.get(playerId) || 0;
+                                let xp = 0;
+                                if (totalDano > 0) {
+                                    xp = Math.floor((danoPlayer / totalDano) * monsterXp);
+                                }
+                                // Adiciona XP diretamente ao player
+                                const player = client.player;
+                                if (player && typeof player.gainExpAndCheckLevelUp === 'function') {
+                                    player.gainExpAndCheckLevelUp(xp);
+                                    console.log(`[use_skill] XP adicionada ao player: playerId=${playerId} xp=${xp} monsterId=${monster.id}`);
+                                } else {
+                                    console.warn(`[use_skill] player.gainExpAndCheckLevelUp não encontrado para playerId=${playerId}`);
+                                }
+                                // Limpa registro de atacantes
+                                this.monsterAttackers.delete(monster.id);
                             }
                         }
                         affectedMonsters.push({ id: monster.id, hp: monster.hp });
-                        // Notifica update para todos os clientes
                         if (this.gameWorld.wildPokemonManager.broadcastUpdate) {
                             this.gameWorld.wildPokemonManager.broadcastUpdate(monster);
                         }
@@ -142,16 +170,8 @@ export class MessageRouter {
             }
             // Broadcast da animação
             if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
-                if (this.wsServer.clients && typeof this.wsServer.clients.forEach === 'function') {
-                    let count = 0;
-                    this.wsServer.clients.forEach((clientObj, clientId) => {
-                        count++;
-                    });
-                } else {
-                    console.log('[use_skill] wsServer.clients não é um Map ou não existe.');
-                }
                 this.wsServer.broadcast('skill_animation', {
-                    playerId: data.playerId,
+                    playerId: playerId,
                     skillName: data.skillName,
                     tile: data.tile,
                     targetArea: targetArea,
@@ -159,10 +179,8 @@ export class MessageRouter {
                 });
                 console.log('[use_skill] Broadcast skill_animation enviado para todos os clientes.');
             } else if (client && typeof client.send === 'function') {
-                // Fallback: envia só para o próprio jogador
-                console.log(`[use_skill] wsServer.broadcast não disponível, enviando apenas para o próprio jogador.`);
                 client.send('skill_animation', {
-                    playerId: data.playerId,
+                    playerId: playerId,
                     skillName: data.skillName,
                     tile: data.tile,
                     targetArea: targetArea,

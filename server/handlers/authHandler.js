@@ -29,6 +29,9 @@ export class AuthHandler {
             // LOG EXTRA: Mostra o nome do personagem retornado
             console.log('[AuthHandler][DEBUG] playerData retornado:', playerData ? playerData.name : 'NULO');
 
+            // LOG do valor de experiência
+            console.log('[AuthHandler][DEBUG] experience do banco:', playerData ? playerData.experience : 'NULO');
+
             console.log('[AuthHandler] Raw playerData from DB:', JSON.stringify({
                 name: playerData?.name,
                 lookaddons: playerData?.lookaddons,
@@ -67,7 +70,7 @@ export class AuthHandler {
                 mp: playerData.mp || playerData.mana,
                 maxMp: playerData.max_mp || playerData.manamax,
                 level: playerData.level,
-                experience: playerData.experience,
+                exp: playerData.experience, // <-- Corrige passagem de exp
                 sprite: playerData.lookaddons || 'default',
                 direction: directionString,
                 // Adiciona mais campos conforme necessário

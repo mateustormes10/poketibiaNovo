@@ -20,6 +20,7 @@ export class WildPokemon {
         this.level = data.level || 5;
         this.hp = data.hp;
         this.maxHp = data.maxHp || data.hp;
+        this.exp = data.exp || 0;
         // Skills e cooldowns
         this.skills = [];
         this.skillCooldowns = {};
@@ -434,7 +435,8 @@ export class WildPokemon {
             sprite_left: this.sprite_left,
             sprite_right: this.sprite_right,
             isDead: this.isDead,
-            spriteDead: this.spriteDead
+            spriteDead: this.spriteDead,
+            exp: this.exp || 0
         };
     }
 }

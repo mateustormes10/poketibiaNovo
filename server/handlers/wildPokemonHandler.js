@@ -47,10 +47,32 @@ export function setupWildPokemonHandler(gameWorld) {
             logger.info(`[WILD] ${client.player.name} causou ${damage} de dano ao Pokémon selvagem ${wild.name} (id=${wild.id}) com ${skillName || 'ataque'}`);
             // Se morreu, registra para o scanner
             if (morreu) {
+                // 1. Register for scanner
                 registerDefeatedMonster(client.player.dbId || client.player.id, {
                     name: wild.name,
                     level: wild.level || 1
                 });
+                // 2. Give EXP and handle level up
+                const { PokemonEntities } = require('../game/entities/PokemonEntities.js');
+                const expGain = (PokemonEntities[wild.name] && PokemonEntities[wild.name].exp) || 1;
+                if (typeof client.player.gainExpAndCheckLevelUp === 'function') {
+                    const leveledUp = client.player.gainExpAndCheckLevelUp(expGain);
+                    // 3. Save player to DB
+                    gameWorld.savePlayer(client.player);
+                    // 4. Sempre envia XP e HP atualizados ao client
+                    if (client.send) {
+                        client.send('player_status', {
+                            hp: client.player.hp,
+                            maxHp: client.player.maxHp,
+                            exp: client.player.exp,
+                            level: client.player.level
+                        });
+                    }
+                    // 5. Notifica level up (extra)
+                    if (leveledUp && client.send) {
+                        client.send('levelUp', { level: client.player.level, exp: client.player.exp });
+                    }
+                }
             }
             // Broadcast update para todos os players
             gameWorld.wildPokemonManager.broadcastUpdate(wild);

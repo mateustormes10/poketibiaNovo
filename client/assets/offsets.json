@@ -4,7 +4,9 @@
         "CidadeInicial_andar_1",
         "CidadeInicial_andar_2",
         "CidadeInicial_andar_3",
-        "CidadeInicial_andar_4"
+        "CidadeInicial_andar_4",
+        "CidadeInicial_andar_5",
+        "CidadeInicial_andar_6"
     ],
     "values": [
         {
@@ -22,6 +24,14 @@
         {
             "offsetX": -158,
             "offsetY": -127
+        },
+        {
+            "offsetX": 0,
+            "offsetY": -6
+        },
+        {
+            "offsetX": 0,
+            "offsetY": -6
         },
         {
             "offsetX": 0,

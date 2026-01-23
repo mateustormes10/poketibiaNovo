@@ -46,7 +46,8 @@ export class Monster extends Entity {
             name: this.name,
             level: this.level,
             hp: this.hp,
-            maxHp: this.maxHp
+            maxHp: this.maxHp,
+            exp: this.exp
         };
     }
 }
