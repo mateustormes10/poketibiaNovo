@@ -1,5 +1,5 @@
 -- Tabelas de NPCs e Economia
-USE poketibia;
+USE chaoswar;
 
 -- Balance (Gold Coin)
 CREATE TABLE IF NOT EXISTS balance (

@@ -1,4 +1,4 @@
-import { PokemonRepository } from '../persistence/PokemonRepository.js';
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { PlayerPokemonRepository } from '../persistence/PlayerPokemonRepository.js';
 import { PlayerActivePokemonRepository } from '../persistence/PlayerActivePokemonRepository.js';
 import { WildPokemonRepository } from '../persistence/WildPokemonRepository.js';
@@ -8,23 +8,17 @@ const logger = new Logger('PokemonService');
 
 export class PokemonService {
     constructor(database) {
-        this.pokemonRepository = new PokemonRepository(database);
         this.playerPokemonRepository = new PlayerPokemonRepository(database);
         this.playerActivePokemonRepository = new PlayerActivePokemonRepository(database);
         this.wildPokemonRepository = new WildPokemonRepository(database);
     }
     
     // Pokémons base
-    async getPokemonById(id) {
-        return await this.pokemonRepository.findById(id);
-    }
-    
     async getPokemonByName(name) {
-        return await this.pokemonRepository.findByName(name);
+        return PokemonEntities[name] || null;
     }
-    
     async getAllPokemons() {
-        return await this.pokemonRepository.findAll();
+        return Object.values(PokemonEntities);
     }
     
     // Pokémons do jogador
@@ -32,21 +26,19 @@ export class PokemonService {
         return await this.playerPokemonRepository.findByPlayerId(playerId);
     }
     
-    async catchPokemon(playerId, pokemonId) {
-        const pokemon = await this.pokemonRepository.findById(pokemonId);
+    async catchPokemon(playerId, pokemonName) {
+        const pokemon = PokemonEntities[pokemonName];
         if (!pokemon) {
             throw new Error('Pokemon not found');
         }
-        
         const playerPokemon = await this.playerPokemonRepository.create({
             player_id: playerId,
-            pokemon_id: pokemonId,
+            pokemon_id: pokemonName,
             level: 1,
             experience: 0,
-            current_hp: pokemon.max_hp,
-            current_mana: pokemon.max_mana
+            current_hp: pokemon.maxHp,
+            current_mana: 0 // Defina se necessário
         });
-        
         logger.info(`Player ${playerId} caught ${pokemon.name}`);
         return playerPokemon;
     }
@@ -61,13 +53,12 @@ export class PokemonService {
         return await this.playerActivePokemonRepository.findByPlayerId(playerId);
     }
     
-    async addToActiveSlot(playerId, pokemonId, slot) {
-        const pokemon = await this.pokemonRepository.findById(pokemonId);
+    async addToActiveSlot(playerId, pokemonName, slot) {
+        const pokemon = PokemonEntities[pokemonName];
         if (!pokemon) {
             throw new Error('Pokemon not found');
         }
-        
-        return await this.playerActivePokemonRepository.addToSlot(playerId, pokemonId, slot);
+        return await this.playerActivePokemonRepository.addToSlot(playerId, pokemonName, slot);
     }
     
     async removeFromActiveSlot(playerId, slot) {

@@ -283,16 +283,6 @@ CREATE TABLE house_auctions (
 -- ======================
 -- PLAYER DATA
 -- ======================
-CREATE TABLE player_items (
-    player_id INT NOT NULL,
-    sid INT NOT NULL,
-    pid INT NOT NULL DEFAULT 0,
-    itemtype INT NOT NULL,
-    count INT NOT NULL DEFAULT 0,
-    attributes BLOB NOT NULL,
-    PRIMARY KEY (player_id, sid),
-    FOREIGN KEY (player_id) REFERENCES players(id)
-) ENGINE=InnoDB;
 
 CREATE TABLE player_depotitems (
     player_id INT NOT NULL,
@@ -310,22 +300,6 @@ CREATE TABLE player_namelocks (
     name VARCHAR(255) NOT NULL,
     new_name VARCHAR(255) NOT NULL,
     date INT NOT NULL DEFAULT 0,
-    FOREIGN KEY (player_id) REFERENCES players(id)
-) ENGINE=InnoDB;
-
-CREATE TABLE player_skills (
-    player_id INT NOT NULL,
-    skillid INT NOT NULL,
-    value INT NOT NULL DEFAULT 0,
-    count INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (player_id, skillid),
-    FOREIGN KEY (player_id) REFERENCES players(id)
-) ENGINE=InnoDB;
-
-CREATE TABLE player_spells (
-    player_id INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    PRIMARY KEY (player_id, name),
     FOREIGN KEY (player_id) REFERENCES players(id)
 ) ENGINE=InnoDB;
 
@@ -383,155 +357,30 @@ CREATE TABLE server_reports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
-CREATE TABLE tiles (
-    id INT NOT NULL,
-    world_id INT NOT NULL DEFAULT 0,
-    house_id INT NOT NULL,
-    x INT NOT NULL,
-    y INT NOT NULL,
-    z INT NOT NULL,
-    PRIMARY KEY (id, world_id),
-    FOREIGN KEY (house_id, world_id)
-        REFERENCES houses(id, world_id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE tile_items (
-    tile_id INT NOT NULL,
-    world_id INT NOT NULL DEFAULT 0,
-    sid INT NOT NULL,
-    pid INT NOT NULL DEFAULT 0,
-    itemtype INT NOT NULL,
-    count INT NOT NULL DEFAULT 0,
-    attributes BLOB NOT NULL,
-    PRIMARY KEY (tile_id, world_id, sid),
-    FOREIGN KEY (tile_id, world_id)
-        REFERENCES tiles(id, world_id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
-CREATE TABLE pokemons (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
-
-    hp INT NOT NULL,
-    max_hp INT NOT NULL,
-    max_mana INT NOT NULL,
-
-    aggressive TINYINT(1) NOT NULL DEFAULT 0,
-    speed DECIMAL(5,3) NOT NULL,
-
-    attack_base INT NOT NULL,
-    defense_base INT NOT NULL,
-
-    elements JSON NOT NULL,
-    weak_elements JSON NOT NULL,
-    strong_elements JSON NOT NULL,
-    skills JSON NOT NULL,
-
-    sprite_up JSON NOT NULL,
-    sprite_down JSON NOT NULL,
-    sprite_left JSON NOT NULL,
-    sprite_right JSON NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-INSERT INTO pokemons (
-    name, hp, max_hp, max_mana, aggressive, speed,
-    attack_base, defense_base,
-    elements, weak_elements, strong_elements, skills,
-    sprite_up, sprite_down, sprite_left, sprite_right
-) VALUES (
-    'Pikachu',
-    120, 120, 80, 0, 0.07,
-    1, 1,
-    JSON_ARRAY('electric'),
-    JSON_ARRAY('stone'),
-    JSON_ARRAY('water'),
-    JSON_ARRAY('Choque do Trovão', 'Cauda de Ferro'),
-    JSON_ARRAY(39664,39668,39672),
-    JSON_ARRAY(39666,39670,39674),
-    JSON_ARRAY(39667,39671,39675),
-    JSON_ARRAY(39665,39669,39673)
-);
-INSERT INTO pokemons (
-    name,
-    hp,
-    max_hp,
-    max_mana,
-    aggressive,
-    speed,
-    attack_base,
-    defense_base,
-    elements,
-    weak_elements,
-    strong_elements,
-    skills,
-    sprite_up,
-    sprite_down,
-    sprite_left,
-    sprite_right
-) VALUES (
-    'Staryu',
-    140,
-    140,
-    60,
-    1,
-    0.06,
-    1,
-    1,
-    JSON_ARRAY('water'),
-    JSON_ARRAY('eletric'),
-    JSON_ARRAY('fire'),
-    JSON_ARRAY('Brasas', 'Arranhão', 'Fogaréu'),
-    JSON_ARRAY(33648, 33652, 33656),
-    JSON_ARRAY(33650, 33654, 33658),
-    JSON_ARRAY(33651, 33655, 33659),
-    JSON_ARRAY(33649, 33653, 33657)
-);
-
-CREATE TABLE player_active_pokemons (
+CREATE TABLE player_active_monsters (
     player_id INT NOT NULL,
-    pokemon_id INT NOT NULL,
+    monster_id INT NOT NULL,
     slot INT NOT NULL, -- 1 a 6
     nickname VARCHAR(50) DEFAULT NULL,
     x INT NOT NULL DEFAULT 0,
     y INT NOT NULL DEFAULT 0,
     direction VARCHAR(10) NOT NULL DEFAULT 'down',
     PRIMARY KEY (player_id, slot),
-    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE,
-    FOREIGN KEY (pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
+    FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE CASCADE
 );
 
-INSERT INTO player_active_pokemons (player_id, pokemon_id, slot, direction)
+INSERT INTO player_active_monsters (player_id, monster_id, slot, direction)
 VALUES 
 (1, 1, 1, 'down'),  -- o pokemon_id aqui pode dar erro precisa ser um id correto de dentro de pokemon
 (1, 2, 2, 'down');  -- Raichu
 
-CREATE TABLE wild_pokemons (
-    id INT AUTO_INCREMENT PRIMARY KEY,
 
-    pokemon_id INT NOT NULL,
 
-    x INT NOT NULL,
-    y INT NOT NULL,
-    z INT NOT NULL,
-
-    world_id INT NOT NULL DEFAULT 0,
-
-    respawn_time INT NOT NULL DEFAULT 0,
-    alive TINYINT(1) NOT NULL DEFAULT 1,
-
-    FOREIGN KEY (pokemon_id) REFERENCES pokemons(id)
-        ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE player_pokemons (
+CREATE TABLE player_monsters (
     id INT AUTO_INCREMENT PRIMARY KEY,
 
     player_id INT NOT NULL,
-    pokemon_id INT NOT NULL,
-
+    monster_id INT NOT NULL,
     nickname VARCHAR(50) DEFAULT NULL,
 
     level INT NOT NULL DEFAULT 1,
@@ -543,8 +392,6 @@ CREATE TABLE player_pokemons (
     created_at INT NOT NULL DEFAULT UNIX_TIMESTAMP(),
 
     FOREIGN KEY (player_id) REFERENCES players(id)
-        ON DELETE CASCADE,
-    FOREIGN KEY (pokemon_id) REFERENCES pokemons(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

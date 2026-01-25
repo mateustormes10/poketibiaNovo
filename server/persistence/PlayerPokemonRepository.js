@@ -4,25 +4,12 @@ export class PlayerPokemonRepository {
     }
     
     async findById(id) {
-        const sql = `
-            SELECT pp.*, p.name as pokemon_name, p.sprite_up, p.sprite_down, 
-                   p.sprite_left, p.sprite_right, p.max_hp, p.max_mana
-            FROM player_pokemons pp
-            JOIN pokemons p ON pp.pokemon_id = p.id
-            WHERE pp.id = ?
-        `;
+        const sql = `SELECT * FROM player_pokemons WHERE id = ?`;
         return await this.db.queryOne(sql, [id]);
     }
     
     async findByPlayerId(playerId) {
-        const sql = `
-            SELECT pp.*, p.name as pokemon_name, p.sprite_up, p.sprite_down,
-                   p.sprite_left, p.sprite_right, p.max_hp, p.max_mana
-            FROM player_pokemons pp
-            JOIN pokemons p ON pp.pokemon_id = p.id
-            WHERE pp.player_id = ?
-            ORDER BY pp.created_at
-        `;
+        const sql = `SELECT * FROM player_pokemons WHERE player_id = ? ORDER BY created_at`;
         return await this.db.query(sql, [playerId]);
     }
     
@@ -35,7 +22,7 @@ export class PlayerPokemonRepository {
         `;
         const id = await this.db.insert(sql, [
             playerPokemonData.player_id,
-            playerPokemonData.pokemon_id,
+            playerPokemonData.pokemon_id, // agora é o nome do Pokémon
             playerPokemonData.nickname || null,
             playerPokemonData.level || 1,
             playerPokemonData.experience || 0,

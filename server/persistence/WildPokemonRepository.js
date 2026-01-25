@@ -4,50 +4,23 @@ export class WildPokemonRepository {
     }
     
     async findById(id) {
-        const sql = `
-            SELECT wp.*, p.name as pokemon_name, p.hp, p.max_hp, p.aggressive,
-                   p.sprite_up, p.sprite_down, p.sprite_left, p.sprite_right
-            FROM wild_pokemons wp
-            JOIN pokemons p ON wp.pokemon_id = p.id
-            WHERE wp.id = ?
-        `;
+        const sql = `SELECT * FROM wild_pokemons WHERE id = ?`;
         return await this.db.queryOne(sql, [id]);
     }
     
     async findInArea(x, y, z, range, worldId = 0) {
-        const sql = `
-            SELECT wp.*, p.name as pokemon_name, p.hp, p.max_hp, p.aggressive
-            FROM wild_pokemons wp
-            JOIN pokemons p ON wp.pokemon_id = p.id
-            WHERE wp.x BETWEEN ? AND ?
-              AND wp.y BETWEEN ? AND ?
-              AND wp.z = ?
-              AND wp.world_id = ?
-              AND wp.alive = 1
-        `;
-        return await this.db.query(sql, [
-            x - range, x + range,
-            y - range, y + range,
-            z, worldId
-        ]);
+        const sql = `SELECT * FROM wild_pokemons WHERE x BETWEEN ? AND ? AND y BETWEEN ? AND ? AND z = ? AND world_id = ? AND alive = 1`;
+        return await this.db.query(sql, [x - range, x + range, y - range, y + range, z, worldId]);
     }
     
     async findByWorldId(worldId = 0) {
-        const sql = `
-            SELECT wp.*, p.name as pokemon_name
-            FROM wild_pokemons wp
-            JOIN pokemons p ON wp.pokemon_id = p.id
-            WHERE wp.world_id = ? AND wp.alive = 1
-        `;
+        const sql = `SELECT * FROM wild_pokemons WHERE world_id = ? AND alive = 1`;
         return await this.db.query(sql, [worldId]);
     }
     
-    async spawn(pokemonId, x, y, z, worldId = 0, respawnTime = 0) {
-        const sql = `
-            INSERT INTO wild_pokemons (pokemon_id, x, y, z, world_id, respawn_time, alive)
-            VALUES (?, ?, ?, ?, ?, ?, 1)
-        `;
-        const id = await this.db.insert(sql, [pokemonId, x, y, z, worldId, respawnTime]);
+    async spawn(pokemonName, x, y, z, worldId = 0, respawnTime = 0) {
+        const sql = `INSERT INTO wild_pokemons (pokemon_id, x, y, z, world_id, respawn_time, alive) VALUES (?, ?, ?, ?, ?, ?, 1)`;
+        const id = await this.db.insert(sql, [pokemonName, x, y, z, worldId, respawnTime]);
         return await this.findById(id);
     }
     

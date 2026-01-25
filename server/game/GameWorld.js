@@ -53,26 +53,31 @@ export class GameWorld {
     }
     
     async loadPlayerPokemons(player, dbPlayerId) {
+        const { PokemonEntities } = await import('./entities/PokemonEntities.js');
         const playerIdToUse = dbPlayerId || player.dbId || player.id;
         try {
             const pokemonData = await this.playerActivePokemonRepository.findByPlayerId(playerIdToUse);
-            player.pokemons = pokemonData.map(p => ({
-                id: p.id,
-                pokemonId: p.pokemon_id,
-                name: p.pokemon_name,
-                nickname: p.nickname,
-                level: p.level,
-                hp: p.hp || p.current_hp,
-                maxHp: p.max_hp,
-                mana: p.current_mana,
-                maxMana: p.max_mana,
-                experience: p.experience,
-                slot: p.slot,
-                sprite_up: p.sprite_up,
-                sprite_down: p.sprite_down,
-                sprite_left: p.sprite_left,
-                sprite_right: p.sprite_right
-            }));
+            player.pokemons = pokemonData.map(p => {
+                // Busca pelo id (monster_id) no PokemonEntities
+                const entity = Object.values(PokemonEntities).find(e => e.id == p.monster_id || e.id == p.pokemon_id);
+                return {
+                    id: p.id,
+                    monster_id: p.monster_id,
+                    name: entity ? entity.name : null,
+                    nickname: p.nickname,
+                    level: entity ? entity.level : null,
+                    hp: entity ? entity.hp : null,
+                    maxHp: entity ? entity.maxHp : null,
+                    exp: entity ? entity.exp : null,
+                    slot: p.slot,
+                    sprite_up: entity ? entity.sprite_up : null,
+                    sprite_down: entity ? entity.sprite_down : null,
+                    sprite_left: entity ? entity.sprite_left : null,
+                    sprite_right: entity ? entity.sprite_right : null,
+                    skills: entity ? entity.skills : [],
+                    spriteDead: entity ? entity.spriteDead : null
+                };
+            });
             logger.info(`Loaded ${player.pokemons.length} ACTIVE pokemons for player ${player.name}`);
         } catch (error) {
             logger.error(`Error loading ACTIVE pokemons for player ${playerIdToUse}:`, error);

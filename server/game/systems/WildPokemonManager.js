@@ -28,12 +28,14 @@ export class WildPokemonManager {
         logger.info('[WILD] Iniciando spawn de Pokémon selvagens...');
         // Lista de nomes dos pokémons iniciais para spawnar
         const initialPokemonNames = [
-            'Rattata',
-            'Horsea',
-            'Pidgey',
-            'Caterpie',
-            'Charmander',
-            'Venusaur'
+            'Skeleton Warrior',
+            'Skeleton Green',
+            'Skeleton Purple',
+            'Skeleton Medusa',
+            'Skeleton Wizard',
+            'Skeleton Bandid',
+            'Skeleton Necromancer',
+            'Skeleton'
         ];
         let fixedId = 1;
         for (const name of initialPokemonNames) {
