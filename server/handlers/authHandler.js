@@ -73,6 +73,7 @@ export class AuthHandler {
                 exp: playerData.experience, // <-- Corrige passagem de exp
                 sprite: playerData.lookaddons || 'default',
                 direction: directionString,
+                town_id: playerData.town_id, // <-- Preenche town_id do banco
                 // Adiciona mais campos conforme necessário
             });
 

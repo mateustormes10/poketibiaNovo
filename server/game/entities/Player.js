@@ -15,6 +15,8 @@ export class Player extends Entity {
         this.mp = data.mp || GameConstants.DEFAULT_PLAYER_MP;
         this.maxMp = data.maxMp || GameConstants.DEFAULT_PLAYER_MAX_MP;
         this.exp = data.exp || 0;
+        // Preenche o town_id corretamente do banco
+        this.town_id = data.town_id || 4;
         // ...existing code...
     }
     
@@ -114,7 +116,8 @@ export class Player extends Entity {
             pokemons: this.pokemons || [],
             pokemonName: this.pokemonName || null,
             // Corrige: envia skills como array de strings (JSON serializados)
-            skills: this.skills ? this.skills.map(skill => typeof skill === 'string' ? skill : JSON.stringify(skill)) : []
+            skills: this.skills ? this.skills.map(skill => typeof skill === 'string' ? skill : JSON.stringify(skill)) : [],
+            town_id: this.town_id || 1
         };
     }
 }

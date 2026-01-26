@@ -45,12 +45,22 @@ export class PortalHandler {
                     this.gameWorld.mapManager.updatePlayerPosition(player.id, player.x, player.y, player.z);
                 }
 
+                // Atualiza town_id se mudou de cidade
+                if (typeof data.to.cidade === 'string') {
+                    const townMap = { "CidadeInicial": 1, "Barco": 2 };
+                    const newTownId = townMap[data.to.cidade] || 1;
+                    await this.playerRepository.updateTownId(player.dbId, newTownId);
+                    player.town_id = newTownId; // <-- Atualiza em memória também!
+                    console.log(`[PORTAL] town_id do player ${player.name} atualizado para ${newTownId} (${data.to.cidade})`);
+                }
+
                 // Log depois da mudança
                 console.log('[PORTAL] Depois do teleporte:', {
                     id: player.id,
                     x: player.x,
                     y: player.y,
-                    z: player.z
+                    z: player.z,
+                    town_id: player.town_id
                 });
 
                 // Envia o novo gameState para o player

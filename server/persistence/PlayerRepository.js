@@ -1,4 +1,11 @@
 export class PlayerRepository {
+        async updateTownId(id, townId) {
+            console.log(`[PlayerRepository] updateTownId chamado para id=${id}, townId=${townId}`);
+            const sql = 'UPDATE players SET town_id = ? WHERE id = ?';
+            const result = await this.db.update(sql, [townId, id]);
+            console.log(`[PlayerRepository] updateTownId resultado:`, result);
+            return result;
+        }
     constructor(database) {
         this.db = database;
     }
