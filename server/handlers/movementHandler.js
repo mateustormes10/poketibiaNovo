@@ -33,11 +33,9 @@ export class MovementHandler {
                 typeof this.gameWorld.mapManager.isWalkable === 'function' &&
                 !this.gameWorld.mapManager.isWalkable(city, data.z, data.x, data.y)
             ) {
-                // Tile bloqueado, ignora movimento
                 client.send('system_message', { message: 'Movimento bloqueado por colisão!', color: 'red' });
                 return;
             }
-
 
             // 2. Checa colisão simples por coordenada (sem SpatialGrid)
             // Players
@@ -73,10 +71,12 @@ export class MovementHandler {
                 }
             }
 
-            // 3. Atualiza posição
-            player.x = data.x;
-            player.y = data.y;
-            player.z = data.z;
+            // 3. Atualiza posição SOMENTE se mudou
+            if (player.x !== data.x || player.y !== data.y || player.z !== data.z) {
+                player.x = data.x;
+                player.y = data.y;
+                player.z = data.z;
+            }
         }
         if (direction) {
             player.direction = direction;
@@ -133,11 +133,6 @@ export class MovementHandler {
             }
         });
 
-        // Broadcast para todos os clientes: lista de jogadores
-        if (this.gameWorld.wsServer) {
-            const allPlayers = Array.from(this.gameWorld.players.values()).map(p => p.serialize());
-            this.gameWorld.wsServer.broadcast('players_update', JSON.stringify(allPlayers));
-        }
 
         
     }

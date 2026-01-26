@@ -24,7 +24,7 @@ export class Player {
         this.maxHp = data.maxHp;
         this.level = data.level;
         this.vocation = data.vocation || 0;
-        this.sprite = data.sprite || 'default';
+        this.sprite = data.sprite || data.lookaddons || 'default';
         this.direction = data.direction || 'down';
         this.pokemons = data.pokemons || [];
         this.goldCoin = data.goldCoin || 0;

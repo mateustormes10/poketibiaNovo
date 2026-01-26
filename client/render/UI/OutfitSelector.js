@@ -47,12 +47,27 @@ export class OutfitSelector {
         console.log('[OutfitSelector] selectCurrent chamado! isOpen:', this.isOpen);
         if (!this.isOpen) return;
         const selectedOutfit = this.outfits[this.selectedIndex];
-        console.log(`[OutfitSelector] Selected outfit: ${selectedOutfit}`);
-        // Envia ao servidor para trocar o lookaddons
+        console.log(`[OutfitSelector] Selected outfit: ${selectedOutfit}`); 
+        // Obtém a direção atual do player local 
+        let direction = 3; // default: down
+        if (window.game && window.game.gameState && window.game.gameState.localPlayer) {
+            const dirStr = window.game.gameState.localPlayer.direction;
+            console.log('[OutfitSelector][DEBUG] direction string do player local:', dirStr);
+            // Converte para número: 0=north, 1=left, 2=right, 3=down
+            switch (dirStr) { 
+                case 'up': direction = 0; break;
+                case 'left': direction = 1; break;
+                case 'right': direction = 2; break;
+                case 'down': direction = 3; break;
+                default: direction = 3;
+            }
+        }
+        // Envia ao servidor para trocar o lookaddons e direction
         this.wsClient.send('change_outfit', {
-            lookaddons: selectedOutfit
+            lookaddons: selectedOutfit,
+            direction: direction
         });
-        console.log('[OutfitSelector] Mensagem enviada para o servidor:', selectedOutfit);
+        console.log('[OutfitSelector] Mensagem enviada para o servidor:', selectedOutfit, 'direction:', direction);
         this.close();
     }
     

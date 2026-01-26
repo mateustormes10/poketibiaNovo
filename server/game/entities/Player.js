@@ -4,20 +4,25 @@ import { GameConstants } from '../../../shared/constants/GameConstants.js';
 export class Player extends Entity {
     constructor(data) {
         super({ ...data, type: 'player' });
-        // ...existing code...
         this.clientState = null; // Referência ao WsClient (socket), usada para broadcast
-        this.dbId = data.dbId; // ID do banco de dados
+        this.dbId = data.dbId;
         this.name = data.name || 'Player';
         this.level = data.level || GameConstants.DEFAULT_PLAYER_LEVEL;
-        this.vocation = data.vocation || 0; // 0 = No vocation, 4 = GM
+        this.vocation = data.vocation || 0;
         this.hp = data.hp || GameConstants.DEFAULT_PLAYER_HP;
         this.maxHp = data.maxHp || GameConstants.DEFAULT_PLAYER_MAX_HP;
         this.mp = data.mp || GameConstants.DEFAULT_PLAYER_MP;
         this.maxMp = data.maxMp || GameConstants.DEFAULT_PLAYER_MAX_MP;
         this.exp = data.exp || 0;
-        // Preenche o town_id corretamente do banco
-        this.town_id = data.town_id || 4;
-        // ...existing code...
+        this.town_id = (data.town_id !== undefined && data.town_id !== null) ? data.town_id : 4;
+        // Garante que o campo sprite sempre seja preenchido corretamente
+        if (typeof data.sprite === 'string' && data.sprite.length > 0) {
+            this.sprite = data.sprite;
+        } else if (typeof data.lookaddons === 'string' && data.lookaddons.length > 0) {
+            this.sprite = data.lookaddons;
+        } else {
+            this.sprite = 'default';
+        }
     }
     
     update(deltaTime) {
@@ -76,10 +81,10 @@ export class Player extends Entity {
     toDirectionNumber() {
         // Converte direção string para número do banco
         const directionMap = {
-            'up': 1,    // Norte
-            'right': 2, // Leste
-            'down': 3,  // Sul
-            'left': 4   // Oeste
+            'up': 0,    // Norte
+            'right': 1, // Leste
+            'down': 2,  // Sul
+            'left': 3   // Oeste
         };
         return directionMap[this.direction] || 3; // Default: Sul
     }

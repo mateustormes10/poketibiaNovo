@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger.js';
 const logger = new Logger('OutfitHandler');
 
 export async function handleChangeOutfit(clientState, data) {
-    let { lookaddons } = data;
+    let { lookaddons, direction } = data;
     
     if (!clientState || !clientState.player) {
         logger.error('[OutfitHandler] Cliente não está autenticado');
@@ -12,7 +12,7 @@ export async function handleChangeOutfit(clientState, data) {
     const player = clientState.player;
     
     // Valida se o lookaddons é válido
-    const validOutfits = ['default', 'summonerMale', 'mageMale', 'warriorMale', 'maletaMale', 'citizenFemale', 'mageFemale'];
+    const validOutfits = ['Robson', 'Samuel', 'Mateus', 'Heitor', 'Enzo', 'Augusto', 'Leandro', 'Amanda'];
     if (typeof lookaddons !== 'string' || !validOutfits.includes(lookaddons)) {
         logger.warn(`[OutfitHandler] Outfit inválido: ${lookaddons}`);
         clientState.send('outfit_changed', {
@@ -21,14 +21,20 @@ export async function handleChangeOutfit(clientState, data) {
         });
         return;
     }
+    // Valida direction
+    if (typeof direction !== 'number' || direction < 0 || direction > 3) {
+        direction = 3; // default: down
+    }
     
     try {
-        // Atualiza a sprite do player
+        // Atualiza a sprite e direção do player
         player.sprite = lookaddons; // sempre string
-        
+        player.direction = direction;
+        // LOGS DE DEPURAÇÃO
+        logger.info(`[OutfitHandler][DEBUG] Salvando outfit para player: name=${player.name}, dbId=${player.dbId}, logicId=${player.id}, lookaddons=${lookaddons}, direction=${direction}`);
         // Salva no banco de dados (usando gameWorld)
         if (clientState.gameWorld && clientState.gameWorld.playerRepository) {
-            await clientState.gameWorld.playerRepository.updatePlayerOutfit(player.id, lookaddons);
+            await clientState.gameWorld.playerRepository.updatePlayerOutfitAndDirection(player.dbId, lookaddons, direction);
         }
         
         logger.info(`[OutfitHandler] ${player.name} trocou para outfit: ${lookaddons}`);
@@ -65,7 +71,8 @@ export async function handleChangeOutfit(clientState, data) {
                 logger.info(`[SINCRONIA_OUTF_PLAYER][SERVER][BROADCAST] Enviando player_outfit_update para playerId=${otherPlayer.id} (outfit: ${lookaddons}) do playerId=${player.id}`);
                 otherPlayer.clientState.send('player_outfit_update', {
                     playerId: player.id,
-                    lookaddons: lookaddons
+                    lookaddons: lookaddons,
+                    direction: direction
                 });
             });
         }

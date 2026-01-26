@@ -110,9 +110,9 @@ export class PlayerRepository {
         return await this.db.query(sql);
     }
     
-    async updatePlayerOutfit(id, lookaddons) {
-        const sql = 'UPDATE players SET lookaddons = ? WHERE id = ?';
-        return await this.db.update(sql, [lookaddons, id]);
+    async updatePlayerOutfitAndDirection(id, lookaddons, direction) {
+        const sql = 'UPDATE players SET lookaddons = ?, direction = ? WHERE id = ?';
+        return await this.db.update(sql, [lookaddons, direction, id]);
     }
 }
 
