@@ -6,7 +6,14 @@
         "CidadeInicial_andar_3",
         "CidadeInicial_andar_4",
         "CidadeInicial_andar_5",
-        "CidadeInicial_andar_6"
+        "CidadeInicial_andar_6",
+        "Barco_andar_0",
+        "Barco_andar_1",
+        "Barco_andar_2",
+        "Barco_andar_3",
+        "Barco_andar_4",
+        "Barco_andar_5",
+        "Barco_andar_6"
     ],
     "values": [
         {
@@ -32,6 +39,34 @@
         {
             "offsetX": 0,
             "offsetY": -6
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        },
+        {
+            "offsetX": -132,
+            "offsetY": 0
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
+        },
+        {
+            "offsetX": 0,
+            "offsetY": 0
         },
         {
             "offsetX": 0,
