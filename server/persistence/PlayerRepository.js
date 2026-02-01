@@ -12,7 +12,17 @@ export class PlayerRepository {
     
     async findById(id) {
         const sql = 'SELECT * FROM players WHERE id = ?';
-        return await this.db.queryOne(sql, [id]);
+        const player = await this.db.queryOne(sql, [id]);
+        if (player && player.conditions) {
+            try {
+                player.conditions = JSON.parse(player.conditions.toString());
+            } catch (e) {
+                player.conditions = {};
+            }
+        } else {
+            player.conditions = {};
+        }
+        return player;
     }
     
     async findByName(name) {
@@ -31,8 +41,8 @@ export class PlayerRepository {
                 name, account_id, group_id, town_id,
                 posx, posy, posz,
                 health, healthmax, mana, manamax,
-                level, vocation, sex, looktype
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                level, vocation, sex, looktype, conditions
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         const id = await this.db.insert(sql, [
             playerData.name,
@@ -49,7 +59,8 @@ export class PlayerRepository {
             playerData.level || 1,
             playerData.vocation || 0,
             playerData.sex || 0,
-            playerData.looktype || 136
+            playerData.looktype || 136,
+            JSON.stringify(playerData.conditions || {})
         ]);
         return await this.findById(id);
     }
@@ -62,7 +73,8 @@ export class PlayerRepository {
                 level = ?, experience = ?,
                 lastlogin = UNIX_TIMESTAMP(),
                 direction = ?,
-                lookaddons = ?
+                lookaddons = ?,
+                conditions = ?
             WHERE id = ?
         `;
         await this.db.update(sql, [
@@ -75,6 +87,7 @@ export class PlayerRepository {
             playerData.exp,
             playerData.direction || 2,
             playerData.sprite || 'default',
+            JSON.stringify(playerData.conditions || {}),
             id
         ]);
         return await this.findById(id);

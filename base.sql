@@ -86,7 +86,8 @@ CREATE TABLE players (
 
 ALTER TABLE players
 MODIFY COLUMN lookaddons VARCHAR(50) NOT NULL DEFAULT 'default';
-
+ALTER TABLE players 
+MODIFY COLUMN conditions BLOB NOT NULL DEFAULT '{"fome": "100", "stamina": "100", "points":0 ,"hit_points": 0, "velocity": 0, "damage": 0, "defense": 0, "crit_chance": 0, "crit_damage": 0, "dodge": 0, "coundown": 0, "scan_efficiency": 0, "lucky": 0}';
 
 INSERT INTO players (
     name, world_id, group_id, account_id,

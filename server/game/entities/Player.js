@@ -9,8 +9,7 @@ export class Player extends Entity {
         this.name = data.name || 'Player';
         this.level = data.level || GameConstants.DEFAULT_PLAYER_LEVEL;
         this.vocation = data.vocation || 0;
-        this.hp = data.hp || GameConstants.DEFAULT_PLAYER_HP;
-        this.maxHp = data.maxHp || GameConstants.DEFAULT_PLAYER_MAX_HP;
+        this.hp = (typeof data.hp === 'number') ? data.hp : GameConstants.DEFAULT_PLAYER_HP;
         this.mp = data.mp || GameConstants.DEFAULT_PLAYER_MP;
         this.maxMp = data.maxMp || GameConstants.DEFAULT_PLAYER_MAX_MP;
         this.exp = data.exp || 0;
@@ -23,11 +22,80 @@ export class Player extends Entity {
         } else {
             this.sprite = 'default';
         }
+        // Garante que conditions sempre será um objeto
+        if (data.conditions && typeof data.conditions === 'object') {
+            this.conditions = data.conditions;
+        } else {
+            this.conditions = {};
+        }
+        // Controle de regeneração de stamina
+        this._lastMoveTime = Date.now();
+        this._staminaRegenTimer = 0;
+        // Controle de fome
+        this._lastFomeTime = Date.now();
     }
     
     update(deltaTime) {
         super.update(deltaTime);
         
+        // Inicialização dos timers (só precisa fazer uma vez no construtor, não no update)
+        if (!this._lastFomeTime) this._lastFomeTime = Date.now();
+        if (!this._lastFomeDanoTime) this._lastFomeDanoTime = Date.now();
+        if (!this.conditions) this.conditions = {};
+
+        let fome;
+        if (typeof this.conditions.fome === 'number') {
+            fome = this.conditions.fome;
+        } else if (typeof this.conditions.fome === 'string') {
+            fome = parseFloat(this.conditions.fome) || 0;
+        } else {
+            fome = 0;
+        }
+        const now = Date.now();
+
+        // Fome abaixa 1 a cada 10s
+        if (now - this._lastFomeTime >= 10000 && fome > 0) {
+            fome = Math.max(0, fome - 10);
+            this.conditions.fome = fome;
+            this._lastFomeTime += 10000;
+        }
+        // Garante que fome nunca volte para 100 automaticamente
+        if (fome <= 0) {
+            this.conditions.fome = 0;
+        }
+
+        // Se fome zerou, perde 1 de vida a cada 10s
+        if (fome <= 0 && this.hp > 0 && now - this._lastFomeDanoTime >= 10000) {
+            this.hp = Math.max(0, this.hp - 1);
+            this._lastFomeDanoTime += 10000;
+        }
+        // Se fome voltou a ser > 0, reseta timer de dano
+        if (fome > 0) this._lastFomeDanoTime = now;
+
+        // Regeneração de stamina se parado
+        if (!this._lastMoveTime) this._lastMoveTime = Date.now();
+        if (!this.conditions) this.conditions = {};
+        let staminaAtual = 100;
+        if (typeof this.conditions.stamina === 'number') {
+            staminaAtual = this.conditions.stamina;
+        } else if (typeof this.conditions.stamina === 'string') {
+            staminaAtual = parseFloat(this.conditions.stamina) || 100;
+        }
+        // Se ficou 2s sem andar, regenera 2 pontos
+        if (!this._lastPos) this._lastPos = {x: this.x, y: this.y, z: this.z};
+        if (this.x !== this._lastPos.x || this.y !== this._lastPos.y || this.z !== this._lastPos.z) {
+            this._lastMoveTime = Date.now();
+            this._lastPos = {x: this.x, y: this.y, z: this.z};
+        } else {
+            // Parado
+            const now = Date.now();
+            if (now - this._lastMoveTime >= 2000 && staminaAtual < 100) {
+                staminaAtual = Math.min(100, staminaAtual + 4);
+                this.conditions.stamina = staminaAtual;
+                this._lastMoveTime = now; // só regenera a cada 2s parado
+            }
+        }
+
         if (this.attackCooldown > 0) {
             this.attackCooldown -= deltaTime * 1000;
         }
@@ -122,7 +190,8 @@ export class Player extends Entity {
             pokemonName: this.pokemonName || null,
             // Corrige: envia skills como array de strings (JSON serializados)
             skills: this.skills ? this.skills.map(skill => typeof skill === 'string' ? skill : JSON.stringify(skill)) : [],
-            town_id: this.town_id || 1
+            town_id: this.town_id || 1,
+            conditions: this.conditions || {}
         };
     }
 }

@@ -74,14 +74,11 @@ export class AuthHandler {
                 sprite: playerData.lookaddons || 'default',
                 direction: directionString,
                 town_id: playerData.town_id, // <-- Preenche town_id do banco
+                conditions: playerData.conditions || {}, // <-- Corrige: garante que conditions do banco seja passado
                 // Adiciona mais campos conforme necessário
             });
 
-                // Calcula HP dinâmico baseado no level do player
-                if (typeof player.level === 'number' && !isNaN(player.level)) {
-                    player.maxHp = GameConstants.PLAYER_HP_INITIAL + GameConstants.PLAYER_HP_INCREASE_PER_LEVEL * player.level;
-                    player.hp = player.maxHp;
-                }
+                // NÃO recalcula maxHp aqui! O GameWorld já faz o cálculo correto.
             
             client.setPlayer(player);
             client.authenticate();
@@ -104,9 +101,12 @@ export class AuthHandler {
             
             // Envia resposta
             // console.log('[DEBUG][SERVER] player.serialize() enviado para o client:', player.serialize());
+            // Garante que o player enviado no login_success já venha com isLocal: true
+            const playerDataLogin = player.serialize();
+            playerDataLogin.isLocal = true;
             client.send(ServerEvents.LOGIN_SUCCESS, {
                 playerId: player.id,
-                player: player.serialize()
+                players: [playerDataLogin]
             });
             
             // Envia balance atualizado

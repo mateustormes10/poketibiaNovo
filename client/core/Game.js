@@ -445,17 +445,41 @@ export class Game {
                     const wildType = wild.element || wild.type || wild.pokemonType || 'normal';
                     const atkType = fullSkill.element || 'normal';
                     let multiplier = getTypeEffectiveness(atkType, wildType);
-                    let finalDmg = Math.round(fullSkill.power * multiplier);
+                    // --- Cálculo avançado de dano ---
+                    const conditions = player.conditions || {};
+                    const basePower = fullSkill.power || 0;
+                    const extraDamage = Number(conditions.damage) || 0;
+                    const critChance = Number(conditions.crit_chance) || 0;
+                    const critDamage = Number(conditions.crit_damage) || 0;
+                    // Determina quantos críticos (critChance pode ser >100%)
+                    let crits = 0;
+                    if (critChance > 0) {
+                        // Para cada 100%, garante 1 crítico
+                        crits = Math.floor(critChance / 100);
+                        // Para a parte decimal, sorteia
+                        const critDecimal = critChance % 100;
+                        if (Math.random() * 100 < critDecimal) crits += 1;
+                    }
+                    let critMultiplier = 1;
+                    if (crits > 0) {
+                        // Cada crítico dobra o power, e aumenta pelo critDamage (%)
+                        critMultiplier = crits * (2 + critDamage / 100);
+                    }
+                    let finalDmg = Math.round((basePower * multiplier * critMultiplier) + extraDamage);
                     // Envia dano ao servidor
                     this.wsClient.send('wild_pokemon_damage', {
                         wildPokemonId: wild.id,
                         damage: finalDmg,
                         skillName,
-                        attackerId: player.id
+                        attackerId: player.id,
+                        crits,
+                        critMultiplier,
+                        critChance,
+                        critDamage
                     });
                     // (Opcional: pode remover a linha abaixo se quiser que só o servidor controle o HP)
                     // wild.hp = Math.max(0, (wild.hp || 100) - finalDmg);
-                    console.log(`[DANO] ${wild.name} (${wildType}) recebeu ${finalDmg} de dano de ${atkType} (x${multiplier}) [ENVIADO AO SERVIDOR]`);
+                    console.log(`[DANO] ${wild.name} (${wildType}) recebeu ${finalDmg} de dano de ${atkType} (x${multiplier}) [CRITs=${crits} x${critMultiplier}] [ENVIADO AO SERVIDOR]`);
                 }
             }
         }

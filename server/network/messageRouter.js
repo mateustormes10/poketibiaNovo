@@ -210,8 +210,15 @@ export class MessageRouter {
                     player.sprite = 'default';
                 }
                 player.skills = [];
-                player.maxHp = player.baseMaxHp || player.maxHp || 100;
+                // Corrige: recalcula maxHp do player normal (100 + level*10 + hit_points*10)
+                const baseHp = 100;
+                const level = Number(player.level) || 1;
+                const pontosHp = Number(player.conditions?.hit_points || 0);
+                const calculatedMaxHp = baseHp + (level * 10) + (pontosHp * 10);
+                console.log(`[SERVER DEBUG] Calculando maxHp para player '${player.name}': baseHp=${baseHp}, level=${level}, pontosHp=${pontosHp}, formula=100 + ${level}*10 + ${pontosHp}*10 = ${calculatedMaxHp}`);
+                player.maxHp = calculatedMaxHp;
                 player.hp = Math.min(player.hp, player.maxHp);
+                console.log(`[SERVER DEBUG] Após cálculo: player='${player.name}', maxHp=${player.maxHp}, hp=${player.hp}`);
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
@@ -241,7 +248,8 @@ export class MessageRouter {
 
                 // Ajuste: soma a vida do Pokémon apenas ao maxHp, hp permanece igual
                 const pokemonHp = pokeData.maxHp || pokeData.hp || 0;
-                player.maxHp = player.baseMaxHp + pokemonHp;
+                const calculatedPokeMaxHp = player.baseMaxHp + pokemonHp;
+                player.maxHp = calculatedPokeMaxHp;
                 // Garante que hp não ultrapasse o novo maxHp
                 if (player.hp > player.maxHp) player.hp = player.maxHp;
 
@@ -337,6 +345,52 @@ export class MessageRouter {
         this.handlers.set(InventoryClientEvents.REQUEST_INVENTORY, inventoryHandler.handleInventoryRequest.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.USE_ITEM, inventoryHandler.handleUseItem.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.DROP_ITEM, inventoryHandler.handleDropItem.bind(inventoryHandler));
+        // Handler para adicionar ponto em atributo do player
+        this.handlers.set('add_points_player', async (client, data) => {
+            // data: { atributo: 'hit_points' }
+            const playerId = client.player?.id || client.playerId;
+            if (!playerId) return;
+            const player = this.gameWorld.players.get(playerId);
+            if (!player) return;
+            // Lista de atributos válidos
+            const validAttrs = [
+                'hit_points', 'velocity', 'damage', 'defense', 'crit_chance',
+                'crit_damage', 'dodge', 'coundown', 'scan_efficiency', 'lucky'
+            ];
+            const attr = data?.atributo;
+            if (!validAttrs.includes(attr)) {
+                client.send('system_message', { message: `Atributo inválido: ${attr}` });
+                return;
+            }
+            // Atualiza o campo conditions (JSON)
+            if (!player.conditions) player.conditions = {};
+            if (typeof player.conditions === 'string') {
+                try { player.conditions = JSON.parse(player.conditions); } catch {}
+            }
+            if (!player.conditions[attr]) player.conditions[attr] = 0;
+            player.conditions[attr] = Number(player.conditions[attr]) + 1;
+            // Atualiza points: subtrai 1
+            if (!player.conditions.points) player.conditions.points = 0;
+            player.conditions.points = Math.max(0, Number(player.conditions.points) - 1);
+
+            // Se for hit_points, recalcula maxHp do player (100 + level*10 + hit_points*10)
+            if (attr === 'hit_points') {
+                const baseHp = 100;
+                const level = Number(player.level) || 1;
+                const pontosHp = Number(player.conditions.hit_points || 0);
+                player.maxHp = baseHp + (level * 10) + (pontosHp * 10);
+                player.hp = player.maxHp;
+            }
+
+            // Atualiza no banco se necessário
+            if (this.gameWorld.playerRepository && typeof this.gameWorld.playerRepository.updateConditions === 'function') {
+                await this.gameWorld.playerRepository.updateConditions(playerId, player.conditions);
+            }
+            // Envia novo estado do jogo para o client
+            const gameState = this.gameWorld.getGameState(player);
+            client.send('gameState', gameState);
+            client.send('system_message', { message: `+1 ponto em ${attr}, -1 ponto disponível` });
+        });
         
         // Wild Pokémon handlers
         const wildPokemonHandlers = setupWildPokemonHandler(this.gameWorld);

@@ -19,6 +19,17 @@ export class MovementHandler {
         }
         if (!player) return;
 
+                // Trava: impede movimento se stamina <= 0
+                let staminaAtual = 100;
+                if (player.conditions && typeof player.conditions.stamina === 'number') {
+                    staminaAtual = player.conditions.stamina;
+                } else if (player.conditions && typeof player.conditions.stamina === 'string') {
+                    staminaAtual = parseFloat(player.conditions.stamina) || 100;
+                }
+                if (staminaAtual <= 0) {
+                    client.send('system_message', { message: 'Você está exausto! Espere a stamina recarregar para andar.', color: 'yellow' });
+                    return;
+                }
         // Checa colisão de mapa antes de atualizar posição
         const { direction } = data;
         let city = data.mapaAtual || player.city || player.mapaAtual || (player.name && player.name.split('_')[0]) || 'CidadeInicial';
@@ -76,6 +87,19 @@ export class MovementHandler {
                 player.x = data.x;
                 player.y = data.y;
                 player.z = data.z;
+
+                // Subtrai 2 pontos de stamina a cada passo
+                if (!player.conditions) player.conditions = {};
+                let staminaAtual = 100;
+                if (typeof player.conditions.stamina === 'number') {
+                    staminaAtual = player.conditions.stamina;
+                } else if (typeof player.conditions.stamina === 'string') {
+                    staminaAtual = parseFloat(player.conditions.stamina) || 100;
+                }
+                staminaAtual = Math.max(0, staminaAtual - 0.5);
+                player.conditions.stamina = staminaAtual;
+                // Opcional: log para debug
+                // console.log(`[STAMINA] Player ${player.name} perdeu 2 stamina ao andar. Novo valor: ${staminaAtual}`);
             }
         }
         if (direction) {

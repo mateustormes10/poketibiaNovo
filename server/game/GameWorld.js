@@ -98,19 +98,20 @@ export class GameWorld {
             logger.warn(`Cannot save player ${player.name} - no database ID`);
             return;
         }
+        // Salva o valor atual de player.conditions (ex: fome/stamina do momento do logout)
         await this.playerRepository.update(player.dbId, {
-                x: player.x,
-                y: player.y,
-                z: player.z,
-                hp: player.hp,
-                mp: player.mp,
-                level: player.level,
-                exp: player.exp || 0,
-                direction: player.toDirectionNumber(),
-                sprite: player.sprite
-            });
-            
-            logger.info(`Player ${player.name} saved successfully (pos: ${player.x},${player.y},${player.z}, hp: ${player.hp})`);
+            x: player.x,
+            y: player.y,
+            z: player.z,
+            hp: player.hp,
+            mp: player.mp,
+            level: player.level,
+            exp: player.exp || 0,
+            direction: player.toDirectionNumber(),
+            sprite: player.sprite,
+            conditions: player.conditions // Salva o valor real do objeto
+        });
+        logger.info(`Player ${player.name} saved successfully (pos: ${player.x},${player.y},${player.z}, hp: ${player.hp}, conditions: ${JSON.stringify(player.conditions)})`);
 
     }
     
@@ -136,8 +137,11 @@ export class GameWorld {
             player.y = templeY;
             player.z = templeZ;
             
-            // Restaura HP
+            // Restaura HP, stamina e fome
             player.hp = player.maxHp;
+            if (!player.conditions) player.conditions = {};
+            player.conditions.stamina = 100;
+            player.conditions.fome = 100;
             player.isDead = false;
             
             // Salva nova posição no banco
@@ -153,6 +157,9 @@ export class GameWorld {
                     respawnY: templeY,
                     respawnZ: templeZ
                 });
+                // Envia gamestate atualizado com conditions restaurados
+                const gameState = this.getGameState(player);
+                client.send('GAME_STATE', gameState);
             }
             
             logger.info(`Player ${player.name} respawned at temple (${templeX}, ${templeY}, ${templeZ})`);
@@ -207,6 +214,39 @@ export class GameWorld {
         player.gameWorld = this; // Referência ao GameWorld
         player.clientState = null; // Garante que clientState começa nulo
         this.players.set(player.id, player);
+        // Corrige pontos disponíveis ao conectar
+        if (!player.conditions) player.conditions = {};
+        if (typeof player.conditions === 'string') {
+            try { player.conditions = JSON.parse(player.conditions); } catch {}
+        }
+        // Lista de atributos
+        const attrs = [
+            'hit_points', 'velocity', 'damage', 'defense', 'crit_chance',
+            'crit_damage', 'dodge', 'coundown', 'scan_efficiency', 'lucky'
+        ];
+        // Soma pontos já distribuídos
+        let pontosDistribuidos = 0;
+        for (const attr of attrs) {
+            pontosDistribuidos += Number(player.conditions[attr] || 0);
+        }
+        // Calcula pontos totais pelo level
+        const pontosTotais = (Number(player.level) || 1) * 5;
+        // Atualiza points
+        player.conditions.points = Math.max(0, pontosTotais - pontosDistribuidos);
+
+        // FORÇA O CÁLCULO DE MAXHP SEMPRE QUE O PLAYER ENTRA NO GAMEWORLD
+        // Cálculo correto: maxHp = 100 + level * 10 + hit_points * 10
+        const baseHp = 100;
+        const level = Number(player.level) || 1;
+        const pontosHp = Number(player.conditions.hit_points || 0);
+        const calculatedMaxHp = baseHp + (level * 10) + (pontosHp * 10);
+        player.maxHp = calculatedMaxHp;
+        if (player.hp > player.maxHp) player.hp = player.maxHp;
+
+        // Opcional: salva no banco
+        if (this.playerRepository && typeof this.playerRepository.updateConditions === 'function') {
+            await this.playerRepository.updateConditions(player.id, player.conditions);
+        }
         // Adiciona ao spatial grid
         logger.info(`Player added: ${player.name} (${player.id})`);
         return player;
@@ -360,9 +400,7 @@ export class GameWorld {
 
         const serializedPlayers = playersInView.map(p => {
             const data = p.serialize();
-            if (p.id === player.id) {
-                data.isLocal = true;
-            }
+            data.isLocal = (p.id === player.id); // Só o player do socket recebe true
             return data;
         });
         
