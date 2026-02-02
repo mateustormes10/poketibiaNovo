@@ -17,12 +17,12 @@ export class PortalHandler {
         // Verifica player
         const playerId = client.player?.id || client.playerId;
         if (!playerId) {
-            console.warn('[MessageRouter] portal: client has no player or playerId');
+			logger.warn('portal: client has no player or playerId');
             return;
         }
         const player = this.gameWorld.players.get(playerId);
         if (!player) {
-            console.warn('[MessageRouter] portal: player not found');
+			logger.warn('portal: player not found');
             return;
         }
 
@@ -30,7 +30,7 @@ export class PortalHandler {
             // Só teleporta se a posição de destino for diferente da atual
             if (player.x !== data.to.x || player.y !== data.to.y || player.z !== data.to.z) {
                 // Log antes da mudança
-                console.log('[PORTAL] Antes do teleporte:', {
+				logger.debug('[PORTAL] Antes do teleporte:', {
                     id: player.id,
                     x: player.x,
                     y: player.y,
@@ -51,11 +51,11 @@ export class PortalHandler {
                     const newTownId = townMap[data.to.cidade] || 1;
                     await this.playerRepository.updateTownId(player.dbId, newTownId);
                     player.town_id = newTownId; // <-- Atualiza em memória também!
-                    console.log(`[PORTAL] town_id do player ${player.name} atualizado para ${newTownId} (${data.to.cidade})`);
+					logger.debug(`[PORTAL] town_id do player ${player.name} atualizado para ${newTownId} (${data.to.cidade})`);
                 }
 
                 // Log depois da mudança
-                console.log('[PORTAL] Depois do teleporte:', {
+				logger.debug('[PORTAL] Depois do teleporte:', {
                     id: player.id,
                     x: player.x,
                     y: player.y,
@@ -66,17 +66,17 @@ export class PortalHandler {
                 // Envia o novo gameState para o player
                 const gameState = this.gameWorld.getGameState(player);
                 // Log do gameState enviado
-                console.log('[PORTAL] Enviando gameState para player:', player.id, JSON.stringify(gameState.players.find(p => p.id === player.id)));
+				logger.debug('[PORTAL] Enviando gameState para player:', player.id);
                 client.send('gameState', gameState);
-                console.log(`[PORTAL] Player ${player.name} teleportado para (${player.x},${player.y},${player.z}) via portal.`);
+				logger.debug(`[PORTAL] Player ${player.name} teleportado para (${player.x},${player.y},${player.z}) via portal.`);
             } else {
                 // Se já está na posição, apenas envia o gameState para garantir atualização de configuração
                 const gameState = this.gameWorld.getGameState(player);
-                console.log('[PORTAL] Player já está na posição de destino. Enviando gameState para atualização de configuração.', player.id);
+				logger.debug('[PORTAL] Player já está na posição de destino. Enviando gameState para atualização de configuração.', player.id);
                 client.send('gameState', gameState);
             }
         } else {
-            console.warn('[MessageRouter] portal: dados de destino inválidos', data);
+			logger.warn('portal: dados de destino inválidos', data);
         }
     }
 }

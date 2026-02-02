@@ -5,6 +5,10 @@
  * Fonte da verdade para todos os itens
  */
 
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('InventoryRepository');
+
 export class InventoryRepository {
     constructor(database) {
         this.db = database;
@@ -27,8 +31,8 @@ export class InventoryRepository {
             WHERE player_id = ? AND quantity > 0
             ORDER BY created_at ASC
         `;
-            console.log('[InventoryRepository] getInventory playerId:', playerId);
-            return await this.db.query(sql, [playerId]);
+    		logger.debug('getInventory playerId:', playerId);
+    		return await this.db.query(sql, [playerId]);
     }
 
     /**

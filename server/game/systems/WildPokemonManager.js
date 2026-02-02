@@ -60,7 +60,7 @@ export class WildPokemonManager {
      * @returns {WildPokemon}
      */
     spawnPokemon(data, broadcast = true) {
-        console.log('[DEBUG] spawnPokemon chamada:', { id: data.id, name: data.name, x: data.x, y: data.y, z: data.z, hp: data.hp });
+		logger.debug('[WILD] spawnPokemon called:', { id: data?.id, name: data?.name, x: data?.x, y: data?.y, z: data?.z, hp: data?.hp });
         // Se vier ID fixo, usa ele, senão gera novo
         const id = data.id ?? this.nextId++;
         // Se já existe um Pokémon com esse ID, nunca sobrescreve HP ou estado!
@@ -133,7 +133,7 @@ export class WildPokemonManager {
         
         // Log ocasional para debug
         if (Math.random() < 0.01) { // 1% de chance
-            console.log(`[WildPokemonManager] Update: ${this.wildPokemons.size} pokémons, ${players.length} players online, currentTime=${currentTime}`);
+			logger.debug(`[WILD] Update: ${this.wildPokemons.size} pokémons, ${players.length} players online, currentTime=${currentTime}`);
         }
         
         // Atualiza cada Pokémon
@@ -208,8 +208,13 @@ export class WildPokemonManager {
      */
     broadcastSpawn(wildPokemon) {
         const data = wildPokemon.toDTO();
+        const range = 25;
         for (const client of this.gameWorld.server.clients.values()) {
-            if (client.player) {
+            if (!client.player) continue;
+            if (client.player.z !== wildPokemon.z) continue;
+            const dx = Math.abs(client.player.x - wildPokemon.x);
+            const dy = Math.abs(client.player.y - wildPokemon.y);
+            if (dx <= range && dy <= range) {
                 client.send(WildPokemonServerEvents.WILD_POKEMON_SPAWN, data);
             }
         }
@@ -221,17 +226,21 @@ export class WildPokemonManager {
      */
     broadcastUpdate(wildPokemon) {
         const data = wildPokemon.toDTO();
-        console.log('[WildPokemonManager] broadcastUpdate DTO:', JSON.stringify(data));
+		logger.debug('[WILD] broadcastUpdate DTO:', data);
         let clientCount = 0;
-        for (const client of this.gameWorld.server.clients.values()) {
-            if (client.player) {
-                // console.log(`[WildPokemonManager] Enviando update de ${wildPokemon.name} para ${client.player.name}`);
-                client.send(WildPokemonServerEvents.WILD_POKEMON_UPDATE, data);
-                clientCount++;
-            }
-        }
+		const range = 25;
+		for (const client of this.gameWorld.server.clients.values()) {
+			if (!client.player) continue;
+			if (client.player.z !== wildPokemon.z) continue;
+			const dx = Math.abs(client.player.x - wildPokemon.x);
+			const dy = Math.abs(client.player.y - wildPokemon.y);
+			if (dx <= range && dy <= range) {
+				client.send(WildPokemonServerEvents.WILD_POKEMON_UPDATE, data);
+				clientCount++;
+			}
+		}
         if (clientCount === 0) {
-            console.log(`[WildPokemonManager] AVISO: Nenhum cliente conectado para receber update de ${wildPokemon.name}`);
+			logger.debug(`[WILD] Nenhum cliente conectado para receber update de ${wildPokemon.name}`);
         }
     }
 
@@ -240,10 +249,11 @@ export class WildPokemonManager {
      * @param {number} id - ID do Pokémon
      */
     broadcastDespawn(id) {
-        for (const client of this.gameWorld.server.clients.values()) {
-            if (client.player) {
-                client.send(WildPokemonServerEvents.WILD_POKEMON_DESPAWN, { id });
-            }
-        }
+		// Para despawn, manda para todos (baixo volume) para evitar clientes com cache de monstro
+		for (const client of this.gameWorld.server.clients.values()) {
+			if (client.player) {
+				client.send(WildPokemonServerEvents.WILD_POKEMON_DESPAWN, { id });
+			}
+		}
     }
 }

@@ -1,26 +1,49 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// Executa o generate_sprites_index.js ao iniciar o servidor, antes de carregar mapas
-import { execSync } from 'child_process';
-// try {
-// 	console.log('[INIT] Gerando sprites_index.json...');
-// 	execSync('node ./generate_sprites_index.js', { stdio: 'inherit', cwd: __dirname });
-// 	console.log('[INIT] sprites_index.json atualizado com sucesso!');
-// } catch (err) {
-// 	console.error('[INIT] Erro ao gerar sprites_index.json:', err);
-// }
+import { config } from './config/serverConfig.js';
+import { Database } from './config/database.js';
+import { Logger } from './utils/Logger.js';
+import { startHttpServer } from './httpServer.js';
+import { startGameServer } from './websocketServer.js';
 
-// Inicializador unificado: HTTP API (Express) e WebSocket/Game
-import('./httpServer.js')
-	.then(() => {
-		console.log('[INIT] HTTP API iniciado com sucesso. Iniciando servidor WebSocket/Game...');
-		return import('./websocketServer.js');
-	})
-	.then(() => {
-		console.log('[INIT] WebSocket/Game iniciado com sucesso.');
-	})
-	.catch((err) => {
-		console.error('[INIT] Falha ao iniciar servidores:', err);
-		process.exit(1);
+const logger = new Logger('INIT');
+
+async function main() {
+	logger.info('Starting ChaosWar servers...');
+
+	const database = new Database(config.database);
+	await database.connect();
+
+	const http = await startHttpServer({ database, config });
+	logger.info(`HTTP API started on port ${config.httpPort}`);
+
+	const game = await startGameServer({ database, config });
+	logger.info(`WebSocket/Game started on port ${config.port}`);
+
+	const shutdown = async (reason) => {
+		logger.warn(`Shutting down (${reason})...`);
+		try {
+			await Promise.allSettled([
+				http?.stop?.(),
+				game?.stop?.()
+			]);
+		} finally {
+			await database.disconnect().catch(() => {});
+		}
+		process.exit(0);
+	};
+
+	process.on('SIGINT', () => shutdown('SIGINT'));
+	process.on('SIGTERM', () => shutdown('SIGTERM'));
+	process.on('unhandledRejection', (err) => {
+		logger.error('Unhandled promise rejection:', err);
+		shutdown('unhandledRejection');
 	});
+	process.on('uncaughtException', (err) => {
+		logger.error('Uncaught exception:', err);
+		shutdown('uncaughtException');
+	});
+}
+
+main().catch((err) => {
+	logger.error('Failed to start servers:', err);
+	process.exit(1);
+});

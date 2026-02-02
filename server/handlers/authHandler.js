@@ -21,22 +21,22 @@ export class AuthHandler {
             const accountId = 1;
 
             // LOG EXTRA: Mostra o playerId recebido
-            console.log('[AuthHandler][DEBUG] playerId recebido do cliente:', playerId, '| Usado:', playerIdToUse);
+			logger.debug('playerId recebido do cliente:', playerId, '| Usado:', playerIdToUse);
 
             // Busca player do banco de dados
             const playerData = await this.playerRepository.findById(playerIdToUse);
 
             // LOG EXTRA: Mostra o nome do personagem retornado
-            console.log('[AuthHandler][DEBUG] playerData retornado:', playerData ? playerData.name : 'NULO');
+			logger.debug('playerData retornado:', playerData ? playerData.name : 'NULO');
 
             // LOG do valor de experiência
-            console.log('[AuthHandler][DEBUG] experience do banco:', playerData ? playerData.experience : 'NULO');
+			logger.debug('experience do banco:', playerData ? playerData.experience : 'NULO');
 
-            console.log('[AuthHandler] Raw playerData from DB:', JSON.stringify({
+			logger.debug('Raw playerData from DB:', {
                 name: playerData?.name,
                 lookaddons: playerData?.lookaddons,
                 direction: playerData?.direction
-            }));
+			});
             
             if (!playerData) {
                 logger.error(`Player not found: ${playerIdToUse}`);
@@ -53,7 +53,7 @@ export class AuthHandler {
             const directionValue = playerData.direction || 2;
             const directionString = directionMap[directionValue] || 'down';
             
-            console.log(`[AuthHandler] Player ${playerData.name} - lookaddons: ${playerData.lookaddons}, direction: ${directionValue} -> ${directionString}`);
+			logger.debug(`Player ${playerData.name} - lookaddons: ${playerData.lookaddons}, direction: ${directionValue} -> ${directionString}`);
             
             // Usa dados do banco e aguarda carregamento dos chunks
             // console.log('[DEBUG][SERVER] playerData recebido do banco:', playerData);
@@ -97,7 +97,7 @@ export class AuthHandler {
             // Define o goldCoin no player
             player.goldCoin = balance;
             
-            console.log('[AuthHandler] Player object before serialize - sprite:', player.sprite, 'direction:', player.direction);
+			logger.debug('Player object before serialize - sprite:', player.sprite, 'direction:', player.direction);
             
             // Envia resposta
             // console.log('[DEBUG][SERVER] player.serialize() enviado para o client:', player.serialize());

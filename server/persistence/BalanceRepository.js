@@ -1,3 +1,7 @@
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('BalanceRepository');
+
 export class BalanceRepository {
     constructor(database) {
         this.db = database;
@@ -28,14 +32,13 @@ export class BalanceRepository {
      * Adiciona gold coin ao player
      */
     async addGold(playerId, amount) {
-        console.log(`[BalanceRepository] addGold chamado: playerId=${playerId}, amount=${amount}`);
+        logger.debug(`addGold called: playerId=${playerId}, amount=${amount}`);
         const updateResult = await this.db.query(
             'UPDATE balance SET gold_coin = gold_coin + ? WHERE player_id = ?',
             [amount, playerId]
         );
-        console.log(`[BalanceRepository] UPDATE result:`, updateResult);
         const newBalance = await this.getBalance(playerId);
-        console.log(`[BalanceRepository] Novo saldo de gold_coin para playerId=${playerId}: ${newBalance}`);
+        logger.debug(`New gold_coin balance: playerId=${playerId}, gold_coin=${newBalance}`);
         return newBalance;
     }
 

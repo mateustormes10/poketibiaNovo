@@ -1,3 +1,7 @@
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('WsClient');
+
 export class WsClient {
     constructor(id, ws, gameWorld) {
         this.id = id;
@@ -11,7 +15,12 @@ export class WsClient {
         if (!this.isConnected()) return;
         
         const message = JSON.stringify({ type, data });
-        this.ws.send(message);
+        try {
+            this.ws.send(message);
+        } catch (error) {
+            logger.warn(`Send failed for ${this.id}:`, error?.message || error);
+            try { this.ws.terminate(); } catch {}
+        }
     }
     
     isConnected() {
@@ -22,7 +31,7 @@ export class WsClient {
         this.player = player;
         this.playerId = player.id; // Adiciona também como playerId para compatibilidade
         player.clientState = this; // Vincula o WsClient ao player
-        console.log(`[WsClient] Player set: ${player.name} (ID: ${player.id}) | clientState vinculado`);
+		logger.info(`Player set: ${player.name} (ID: ${player.id}) | clientState vinculado`);
     }
     
     authenticate() {

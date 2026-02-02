@@ -1,14 +1,19 @@
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('PlayerRepository');
+
 export class PlayerRepository {
-        async updateTownId(id, townId) {
-            console.log(`[PlayerRepository] updateTownId chamado para id=${id}, townId=${townId}`);
-            const sql = 'UPDATE players SET town_id = ? WHERE id = ?';
-            const result = await this.db.update(sql, [townId, id]);
-            console.log(`[PlayerRepository] updateTownId resultado:`, result);
-            return result;
-        }
-    constructor(database) {
-        this.db = database;
-    }
+	constructor(database) {
+		this.db = database;
+	}
+
+	async updateTownId(id, townId) {
+		logger.debug(`updateTownId called: id=${id}, townId=${townId}`);
+		const sql = 'UPDATE players SET town_id = ? WHERE id = ?';
+		const result = await this.db.update(sql, [townId, id]);
+		logger.debug('updateTownId result:', result);
+		return result;
+	}
     
     async findById(id) {
         const sql = 'SELECT * FROM players WHERE id = ?';

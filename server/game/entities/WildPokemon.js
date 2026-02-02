@@ -14,7 +14,7 @@ const logger = new Logger('WildPokemon');
 
 export class WildPokemon {
     constructor(data) {
-        console.log('[DEBUG] Criando WildPokemon:', { id: data.id, name: data.name, x: data.x, y: data.y, z: data.z, hp: data.hp });
+		logger.debug('[WILD] Criando WildPokemon:', { id: data?.id, name: data?.name, x: data?.x, y: data?.y, z: data?.z, hp: data?.hp });
         this.id = data.id;
         this.name = data.name;
         this.level = data.level || 5;
@@ -258,7 +258,7 @@ export class WildPokemon {
                     targetArea = skill.targetArea;
                 }
             } catch (e) {
-                console.warn('[WildPokemon] Erro ao buscar targetArea:', e);
+				logger.warn('Erro ao buscar targetArea:', e);
             }
             if (this.gameWorld && this.gameWorld.server) {
                 for (const client of this.gameWorld.server.clients.values()) {
@@ -310,90 +310,81 @@ export class WildPokemon {
      * @param {Object} target - Alvo (player)
      */
     moveTowards(target) {
-        // Pathfinding A* aprimorado para garantir encostar no player
-        logger.debug(`[WILD] ${this.name} (${this.id}) tentando mover de (${this.x},${this.y}) para (${target.x},${target.y})`);
+		if (!target) return;
+		logger.debug(`[WILD] ${this.name} (${this.id}) tentando mover de (${this.x},${this.y}) para (${target.x},${target.y})`);
 
-        // Tiles adjacentes ao player (incluindo diagonais)
-        const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
-        // Corrige para garantir que o nome da cidade/mapa seja sempre o correto, nunca o nome do monstro
-        let city = this.city || this.mapaAtual || (this.gameWorld && this.gameWorld.currentMapName) || 'CidadeInicial';
-        const adjacents = [];
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue; // Ignora o tile do player
-                adjacents.push({ x: target.x + dx, y: target.y + dy });
-            }
-        }
-        // Filtra apenas os walkable e não ocupados
-        const validAdjacents = adjacents.filter(pos =>
-            !this.isPositionOccupied(pos.x, pos.y, this.z) &&
-            mapManager && typeof mapManager.isWalkable === 'function' &&
-            mapManager.isWalkable(city, this.z, pos.x, pos.y)
-        );
+		const mapManager = this.gameWorld ? this.gameWorld.mapManager : null;
+		const city = this.city || this.mapaAtual || (this.gameWorld && this.gameWorld.currentMapName) || 'CidadeInicial';
+		if (!mapManager || typeof mapManager.isWalkable !== 'function') return;
 
-        // Função heurística Manhattan
-        function heuristic(ax, ay, bx, by) {
-            return Math.abs(ax - bx) + Math.abs(ay - by);
-        }
+		// Tiles adjacentes ao player (incluindo diagonais) que são válidos (walkable e desocupados)
+		const destinationKeys = new Set();
+		for (let dx = -1; dx <= 1; dx++) {
+			for (let dy = -1; dy <= 1; dy++) {
+				if (dx === 0 && dy === 0) continue;
+				const tx = target.x + dx;
+				const ty = target.y + dy;
+				if (this.isPositionOccupied(tx, ty, this.z)) continue;
+				if (!mapManager.isWalkable(city, this.z, tx, ty)) continue;
+				destinationKeys.add(`${tx},${ty}`);
+			}
+		}
 
-        // A* para múltiplos destinos (apenas tiles adjacentes válidos)
-        let bestPath = null;
-        let bestDest = null;
-        let bestLen = Infinity;
-        for (const dest of validAdjacents) {
-            const open = [];
-            const closed = new Set();
-            open.push({ x: this.x, y: this.y, path: [] });
-            let found = null;
-            const maxSteps = 100; // Aumentado para evitar desistência prematura
-            while (open.length > 0 && !found) {
-                open.sort((a, b) => heuristic(a.x, a.y, dest.x, dest.y) - heuristic(b.x, b.y, dest.x, dest.y));
-                const current = open.shift();
-                const key = `${current.x},${current.y}`;
-                if (closed.has(key)) continue;
-                closed.add(key);
-                if (current.x === dest.x && current.y === dest.y) {
-                    found = current.path;
-                    break;
-                }
-                if (current.path.length >= maxSteps) {
-                    continue;
-                }
-                const directions = [
-                    { dx: 0, dy: -1, dir: 'up' },
-                    { dx: 0, dy: 1, dir: 'down' },
-                    { dx: -1, dy: 0, dir: 'left' },
-                    { dx: 1, dy: 0, dir: 'right' }
-                ];
-                for (const d of directions) {
-                    const nx = current.x + d.dx;
-                    const ny = current.y + d.dy;
-                    const nkey = `${nx},${ny}`;
-                    if (closed.has(nkey)) continue;
-                    if (
-                        (mapManager && typeof mapManager.isWalkable === 'function' && !mapManager.isWalkable(city, this.z, nx, ny)) ||
-                        this.isPositionOccupied(nx, ny, this.z)
-                    ) {
-                        continue;
-                    }
-                    open.push({ x: nx, y: ny, path: [...current.path, d] });
-                }
-            }
-            if (found && found.length < bestLen) {
-                bestPath = found;
-                bestDest = dest;
-                bestLen = found.length;
-            }
-        }
-        if (bestPath && bestPath.length > 0) {
-            const step = bestPath[0];
-            logger.debug(`[WILD] ${this.name} (${this.id}) moveu para (${this.x + step.dx},${this.y + step.dy}) direção ${step.dir}`);
-            this.x += step.dx;
-            this.y += step.dy;
-            this.direction = step.dir;
-        } else {
-            logger.debug(`[WILD] ${this.name} (${this.id}) não encontrou caminho para nenhum tile adjacente ao player. Motivo provável: todos ocupados ou bloqueados.`);
-        }
+		if (destinationKeys.size === 0) {
+			logger.debug(`[WILD] ${this.name} (${this.id}) sem tiles adjacentes válidos ao player (ocupados/bloqueados).`);
+			return;
+		}
+
+		// BFS limitado: encontra o próximo passo até qualquer destino
+		const directions = [
+			{ dx: 0, dy: -1, dir: 'up' },
+			{ dx: 0, dy: 1, dir: 'down' },
+			{ dx: -1, dy: 0, dir: 'left' },
+			{ dx: 1, dy: 0, dir: 'right' }
+		];
+
+		const startKey = `${this.x},${this.y}`;
+		const visited = new Set([startKey]);
+		const queue = [{ x: this.x, y: this.y, firstStep: null }];
+		let qHead = 0;
+		let expanded = 0;
+		const maxExpanded = 400; // limite de segurança para não travar o loop
+
+		let chosenFirstStep = null;
+		while (qHead < queue.length) {
+			const current = queue[qHead++];
+			const key = `${current.x},${current.y}`;
+			if (destinationKeys.has(key)) {
+				chosenFirstStep = current.firstStep;
+				break;
+			}
+			if (expanded++ >= maxExpanded) break;
+
+			for (const d of directions) {
+				const nx = current.x + d.dx;
+				const ny = current.y + d.dy;
+				const nKey = `${nx},${ny}`;
+				if (visited.has(nKey)) continue;
+				visited.add(nKey);
+				if (!mapManager.isWalkable(city, this.z, nx, ny)) continue;
+				if (this.isPositionOccupied(nx, ny, this.z)) continue;
+				queue.push({
+					x: nx,
+					y: ny,
+					firstStep: current.firstStep ?? d
+				});
+			}
+		}
+
+		if (chosenFirstStep) {
+			logger.debug(`[WILD] ${this.name} (${this.id}) moveu para (${this.x + chosenFirstStep.dx},${this.y + chosenFirstStep.dy}) direção ${chosenFirstStep.dir}`);
+			this.x += chosenFirstStep.dx;
+			this.y += chosenFirstStep.dy;
+			this.direction = chosenFirstStep.dir;
+			return;
+		}
+
+		logger.debug(`[WILD] ${this.name} (${this.id}) não encontrou caminho (BFS) para nenhum tile adjacente ao player. Provável: bloqueio/ocupação.`);
     }
 
     /**

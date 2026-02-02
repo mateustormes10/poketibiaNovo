@@ -4,6 +4,9 @@ import path from 'path';
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { GMCommandHandler } from './gmCommandHandler.js';
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('ChatHandler');
 
 export class ChatHandler {
     constructor(gameWorld, wsServer) {
@@ -19,7 +22,7 @@ export class ChatHandler {
             this.badwords = JSON.parse(fs.readFileSync(badwordsPath, 'utf8'));
         } catch (e) {
             this.badwords = [];
-            console.warn('[ChatHandler] Não foi possível carregar badwords.json');
+			logger.warn('Não foi possível carregar badwords.json');
         }
     }
     
@@ -67,7 +70,7 @@ export class ChatHandler {
             }
         }
 
-        console.log(`[Chat] ${client.player.name}: ${message} (broadcast global)`);
+		logger.debug(`[Chat] ${client.player.name}: ${message} (broadcast global)`);
     }
     
     handleCommand(client, message) {
@@ -82,7 +85,7 @@ export class ChatHandler {
                 type: 'system',
                 timestamp: Date.now()
             });
-            console.log(`[ChatHandler] ${client.player.name} tried to use command without GM permission`);
+			logger.debug(`${client.player.name} tried to use command without GM permission`);
             return;
         }
         
@@ -90,7 +93,7 @@ export class ChatHandler {
             case 'die':
             case 'suicide':
                 // Comando de teste para matar o player
-                console.log(`[ChatHandler] GM ${client.player.name} used /die command`);
+				logger.debug(`GM ${client.player.name} used /die command`);
                 client.player.takeDamage(client.player.hp);
                 client.send('chatMessage', {
                     playerName: 'System',
@@ -103,7 +106,7 @@ export class ChatHandler {
             case 'heal':
                 // Comando de teste para curar o player
                 client.player.hp = client.player.maxHp;
-                console.log(`[ChatHandler] GM ${client.player.name} healed to full HP`);
+				logger.debug(`GM ${client.player.name} healed to full HP`);
                 client.send('chatMessage', {
                     playerName: 'System',
                     message: 'You have been healed to full HP.',
@@ -116,7 +119,7 @@ export class ChatHandler {
                 // Comando para tomar dano específico: /damage 50
                 const damage = parseInt(args[1]) || 10;
                 client.player.takeDamage(damage);
-                console.log(`[ChatHandler] GM ${client.player.name} took ${damage} damage`);
+				logger.debug(`GM ${client.player.name} took ${damage} damage`);
                 client.send('chatMessage', {
                     playerName: 'System',
                     message: `You took ${damage} damage.`,
@@ -137,7 +140,7 @@ export class ChatHandler {
                     type: 'system',
                     timestamp: Date.now()
                 });
-                console.log(`[ChatHandler] Unknown command: ${command}`);
+				logger.debug(`Unknown command: ${command}`);
         }
     }
     
@@ -189,10 +192,10 @@ export class ChatHandler {
                 timestamp: Date.now()
             });
             
-            console.log(`[ChatHandler] GM ${client.player.name} added ${amount} gold coins to player ID ${targetPlayerId}`);
+			logger.debug(`GM ${client.player.name} added ${amount} gold coins to player ID ${targetPlayerId}`);
             
         } catch (error) {
-            console.error(`[ChatHandler] Error adding gold:`, error);
+			logger.error('Error adding gold:', error);
             client.send('chatMessage', {
                 playerName: 'System',
                 message: 'Erro ao adicionar gold coins.',

@@ -3,7 +3,6 @@ import { WsClient } from './wsClient.js';
 import { MessageRouter } from './messageRouter.js';
 
 import { Logger } from '../utils/Logger.js';
-import { PlayerRepository } from '../persistence/PlayerRepository.js';
 
 const logger = new Logger('WsServer');
 
@@ -14,6 +13,7 @@ export class WsServer {
         this.wss = null;
         this.clients = new Map();
         this.messageRouter = new MessageRouter(gameWorld, this);
+		this.heartbeatInterval = null;
     }
     
     async start() {
@@ -26,6 +26,28 @@ export class WsServer {
         this.wss.on('error', (error) => {
             logger.error('WebSocket server error:', error);
         });
+
+        // Heartbeat para limpar conexões mortas e evitar leak de clients
+        this.heartbeatInterval = setInterval(() => {
+            for (const client of this.clients.values()) {
+                const ws = client.ws;
+                if (!ws) continue;
+                if (ws.isAlive === false) {
+                    try {
+                        ws.terminate();
+                    } catch {
+                        // ignore
+                    }
+                    continue;
+                }
+                ws.isAlive = false;
+                try {
+                    ws.ping();
+                } catch {
+                    // ignore
+                }
+            }
+        }, 30000);
         
         logger.info(`WebSocket server started on port ${this.port}`);
     }
@@ -36,6 +58,11 @@ export class WsServer {
         
         this.clients.set(clientId, client);
         logger.info(`Client connected: ${clientId} (Total: ${this.clients.size})`);
+
+        ws.isAlive = true;
+        ws.on('pong', () => {
+            ws.isAlive = true;
+        });
         
         ws.on('message', (data) => {
             this.handleMessage(client, data);
@@ -83,12 +110,12 @@ export class WsServer {
                 }
             }
             logger.info(`Saving player ${client.player.name} before disconnect...`);
-            await this.gameWorld.savePlayer(client.player)
-                .then(() => {
-                    logger.info(`Player ${client.player.name} saved successfully`);
-                }).catch(error => {
-                    logger.error(`Error saving player ${client.player.name}:`, error);
-                });
+			try {
+				await this.gameWorld.savePlayer(client.player);
+				logger.info(`Player ${client.player.name} saved successfully`);
+			} catch (error) {
+				logger.error(`Error saving player ${client.player.name}:`, error);
+			}
             this.gameWorld.removePlayer(client.player.id);
         }
         this.clients.delete(client.id);
@@ -105,7 +132,12 @@ export class WsServer {
         
         this.clients.forEach(client => {
             if (client !== excludeClient && client.isConnected()) {
-                client.ws.send(message);
+				try {
+					client.ws.send(message);
+				} catch (error) {
+					logger.warn(`Broadcast send failed for ${client.id}:`, error?.message || error);
+					try { client.ws.terminate(); } catch {}
+				}
             }
         });
     }
@@ -119,20 +151,34 @@ export class WsServer {
                 const dy = Math.abs(client.player.y - y);
                 
                 if (client.player.z === z && dx <= range && dy <= range) {
-                    client.ws.send(message);
+					try {
+						client.ws.send(message);
+					} catch (error) {
+						logger.warn(`Area send failed for ${client.id}:`, error?.message || error);
+						try { client.ws.terminate(); } catch {}
+					}
                 }
             }
         });
     }
     
     generateClientId() {
-        return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		return `client_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     }
     
     stop() {
         this.clients.forEach(client => {
-            client.ws.close();
+            try {
+                client.ws.close();
+            } catch {
+                try { client.ws.terminate(); } catch {}
+            }
         });
+
+		if (this.heartbeatInterval) {
+			clearInterval(this.heartbeatInterval);
+			this.heartbeatInterval = null;
+		}
         
         if (this.wss) {
             this.wss.close();

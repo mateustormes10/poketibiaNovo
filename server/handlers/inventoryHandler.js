@@ -11,6 +11,9 @@ import {
     InventoryErrorCode 
 } from '../../shared/protocol/InventoryProtocol.js';
 import { InventoryDTO } from '../../shared/dto/InventoryDTO.js';
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('InventoryHandler');
 
 export class InventoryHandler {
     constructor(gameWorld, inventoryService) {
@@ -35,9 +38,8 @@ export class InventoryHandler {
         try {
             // Busca inventário do player
             const inventory = await this.inventoryService.getPlayerInventory(playerId);
-
-            console.log('[InventoryHandler] Inventário do player:', playerId);
-            console.log('[InventoryHandler] Dados a enviar:', JSON.stringify(inventory, null, 2));
+			logger.debug('Inventário do player:', playerId);
+			logger.debug('Dados a enviar:', inventory);
 
             // Valida DTO
             if (!InventoryDTO.validate(inventory)) {
@@ -46,10 +48,9 @@ export class InventoryHandler {
 
             // Envia inventário para o cliente
             client.send(InventoryServerEvents.INVENTORY_DATA, inventory);
-
-            console.log(`[InventoryHandler] Inventário enviado para player ${playerId}`);
+			logger.debug(`Inventário enviado para player ${playerId}`);
         } catch (error) {
-            console.error('[InventoryHandler] Erro ao buscar inventário:', error);
+			logger.error('Erro ao buscar inventário:', error);
             this.sendInventoryError(client, InventoryErrorCode.PERMISSION_DENIED, 'Erro ao carregar inventário');
         }
     }
@@ -95,14 +96,13 @@ export class InventoryHandler {
 
                 // Envia inventário atualizado
                 await this.sendInventoryUpdate(client, playerId);
-
-                console.log(`[InventoryHandler] Player ${playerId} usou item: ${item_name}`);
+				logger.debug(`Player ${playerId} usou item: ${item_name}`);
             } else {
                 // Envia erro
                 this.sendInventoryError(client, result.error, result.message);
             }
         } catch (error) {
-            console.error('[InventoryHandler] Erro ao usar item:', error);
+			logger.error('Erro ao usar item:', error);
             this.sendInventoryError(client, InventoryErrorCode.CANNOT_USE_ITEM, 'Erro ao usar item');
         }
     }
@@ -128,7 +128,7 @@ export class InventoryHandler {
 
             client.send(InventoryServerEvents.INVENTORY_UPDATE, inventory);
         } catch (error) {
-            console.error('[InventoryHandler] Erro ao enviar atualização:', error);
+			logger.error('Erro ao enviar atualização:', error);
         }
     }
 

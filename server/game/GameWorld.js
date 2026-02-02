@@ -164,7 +164,7 @@ export class GameWorld {
             
             logger.info(`Player ${player.name} respawned at temple (${templeX}, ${templeY}, ${templeZ})`);
         } catch (error) {
-            logger.error(`Error handling death forer.name} saved successfully (pos: ${player.x},${player.y},${player.z}, hp: ${player.hp})`);
+			logger.error(`Error handling death for player ${player?.name || player?.id}:`, error);
         }
     }
 

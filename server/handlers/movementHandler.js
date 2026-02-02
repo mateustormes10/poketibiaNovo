@@ -1,6 +1,9 @@
 import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { MovementSystem } from '../game/systems/MovementSystem.js';
 import { ServerEvents } from '../../shared/protocol/actions.js';
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('Movement');
 
 export class MovementHandler {
     constructor(gameWorld) {
@@ -10,7 +13,9 @@ export class MovementHandler {
     
     handleMove(client, data) {
         // Loga as coordenadas recebidas do client
-        console.log(`[SERVER][RECEIVED MOVE] Recebido do client: direção=${data.direction}, x=${data.x}, y=${data.y}, z=${data.z}, mapaAtual=${data.mapaAtual}`);
+		logger.debug(
+			`[RECEIVED MOVE] direção=${data?.direction}, x=${data?.x}, y=${data?.y}, z=${data?.z}, mapaAtual=${data?.mapaAtual}`
+		);
 
         // Busca o player pelo playerId do pacote, se existir, senão usa client.player
         let player = client.player;
@@ -107,7 +112,7 @@ export class MovementHandler {
         }
 
         // Log detalhado do movimento
-        console.log(`[MOVE] Player ${player.name} moveu para (${player.x},${player.y},${player.z})`);
+		logger.debug(`Player ${player.name} moveu para (${player.x},${player.y},${player.z})`);
 
         // Se o player está transformado em pokémon, atualiza a sprite conforme a direção
         if (player && player.sprite && Array.isArray(player.sprite)) {
@@ -138,9 +143,14 @@ export class MovementHandler {
         // Notifica o cliente (sempre envia movimento próprio)
         client.send(ServerEvents.PLAYER_MOVE, moveDelta);
 
-        // Envia gameState atualizado (inclui npcs próximos)
-        const gameState = this.gameWorld.getGameState(player);
-        client.send('gameState', gameState);
+        // Envia gameState atualizado (pode ser pesado). Throttle leve para evitar travadas.
+        const now = Date.now();
+        const lastSent = client._lastGameStateSentAt || 0;
+        if (now - lastSent >= 120) {
+            const gameState = this.gameWorld.getGameState(player);
+            client.send('gameState', gameState);
+            client._lastGameStateSentAt = now;
+        }
 
         // Notifica jogadores na área (apenas delta)
         const playersInRange = this.gameWorld.getPlayersInArea(

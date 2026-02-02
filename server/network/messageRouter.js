@@ -17,6 +17,9 @@ import { TurnHandler } from '../handlers/turnHandler.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Logger } from '../utils/Logger.js';
+
+const logger = new Logger('MessageRouter');
 
 export class MessageRouter {
     constructor(gameWorld, wsServer = null) {
@@ -36,7 +39,7 @@ export class MessageRouter {
             badwords = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../config/badwords.json'), 'utf8'));
         } catch (e) {
             badwords = [];
-            console.warn('[MessageRouter] Não foi possível carregar badwords.json');
+			logger.warn('Não foi possível carregar badwords.json');
         }
 
         // Handler para scan de Pokémon derrotados
@@ -83,7 +86,7 @@ export class MessageRouter {
         this.handlers.set('use_skill', (client, data) => {
             // data: { playerId, skillName, tile }
             if (!data || !data.skillName || !data.tile) {
-                console.log('[use_skill] Dados inválidos recebidos:', data);
+				logger.debug('[use_skill] Dados inválidos recebidos:', data);
                 return;
             }
             // Sempre usa o playerId autenticado do socket
@@ -102,7 +105,7 @@ export class MessageRouter {
                     }
                 }
             } catch (e) {
-                console.warn('[use_skill] Erro ao buscar targetArea/power:', e);
+				logger.warn('[use_skill] Erro ao buscar targetArea/power:', e);
             }
             // --- Controle de dano e XP por atacante (corrigido: só envia XP para quem finaliza) ---
             if (!this.monsterAttackers) this.monsterAttackers = new Map();
@@ -151,9 +154,9 @@ export class MessageRouter {
                                 const player = client.player;
                                 if (player && typeof player.gainExpAndCheckLevelUp === 'function') {
                                     player.gainExpAndCheckLevelUp(xp);
-                                    console.log(`[use_skill] XP adicionada ao player: playerId=${playerId} xp=${xp} monsterId=${monster.id}`);
+							logger.debug(`[use_skill] XP adicionada ao player: playerId=${playerId} xp=${xp} monsterId=${monster.id}`);
                                 } else {
-                                    console.warn(`[use_skill] player.gainExpAndCheckLevelUp não encontrado para playerId=${playerId}`);
+							logger.warn(`[use_skill] player.gainExpAndCheckLevelUp não encontrado para playerId=${playerId}`);
                                 }
                                 // Limpa registro de atacantes
                                 this.monsterAttackers.delete(monster.id);
@@ -166,7 +169,7 @@ export class MessageRouter {
                     }
                 });
             } catch (e) {
-                console.warn('[use_skill] Erro ao aplicar dano nos wildPokemons:', e);
+				logger.warn('[use_skill] Erro ao aplicar dano nos wildPokemons:', e);
             }
             // Broadcast da animação
             if (this.wsServer && typeof this.wsServer.broadcast === 'function') {
@@ -177,7 +180,7 @@ export class MessageRouter {
                     targetArea: targetArea,
                     affectedMonsters: affectedMonsters
                 });
-                console.log('[use_skill] Broadcast skill_animation enviado para todos os clientes.');
+				logger.debug('[use_skill] Broadcast skill_animation enviado para todos os clientes.');
             } else if (client && typeof client.send === 'function') {
                 client.send('skill_animation', {
                     playerId: playerId,
@@ -197,15 +200,15 @@ export class MessageRouter {
             }
             const player = this.gameWorld.players.get(playerId);
             if (!player) {
-                console.log('[SERVER DEBUG] player não encontrado no gameWorld!');
+				logger.debug('[request_transform_pokemon] player não encontrado no gameWorld');
                 return;
             }
-            console.log('[SERVER DEBUG] player encontrado:', player.name);
+			logger.debug('[request_transform_pokemon] player encontrado:', player.name);
             if (!data.pokemonName) {
                 player.pokemonName = null;
                 if (data.lastSprite) {
                     player.sprite = data.lastSprite;
-                    console.log('[SERVER DEBUG] Sprite anterior restaurada:', data.lastSprite);
+					logger.debug('[request_transform_pokemon] Sprite anterior restaurada:', data.lastSprite);
                 } else {
                     player.sprite = 'default';
                 }
@@ -215,10 +218,10 @@ export class MessageRouter {
                 const level = Number(player.level) || 1;
                 const pontosHp = Number(player.conditions?.hit_points || 0);
                 const calculatedMaxHp = baseHp + (level * 10) + (pontosHp * 10);
-                console.log(`[SERVER DEBUG] Calculando maxHp para player '${player.name}': baseHp=${baseHp}, level=${level}, pontosHp=${pontosHp}, formula=100 + ${level}*10 + ${pontosHp}*10 = ${calculatedMaxHp}`);
+				logger.debug(`[request_transform_pokemon] Calculando maxHp: player='${player.name}', maxHp=${calculatedMaxHp}`);
                 player.maxHp = calculatedMaxHp;
                 player.hp = Math.min(player.hp, player.maxHp);
-                console.log(`[SERVER DEBUG] Após cálculo: player='${player.name}', maxHp=${player.maxHp}, hp=${player.hp}`);
+				logger.debug(`[request_transform_pokemon] Após cálculo: player='${player.name}', maxHp=${player.maxHp}, hp=${player.hp}`);
                 client.send('player_outfit_update', { playerId: player.id, lookaddons: player.sprite });
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
@@ -228,7 +231,7 @@ export class MessageRouter {
                 player.pokemonName = data.pokemonName;
                 const pokeData = PokemonEntities[data.pokemonName];
                 if (!pokeData) {
-                    console.log('[SERVER DEBUG] Definição do Pokémon não encontrada:', data.pokemonName);
+					logger.warn('[request_transform_pokemon] Definição do Pokémon não encontrada:', data.pokemonName);
                     return;
                 }
                 let direction = player.direction || 'down';
@@ -238,7 +241,7 @@ export class MessageRouter {
                 player.skills = (pokeData.skills || []).map(skillName => {
                     const skillObj = SkillDatabase[skillName];
                     if (!skillObj) {
-                        console.log('[SERVER DEBUG] Skill não encontrada no SkillDatabase:', skillName);
+						logger.warn('[request_transform_pokemon] Skill não encontrada no SkillDatabase:', skillName);
                         return skillName;
                     }
                     return JSON.stringify(skillObj);
@@ -257,7 +260,7 @@ export class MessageRouter {
                 const gameState = this.gameWorld.getGameState(player);
                 client.send('gameState', gameState);
             } catch (e) {
-                console.error('[SERVER DEBUG] Erro ao transformar player em Pokémon:', e);
+				logger.error('[request_transform_pokemon] Erro ao transformar player em Pokémon:', e);
             }
         });
 
@@ -265,12 +268,12 @@ export class MessageRouter {
                             this.handlers.set('gm_change_z', (client, data) => {
                                 const playerId = client.player?.id || client.playerId;
                                 if (!playerId) {
-                                    console.warn('[GM_CHANGE_Z] client has no player or playerId');
+								logger.warn('[GM_CHANGE_Z] client has no player or playerId');
                                     return;
                                 }
                                 const player = this.gameWorld.players.get(playerId);
                                 if (!player) {
-                                    console.warn('[GM_CHANGE_Z] player not found');
+								logger.warn('[GM_CHANGE_Z] player not found');
                                     return;
                                 }
                                 if (player.vocation !== 4) {
@@ -286,7 +289,7 @@ export class MessageRouter {
                                 const gameState = this.gameWorld.getGameState(player);
                                 client.send('gameState', gameState);
                                 client.send('system_message', { message: `Andar alterado para z=${player.z}`, color: 'yellow' });
-                                console.log(`[GM_CHANGE_Z] Player ${player.name} mudou para z=${player.z}`);
+								logger.debug(`[GM_CHANGE_Z] Player ${player.name} mudou para z=${player.z}`);
                             });
                     // Handler para consulta de vocation do player
                 this.handlers.set('get_player_vocation', (client, data) => {
@@ -416,12 +419,12 @@ export class MessageRouter {
         // Verifica player
         const playerId = client.player?.id || client.playerId;
         if (!playerId) {
-            console.warn('[MessageRouter] changeFloor: client has no player or playerId');
+			logger.warn('changeFloor: client has no player or playerId');
             return;
         }
         const player = this.gameWorld.players.get(playerId);
         if (!player) {
-            console.warn('[MessageRouter] changeFloor: player not found');
+			logger.warn('changeFloor: player not found');
             return;
         }
         // Nunca altera x/y do player, apenas z
@@ -431,7 +434,7 @@ export class MessageRouter {
             player.z -= 1;
         }
         // Não faz nenhuma checagem de existência de floor/txt, aceita qualquer z
-        console.log(`[LOG CHANGEFLOOR] Player ${player.name} mudou para andar z=${player.z}`);
+		logger.debug(`[changeFloor] Player ${player.name} mudou para andar z=${player.z}`);
 
         // Garante que chunks do novo andar estão carregados antes de enviar o mapa
         // Lógica de mapa removida do servidor
@@ -454,15 +457,15 @@ export class MessageRouter {
         const playerId = client.player?.id || client.playerId;
         
         if (!playerId) {
-            console.warn('[MessageRouter] Map update requested but client has no player or playerId');
+			logger.warn('Map update requested but client has no player or playerId');
             return;
         }
         
         const player = this.gameWorld.players.get(playerId);
         if (!player) {
-            console.warn('[MessageRouter] Map update requested but player not found in gameWorld');
-            console.warn('[MessageRouter] Looking for player ID:', playerId);
-            console.warn('[MessageRouter] Available players:', Array.from(this.gameWorld.players.keys()));
+			logger.warn('Map update requested but player not found in gameWorld');
+			logger.debug('Looking for player ID:', playerId);
+			logger.debug('Available players:', Array.from(this.gameWorld.players.keys()));
             return;
         }
         
@@ -472,18 +475,18 @@ export class MessageRouter {
         // Envia atualização
         client.send('gameState', gameState);
         
-        console.log(`[MessageRouter] Map updated for player ${player.name} at (${data.x}, ${data.y}, ${data.z})`);
+		logger.debug(`Map updated for player ${player.name} at (${data.x}, ${data.y}, ${data.z})`);
     }
     
     route(client, message) {
-        console.log(`[MessageRouter] Routing message type: ${message.type}`);
+		logger.debug(`Routing message type: ${message.type}`);
         
         const handler = this.handlers.get(message.type);
         
         if (handler) {
             handler(client, message.data);
         } else {
-            console.warn(`[MessageRouter] No handler for message type: ${message.type}`);
+			logger.warn(`No handler for message type: ${message.type}`);
         }
     }
 }
