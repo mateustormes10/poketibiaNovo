@@ -1,5 +1,5 @@
 import { ClientEvents, ServerEvents } from '../../shared/protocol/actions.js';
-import { scanDefeatedMonsters } from '../handlers/scanHandler.js';
+import { registerDefeatedMonster, scanDefeatedMonsters } from '../handlers/scanHandler.js';
 import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
@@ -51,6 +51,7 @@ export class MessageRouter {
             }
             // ScannerType pode vir do client futuramente (ex: BASIC, ADVANCED)
             const scannerType = (data && data.scannerType) || 'BASIC';
+            logger.debug(`[SCAN] request playerId=${playerId} scannerType=${scannerType}`);
             const result = await scanDefeatedMonsters(playerId, this.gameWorld.inventoryRepository, scannerType);
             client.send(ServerEvents.SCAN_RESULT, result);
         });
@@ -142,6 +143,17 @@ export class MessageRouter {
                             if (monster.hp === 0 && !monster.isDead) {
                                 monster.isDead = true;
                                 monster.deadSince = Date.now();
+
+                                // Registra o monstro derrotado para o scanner (usa a mesma chave do SCAN)
+                                const scanPlayerId = client.player?.dbId || client.player?.id;
+                                if (scanPlayerId) {
+                                    registerDefeatedMonster(scanPlayerId, {
+                                        name: monster.name,
+                                        level: monster.level || 1
+                                    });
+                                    logger.debug(`[use_skill] registerDefeatedMonster playerId=${scanPlayerId} monster=${monster.name} lvl=${monster.level || 1} id=${monster.id}`);
+                                }
+
                                 // --- Só adiciona XP ao player que finalizou ---
                                 const monsterXp = monster.exp || 0;
                                 const totalDano = Array.from(attackers.values()).reduce((a, b) => a + b, 0);
