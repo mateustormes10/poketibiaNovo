@@ -1,7 +1,6 @@
 export class SpriteSheet {
-    constructor(imagePath, frameWidth, frameHeight) {
+    constructor( frameWidth, frameHeight) {
         this.image = new Image();
-        this.image.src = imagePath;
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
         this.loaded = false;

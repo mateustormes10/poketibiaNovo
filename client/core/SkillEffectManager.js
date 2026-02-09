@@ -11,8 +11,8 @@ export class SkillEffectManager {
     // Adiciona uma animação de skill para ser renderizada
     addSkillEffect({ skillName, tile, duration = 700 }) {
         const skill = SkillDatabase[skillName];
-        if (!skill || !skill.spriteSkillList) {
-            console.warn('[SkillEffectManager] Skill não encontrada ou sem spriteSkillList:', skillName, skill);
+        if (!skill) {
+            console.warn('[SkillEffectManager] Skill não encontrada:', skillName, skill);
             return;
         }
         const now = performance.now();
@@ -36,10 +36,9 @@ export class SkillEffectManager {
             // fallback: só o tile do player
             affectedTiles = [tile];
         }
-        console.log(`[SkillEffectManager] addSkillEffect chamado para skill '${skillName}' com sprites:`, skill.spriteSkillList, 'tiles:', affectedTiles);
+        console.log(`[SkillEffectManager] addSkillEffect chamado para skill '${skillName}', tiles:`, affectedTiles);
         this.activeSkillAnims.push({
             skillName,
-            spriteList: skill.spriteSkillList,
             tiles: affectedTiles,
             start: now,
             duration,
