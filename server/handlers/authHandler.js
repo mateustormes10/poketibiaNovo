@@ -117,6 +117,22 @@ export class AuthHandler {
             // Envia estado inicial do jogo
             const gameState = this.gameWorld.getGameState(player);
             client.send(ServerEvents.GAME_STATE, gameState);
+
+            // Quests: prime cache do player e envia sync inicial (payload compacto)
+            try {
+                const qm = this.gameWorld?.questManager;
+                if (qm?.primePlayer) {
+                    await qm.primePlayer(player);
+                }
+                if (qm?.getQuestPublicState) {
+                    const summary = qm?._getSummary ? qm._getSummary(playerIdToUse) : { active: [], completed: [], failed: [] };
+                    const activeStates = (summary.active || []).map(qid => qm.getQuestPublicState(player, qid));
+                    client.send('quest_sync', {
+                        summary,
+                        active: activeStates
+                    });
+                }
+            } catch {}
             
             // Envia lista de Pokémon selvagens
             const wildPokemons = this.gameWorld.wildPokemonManager.getVisiblePokemonDTOsForPlayer(player, 25);

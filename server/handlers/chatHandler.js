@@ -42,6 +42,19 @@ export class ChatHandler {
             return;
         }
 
+        // Quest prompts (estilo Tibia yes/no): intercepta antes do broadcast
+        try {
+            const questManager = this.gameWorld?.questManager;
+            if (questManager?.handleChatResponse) {
+                const res = questManager.handleChatResponse(client, message);
+                if (res?.handled) {
+                    return;
+                }
+            }
+        } catch (e) {
+            logger.warn('[ChatHandler] QuestManager handleChatResponse falhou:', e?.message || e);
+        }
+
         // Validação de palavras proibidas
         const msgLower = message.toLowerCase();
         if (this.badwords.some(bad => msgLower.includes(bad))) {

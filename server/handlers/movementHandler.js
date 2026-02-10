@@ -93,6 +93,11 @@ export class MovementHandler {
                 player.y = data.y;
                 player.z = data.z;
 
+                // Quests: location objectives
+                try {
+                    this.gameWorld?.questManager?.onPlayerMoved?.(player);
+                } catch {}
+
                 // Subtrai 2 pontos de stamina a cada passo
                 if (!player.conditions) player.conditions = {};
                 let staminaAtual = 100;

@@ -39,6 +39,18 @@ export class NpcHandler {
 
         logger.info(`[NpcHandler] Player ${player.name} interagiu com ${npc.name}`);
 
+        // Quest system (desacoplado de UI): se a interação for consumida por quests, não abre shop/heal.
+        try {
+            if (this.gameWorld?.questManager?.handleNpcInteract) {
+                const handledByQuest = this.gameWorld.questManager.handleNpcInteract(client, npc);
+                if (handledByQuest) {
+                    return;
+                }
+            }
+        } catch (e) {
+            logger.warn('[NpcHandler] QuestManager handleNpcInteract falhou:', e?.message || e);
+        }
+
         // Processa baseado no tipo do NPC
         switch (npc.type) {
             case 'shop':
@@ -129,6 +141,11 @@ export class NpcHandler {
             }
 
             await this.inventoryRepository.addItem(player.dbId, itemType, itemName, 1);
+
+            // Quests: collect objective progress
+            try {
+                this.gameWorld?.questManager?.onItemCollected?.(player, itemName, 1);
+            } catch {}
 
             // Notifica player
             client.send('purchase_success', {

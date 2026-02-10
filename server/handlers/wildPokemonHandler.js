@@ -7,6 +7,7 @@
 import { WildPokemonClientEvents, WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { Logger } from '../utils/Logger.js';
 import { registerDefeatedMonster } from './scanHandler.js';
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 
 const logger = new Logger('WildPokemonHandler');
 
@@ -51,13 +52,17 @@ export function setupWildPokemonHandler(gameWorld) {
             logger.info(`[WILD] ${client.player.name} causou ${damage} de dano ao Pokémon selvagem ${wild.name} (id=${wild.id}) com ${skillName || 'ataque'}${critLog}`);
             // Se morreu, registra para o scanner
             if (morreu) {
+                // Quests: kill objective progress (best-effort)
+                try {
+                    gameWorld?.questManager?.onEnemyKilled?.(client.player, wild.name, 1);
+                } catch {}
+
                 // 1. Register for scanner
                 registerDefeatedMonster(client.player.dbId || client.player.id, {
                     name: wild.name,
                     level: wild.level || 1
                 });
                 // 2. Give EXP and handle level up
-                const { PokemonEntities } = require('../game/entities/PokemonEntities.js');
                 const expGain = (PokemonEntities[wild.name] && PokemonEntities[wild.name].exp) || 1;
                 if (typeof client.player.gainExpAndCheckLevelUp === 'function') {
                     const leveledUp = client.player.gainExpAndCheckLevelUp(expGain);

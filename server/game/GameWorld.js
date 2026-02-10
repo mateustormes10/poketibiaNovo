@@ -5,12 +5,16 @@ import { Npc } from './entities/Npc.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
 import { WildPokemonManager } from './systems/WildPokemonManager.js';
+import { QuestManager } from './systems/QuestManager.js';
 import { PlayerActivePokemonRepository } from '../persistence/PlayerActivePokemonRepository.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { PlayerDeathRepository } from '../persistence/PlayerDeathRepository.js';
 import { NpcRepository } from '../persistence/NpcRepository.js';
 import { BalanceRepository } from '../persistence/BalanceRepository.js';
 import { InventoryRepository } from '../persistence/InventoryRepository.js';
+import { QuestRepository } from '../persistence/QuestRepository.js';
+import { PlayerQuestRepository } from '../persistence/PlayerQuestRepository.js';
+import { QuestDefinitions } from './quests/QuestDefinitions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { Logger } from '../utils/Logger.js';
 
@@ -28,8 +32,7 @@ export class GameWorld {
     
         this.mapManager = new MapManager();
         this.zoneManager = new ZoneManager();
-        this.wildPokemonManager = new WildPokemonManager(this);
-        
+
         // Repositórios
         this.playerActivePokemonRepository = new PlayerActivePokemonRepository(database);
         this.playerRepository = new PlayerRepository(database);
@@ -37,6 +40,14 @@ export class GameWorld {
         this.npcRepository = new NpcRepository(database);
         this.balanceRepository = new BalanceRepository(database);
         this.inventoryRepository = new InventoryRepository(database);
+
+        // Quests (persistência em tabelas dedicadas)
+        this.questRepository = new QuestRepository(database);
+        this.playerQuestRepository = new PlayerQuestRepository(database);
+
+        // Sistemas
+        this.wildPokemonManager = new WildPokemonManager(this);
+        this.questManager = new QuestManager(this);
         
         // Sistemas de otimização
         this.deltaManager = new DeltaManager();
@@ -170,6 +181,16 @@ export class GameWorld {
 
     async init() {
         logger.info('Initializing game world...');
+
+        // Quests: garante tabelas e popula definições
+        try {
+            await this.questRepository.ensureTables();
+            await this.playerQuestRepository.ensureTables();
+            await this.questRepository.seedFromDefinitions(QuestDefinitions);
+        } catch (e) {
+            logger.error('[QUEST] Falha ao inicializar tabelas/seed de quests:', e?.message || e);
+        }
+
         if (this.mapManager && typeof this.mapManager.loadMaps === 'function') {
             await this.mapManager.loadMaps();
         }

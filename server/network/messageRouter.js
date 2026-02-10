@@ -144,6 +144,11 @@ export class MessageRouter {
                                 monster.isDead = true;
                                 monster.deadSince = Date.now();
 
+                                // Quests: kill objective progress (best-effort)
+                                try {
+                                    this.gameWorld?.questManager?.onEnemyKilled?.(client.player, monster.name, 1);
+                                } catch {}
+
                                 // Registra o monstro derrotado para o scanner (usa a mesma chave do SCAN)
                                 const scanPlayerId = client.player?.dbId || client.player?.id;
                                 if (scanPlayerId) {
