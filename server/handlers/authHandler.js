@@ -119,7 +119,7 @@ export class AuthHandler {
             client.send(ServerEvents.GAME_STATE, gameState);
             
             // Envia lista de Pokémon selvagens
-            const wildPokemons = this.gameWorld.wildPokemonManager.getAllPokemons();
+            const wildPokemons = this.gameWorld.wildPokemonManager.getVisiblePokemonDTOsForPlayer(player, 25);
             client.send(WildPokemonServerEvents.WILD_POKEMON_LIST, {
                 wildPokemons
             });

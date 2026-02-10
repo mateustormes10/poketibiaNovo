@@ -48,6 +48,9 @@ export class WildPokemon {
         this.y = data.y;
         this.z = data.z;
 
+        // Cidade / town (evita vazamento de monstros entre mapas com coordenadas coincidentes)
+        this.town_id = data.town_id ?? data.townId ?? 1;
+
         // Comportamento
         this.attackRange = data.attackRange || WildPokemonConfig.ATTACK_RANGE_DEFAULT;
         this.moveRange = this.attackRange * WildPokemonConfig.MOVE_RANGE_MULTIPLIER;
@@ -61,6 +64,7 @@ export class WildPokemon {
         this.spawnX = this.x;
         this.spawnY = this.y;
         this.spawnZ = this.z;
+        this.spawnTownId = this.town_id;
 
         // Referência ao GameWorld (será setada pelo manager)
         this.gameWorld = null;
@@ -420,6 +424,7 @@ export class WildPokemon {
             x: this.x,
             y: this.y,
             z: this.z,
+            town_id: this.town_id,
             direction: this.direction || 'down',
             sprite_up: this.sprite_up,
             sprite_down: this.sprite_down,

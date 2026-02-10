@@ -23,8 +23,8 @@ export function setupWildPokemonHandler(gameWorld) {
 
             logger.debug(`[WILD] Player ${client.player.name} solicitou lista de Pokémon selvagens`);
 
-            // Pega todos os Pokémon selvagens
-            const wildPokemons = gameWorld.wildPokemonManager.getAllPokemons();
+            // Pega apenas os Pokémon selvagens visíveis para o player (town_id + z + range)
+            const wildPokemons = gameWorld.wildPokemonManager.getVisiblePokemonDTOsForPlayer(client.player, 25);
 
             // Envia lista para o cliente
             client.send(WildPokemonServerEvents.WILD_POKEMON_LIST, {

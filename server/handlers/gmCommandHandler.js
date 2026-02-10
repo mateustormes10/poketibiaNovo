@@ -187,6 +187,25 @@ export class GMCommandHandler {
         client.player.x = newX;
         client.player.y = newY;
 
+        // Atualiza town_id (importante para o client Unity trocar o mapa/cidade)
+        try {
+            const normalizedCidade = String(newCidade || '')
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, '')
+                .replace(/_/g, '');
+            const townMap = { cidadeinicial: 1, barco: 2 };
+            const mappedTownId = townMap[normalizedCidade];
+            if (mappedTownId) {
+                client.player.town_id = mappedTownId;
+                if (this.gameWorld.playerRepository && client.player.dbId) {
+                    await this.gameWorld.playerRepository.updateTownId(client.player.dbId, mappedTownId);
+                }
+            }
+        } catch (e) {
+            logger.warn('[GM] Falha ao atualizar town_id no teleport:', e);
+        }
+
         // Atualiza spatial grid
         if (this.gameWorld.spatialGrid && typeof this.gameWorld.spatialGrid.update === 'function') {
             this.gameWorld.spatialGrid.update(client.player);
@@ -208,6 +227,14 @@ export class GMCommandHandler {
             message: `✅ Teleportado para cidade=${newCidade}, andar=${newAndar}, x=${newX}, y=${newY}`,
             color: 'green'
         });
+
+        // Envia gameState atualizado imediatamente
+        try {
+            const gameState = this.gameWorld.getGameState(client.player);
+            client.send('gameState', gameState);
+        } catch (e) {
+            logger.warn('[GM] Falha ao enviar gameState após teleport:', e);
+        }
 
         // Log
         logger.info(`[GM] Teleport: ${client.player.name} (id=${client.player.id}) para cidade=${newCidade}, andar=${newAndar}, x=${newX}, y=${newY}`);

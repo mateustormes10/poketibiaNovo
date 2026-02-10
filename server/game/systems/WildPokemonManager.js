@@ -175,6 +175,7 @@ export class WildPokemonManager {
         const nearby = [];
         
         for (const wildPokemon of this.wildPokemons.values()) {
+            if ((wildPokemon.town_id ?? 1) !== (player.town_id ?? 1)) continue;
             if (wildPokemon.z !== player.z) continue;
             
             const distance = wildPokemon.getDistanceToPlayer(player);
@@ -184,6 +185,17 @@ export class WildPokemonManager {
         }
         
         return nearby;
+    }
+
+    /**
+     * Retorna DTOs visíveis para um player (town_id + z + range)
+     * @param {Object} player
+     * @param {number} range
+     * @returns {Array}
+     */
+    getVisiblePokemonDTOsForPlayer(player, range = 25) {
+        if (!player) return [];
+        return this.getNearbyPokemons(player, range).map(wp => wp.toDTO());
     }
 
     /**
@@ -211,6 +223,7 @@ export class WildPokemonManager {
         const range = 25;
         for (const client of this.gameWorld.server.clients.values()) {
             if (!client.player) continue;
+            if ((client.player.town_id ?? 1) !== (wildPokemon.town_id ?? 1)) continue;
             if (client.player.z !== wildPokemon.z) continue;
             const dx = Math.abs(client.player.x - wildPokemon.x);
             const dy = Math.abs(client.player.y - wildPokemon.y);
@@ -231,6 +244,7 @@ export class WildPokemonManager {
 		const range = 25;
 		for (const client of this.gameWorld.server.clients.values()) {
 			if (!client.player) continue;
+            if ((client.player.town_id ?? 1) !== (wildPokemon.town_id ?? 1)) continue;
 			if (client.player.z !== wildPokemon.z) continue;
 			const dx = Math.abs(client.player.x - wildPokemon.x);
 			const dy = Math.abs(client.player.y - wildPokemon.y);
