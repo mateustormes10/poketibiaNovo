@@ -11,7 +11,10 @@ INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES
 (1, 'potion', 'Super Poção', 8),
 (1, 'potion', 'Hyper Poção', 3),
 (1, 'revive', 'Revive', 5),
-(1, 'gold', 'Gold Coin', 10000);
+(1, 'gold', 'Gold Coin', 10000),
+(1, 'house', 'House Chair', 2),
+(1, 'house', 'House Table', 1),
+(1, 'house', 'House Bed', 1);
 
 -- Player 2 - Inventário Inicial
 INSERT INTO player_inventory (player_id, item_type, item_name, quantity) VALUES

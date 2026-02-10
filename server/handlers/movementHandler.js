@@ -24,6 +24,58 @@ export class MovementHandler {
         }
         if (!player) return;
 
+        // Houses (Modelo A): valida entrada/saída/área (server-authoritative)
+        try {
+            const cityForHouse = data.mapaAtual || player.city || player.mapaAtual || (player.name && player.name.split('_')[0]) || 'CidadeInicial';
+            const to = { x: data?.x, y: data?.y, z: data?.z };
+            const from = { x: player.x, y: player.y, z: player.z };
+
+            if (typeof to.x === 'number' && typeof to.y === 'number' && typeof to.z === 'number') {
+                const res = this.gameWorld.houseService?.validateMove
+                    ? this.gameWorld.houseService.validateMove({ player, city: cityForHouse, from, to })
+                    : null;
+
+                // validateMove é async: resolve promise se existir
+                if (res && typeof res.then === 'function') {
+                    // eslint-disable-next-line no-void
+                    return void res.then((r) => {
+                        if (!r?.allowed) {
+                            const reason = r?.reason || 'blocked';
+                            const msg = reason === 'house_in_auction'
+                                ? 'Casa em leilão: entrada bloqueada.'
+                                : reason === 'not_allowed'
+                                    ? 'Você não tem permissão para entrar nesta casa.'
+                                    : reason === 'house_unowned'
+                                        ? 'Casa sem dono: entrada bloqueada.'
+                                        : 'Movimento bloqueado pela casa.';
+                            client.send('system_message', { message: msg, color: 'yellow' });
+                            // Corrige client-side prediction: informa a posição autoritativa atual.
+                            client.send('move_reject', { x: player.x, y: player.y, z: player.z });
+                            return;
+                        }
+                        // continua fluxo normal após validação
+                        this._handleMoveAfterHouseValidation(client, data, player);
+                    }).catch(() => {
+                        this._handleMoveAfterHouseValidation(client, data, player);
+                    });
+                }
+                if (res && res.allowed === false) {
+                    client.send('system_message', { message: 'Movimento bloqueado pela casa.', color: 'yellow' });
+                    client.send('move_reject', { x: player.x, y: player.y, z: player.z });
+                    return;
+                }
+            }
+        } catch {
+            // ignore - não bloqueia o movimento se houver erro de validação
+        }
+
+        // Continuação normal (sem await)
+        return this._handleMoveAfterHouseValidation(client, data, player);
+
+    }
+
+    _handleMoveAfterHouseValidation(client, data, player) {
+
                 // Trava: impede movimento se stamina <= 0
                 let staminaAtual = 100;
                 if (player.conditions && typeof player.conditions.stamina === 'number') {

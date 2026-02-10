@@ -28,7 +28,8 @@ export const ItemType = {
     CONSUMABLE: 'consumable',    // Itens consumíveis (Poção, Revive, etc)
     BATTLE: 'battle',            // Itens de batalha (Pokébola, Great Ball, etc)
     KEY: 'key',                  // Itens-chave (Key Items)
-    MISC: 'misc'                 // Itens diversos
+    MISC: 'misc',                // Itens diversos
+    HOUSE: 'house'               // Itens de house (placeable dentro de casas)
 };
 
 // Configurações do inventário

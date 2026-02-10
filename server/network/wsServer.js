@@ -18,11 +18,28 @@ export class WsServer {
     
     async start() {
         this.wss = new WebSocketServer({ port: this.port });
-        
+
+        await new Promise((resolve, reject) => {
+            const onListening = () => {
+                cleanup();
+                resolve();
+            };
+            const onError = (err) => {
+                cleanup();
+                reject(err);
+            };
+            const cleanup = () => {
+                this.wss?.off('listening', onListening);
+                this.wss?.off('error', onError);
+            };
+            this.wss.once('listening', onListening);
+            this.wss.once('error', onError);
+        });
+
         this.wss.on('connection', (ws, req) => {
             this.handleConnection(ws, req);
         });
-        
+
         this.wss.on('error', (error) => {
             logger.error('WebSocket server error:', error);
         });

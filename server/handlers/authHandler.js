@@ -139,6 +139,16 @@ export class AuthHandler {
             client.send(WildPokemonServerEvents.WILD_POKEMON_LIST, {
                 wildPokemons
             });
+
+            // Houses: envia lista inicial (house_lists + auctions)
+            try {
+                if (this.gameWorld.houseService && typeof this.gameWorld.houseService.buildHousesInitPayload === 'function') {
+                    const payload = await this.gameWorld.houseService.buildHousesInitPayload();
+                    client.send('houses_init', payload);
+                }
+            } catch (e) {
+                logger.error('[HOUSE] Falha ao enviar houses_init:', e?.message || e);
+            }
             
             logger.info(`Game state sent to ${player.name} at (${player.x}, ${player.y}, ${player.z}) with ${player.pokemons.length} pokemons`);
             logger.info(`Sent ${wildPokemons.length} wild Pokémon to ${player.name}`);

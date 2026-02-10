@@ -1,0 +1,169 @@
+# Sistema de Casas (House System) - Explicação e Testes
+
+Este documento explica como funciona o sistema de casas do servidor, como testar diferentes cenários, as coordenadas das casas cadastradas, e como inserir itens de casa no inventário para testes.
+
+---
+
+## 1. Visão Geral
+- O sistema de casas é persistido no banco de dados MySQL.
+- Casas são representadas na tabela `house_lists`.
+- Itens de casa são itens normais de inventário (`item_type = 'house'`), que podem ser colocados e removidos pelo jogador.
+- Toda validação (se está na casa, se pode colocar/remover, etc.) é feita no servidor.
+- O servidor carrega as casas do banco ao iniciar e mantém um cache em memória.
+
+---
+
+## 2. Coordenadas das Casas Cadastradas
+
+As casas estão cadastradas na tabela `house_lists`. Exemplos de casas padrão:
+
+| id | city      | map      | z | area_x | area_y | area_w | area_h |
+|----|-----------|----------|---|--------|--------|--------|--------|
+| 1  | cidade1   | map1     | 7 | 100    | 200    | 5      | 5      |
+| 2  | cidade2   | map2     | 7 | 150    | 250    | 6      | 6      |
+
+- **city**: nome da cidade (sempre minúsculo, sem espaços)
+- **map**: nome do mapa (sempre minúsculo, sem espaços)
+- **z**: andar (nível do chão)
+- **area_x, area_y**: coordenada superior esquerda da casa
+- **area_w, area_h**: largura e altura da casa
+
+> Consulte a tabela `house_lists` para ver todas as casas cadastradas.
+
+---
+
+## 3. Como Testar Cenários
+
+### a) Colocar item de casa
+1. Dê ao jogador um item de inventário do tipo `house` (veja o insert abaixo).
+2. Entre na área da casa (dentro das coordenadas da casa, city/map/z corretos).
+3. Use o item de casa no inventário.
+4. O item será removido do inventário e colocado no mundo, persistido no banco.
+
+### b) Remover item de casa
+1. Fique dentro da casa (área/city/map/z corretos).
+2. Aperte a tecla `E` próximo ao item de casa colocado.
+3. O item será removido do mundo e adicionado ao inventário.
+
+### c) Testar erros
+- Tente usar o item fora da casa: deve aparecer erro `not_in_house`.
+- Tente remover item de casa de outro jogador: deve aparecer erro `not_owner`.
+- Tente colocar item em casa de outro jogador: erro `not_owner`.
+
+### d) Testar persistência
+- Coloque/remova itens, reinicie o servidor e verifique se os itens permanecem conforme esperado.
+
+---
+
+## 4. Insert para Gerar Item de Casa no Inventário
+
+Supondo que o inventário está na tabela `player_inventory`:
+
+INSERT INTO player_inventory (player_id, item_id, item_type, amount, extra_data)
+VALUES (1, 1001, 'house', 1, NULL);
+```
+
+- **player_id**: id do jogador
+- **item_id**: id do item (deve ser um id válido para item de casa)
+- **item_type**: sempre 'house' para itens de casa
+- **amount**: quantidade (normalmente 1)
+- **extra_data**: pode ser NULL ou JSON com dados extras
+
+- O servidor normaliza city/map para minúsculo e sem espaços.
+- Sempre reinicie o servidor após alterar casas no banco.
+
+
+### Exemplos reais de casas cadastradas
+
+| house_id | map_id         | city_name      | door_x | door_y | door_z | area_from_x | area_from_y | area_to_x | area_to_y | area_z |
+|----------|----------------|---------------|--------|--------|--------|-------------|-------------|-----------|-----------|--------|
+| 1        | CidadeInicial  | CidadeInicial | 10     | 10     | 3      | 11          | 10          | 15        | 14        | 3      |
+| 2        | CidadeInicial  | CidadeInicial | 20     | 8      | 3      | 21          | 8           | 26        | 12        | 3      |
+| 3        | CidadeInicial  | CidadeInicial | 5      | 20     | 3      | 6           | 20          | 10        | 24        | 3      |
+
+#### Como interpretar:
+- **area_from_x, area_from_y**: canto superior esquerdo da casa
+- **area_to_x, area_to_y**: canto inferior direito da casa
+- **area_z**: andar (nível do chão)
+
+#### Exemplo visual (mapa simplificado, Z=3)
+
+Legenda: H = tile da casa, . = fora da casa
+
+Casa 1 (de 11,10 até 15,14):
+
+Y→
+	10 11 12 13 14
+X
+11  H  H  H  H  H
+12  H  H  H  H  H
+13  H  H  H  H  H
+14  H  H  H  H  H
+
+Casa 2 (de 21,8 até 26,12):
+
+Y→
+	 8  9 10 11 12
+X
+21  H  H  H  H  H
+22  H  H  H  H  H
+23  H  H  H  H  H
+24  H  H  H  H  H
+25  H  H  H  H  H
+26  H  H  H  H  H
+
+Casa 3 (de 6,20 até 10,24):
+
+Y→
+	20 21 22 23 24
+X
+ 6  H  H  H  H  H
+ 7  H  H  H  H  H
+ 8  H  H  H  H  H
+ 9  H  H  H  H  H
+10  H  H  H  H  H
+
+Tiles fora dessas áreas são considerados fora da casa (não é possível colocar/remover itens de house).
+- Para recarregar casas sem reiniciar, implemente o comando GM `/house_reload` (opcional).
+
+---
+
+## 6. Dúvidas Frequentes
+- **Erro `not_in_house`**: Verifique se está dentro da área da casa, city/map/z corretos.
+- **Erro `not_owner`**: Só o dono pode colocar/remover itens na própria casa.
+- **Item não aparece após colocar/remover**: Verifique logs do servidor e o banco de dados.
+
+---
+
+## 7. Consultar Casas no Banco
+
+```sql
+SELECT * FROM house_lists;
+```
+
+---
+
+## 8. Consultar Itens de Casa no Mundo
+
+```sql
+SELECT * FROM house_items;
+```
+
+---
+
+## 9. Consultar Inventário do Jogador
+
+```sql
+SELECT * FROM player_inventory WHERE player_id = 1;
+```
+
+---
+
+## 10. Logs
+- Ative o modo debug para logs detalhados: `LOG_LEVEL=debug`
+- Veja logs de ações e erros no console do servidor.
+
+---
+
+## 11. Contato
+Dúvidas ou problemas: consulte os arquivos de código ou abra um issue.

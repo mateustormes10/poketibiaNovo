@@ -88,8 +88,16 @@ export async function startHttpServer({ database, config } = {}) {
     });
 
     const port = cfg.httpPort ?? 3001;
-    const server = app.listen(port, () => {
-        logger.info(`API server running on port ${port}`);
+
+    const server = await new Promise((resolve, reject) => {
+        const s = app.listen(port);
+        s.once('listening', () => {
+            logger.info(`API server running on port ${port}`);
+            resolve(s);
+        });
+        s.once('error', (err) => {
+            reject(err);
+        });
     });
 
     return {

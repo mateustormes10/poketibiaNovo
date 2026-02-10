@@ -17,6 +17,8 @@ import { PlayerQuestRepository } from '../persistence/PlayerQuestRepository.js';
 import { QuestDefinitions } from './quests/QuestDefinitions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { Logger } from '../utils/Logger.js';
+import { HouseRepository } from '../persistence/HouseRepository.js';
+import { HouseService } from '../services/HouseService.js';
 
 const logger = new Logger('GameWorld');
 
@@ -40,6 +42,10 @@ export class GameWorld {
         this.npcRepository = new NpcRepository(database);
         this.balanceRepository = new BalanceRepository(database);
         this.inventoryRepository = new InventoryRepository(database);
+
+        // Houses (Modelo A)
+        this.houseRepository = new HouseRepository(database);
+        this.houseService = new HouseService(this, this.houseRepository);
 
         // Quests (persistência em tabelas dedicadas)
         this.questRepository = new QuestRepository(database);
@@ -194,6 +200,14 @@ export class GameWorld {
         if (this.mapManager && typeof this.mapManager.loadMaps === 'function') {
             await this.mapManager.loadMaps();
         }
+
+        // Houses: garante schema + seed e carrega cache
+        try {
+            await this.houseService.init();
+        } catch (e) {
+            logger.error('[HOUSE] Falha ao inicializar sistema de houses:', e?.message || e);
+        }
+
         await this.zoneManager.init();
         // Carrega NPCs do banco de dados
         await this.loadNpcs();
@@ -382,6 +396,13 @@ export class GameWorld {
         
         // Atualiza zonas
         this.zoneManager.update(deltaTime);
+
+        // Houses/leilões (throttled internamente)
+        try {
+            this.houseService?.update?.(Date.now());
+        } catch {
+            // ignore
+        }
     }
     
     getGameState(player) {

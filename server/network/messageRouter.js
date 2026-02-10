@@ -417,6 +417,102 @@ export class MessageRouter {
         Object.keys(wildPokemonHandlers).forEach(eventType => {
             this.handlers.set(eventType, wildPokemonHandlers[eventType]);
         });
+
+        // Houses (Modelo A)
+        this.handlers.set('house_get_info', async (client, data) => {
+            const houseId = Number(data?.houseId ?? data?.house_id);
+            if (!houseId) {
+                client.send('house_info', { success: false, reason: 'invalid_house_id' });
+                return;
+            }
+            const info = await this.gameWorld.houseService?.getHouseInfo?.(houseId);
+            if (!info) {
+                client.send('house_info', { success: false, reason: 'house_not_found' });
+                return;
+            }
+            client.send('house_info', { success: true, ...info });
+        });
+
+        this.handlers.set('house_bid', async (client, data) => {
+            const houseId = Number(data?.houseId ?? data?.house_id);
+            const amount = Number(data?.amount ?? data?.bid);
+            if (!houseId || !Number.isFinite(amount)) {
+                client.send('house_bid_result', { success: false, reason: 'invalid_request' });
+                return;
+            }
+
+            const result = await this.gameWorld.houseService?.placeBid?.({ client, houseId, amount });
+            if (!result) {
+                client.send('house_bid_result', { success: false, reason: 'house_system_unavailable' });
+                return;
+            }
+            client.send('house_bid_result', result);
+        });
+
+        // House items (inventário-based)
+        this.handlers.set('house_get_items', async (client) => {
+            try {
+                const p = client?.player;
+                logger.info(`[HOUSE_GET_ITEMS] player=${p?.name ?? p?.id ?? 'unknown'} pos=(${p?.x},${p?.y},${p?.z})`);
+                const result = await this.gameWorld.houseService?.getCurrentHouseItems?.({ client });
+                if (!result) {
+                    client.send('house_items', { success: false, reason: 'house_system_unavailable' });
+                    return;
+                }
+                logger.info(`[HOUSE_GET_ITEMS_RESULT] success=${Boolean(result?.success)} reason=${result?.reason ?? ''} house_id=${result?.house_id ?? ''}`);
+                client.send('house_items', result);
+            } catch (e) {
+                logger.error(`[HOUSE_GET_ITEMS_ERROR] ${e?.message ?? e}`);
+                client.send('house_items', { success: false, reason: 'internal_error' });
+            }
+        });
+
+        this.handlers.set('house_item_place', async (client, data) => {
+            try {
+                const p = client?.player;
+                const templateId = data?.item_id ?? data?.itemId;
+                logger.info(`[HOUSE_ITEM_PLACE] player=${p?.name ?? p?.id ?? 'unknown'} pos=(${p?.x},${p?.y},${p?.z}) item_id=${templateId}`);
+                const result = await this.gameWorld.houseService?.placeHouseItemFromInventory?.({
+                    client,
+                    item_id: data?.item_id ?? data?.itemId
+                });
+                if (!result) {
+                    client.send('house_item_place_result', { success: false, reason: 'house_system_unavailable' });
+                    return;
+                }
+                logger.info(`[HOUSE_ITEM_PLACE_RESULT] success=${Boolean(result?.success)} reason=${result?.reason ?? ''}`);
+                client.send('house_item_place_result', result);
+            } catch (e) {
+                logger.error(`[HOUSE_ITEM_PLACE_ERROR] ${e?.message ?? e}`);
+                client.send('house_item_place_result', { success: false, reason: 'internal_error' });
+            }
+        });
+
+        // Move não existe no novo fluxo (sem modo construção)
+        this.handlers.set('house_item_move', async (client) => {
+            client.send('house_item_move_result', { success: false, reason: 'unsupported' });
+        });
+
+        this.handlers.set('house_item_remove', async (client, data) => {
+            try {
+                const p = client?.player;
+                const instanceId = data?.item_instance_id ?? data?.itemInstanceId ?? data?.id;
+                logger.info(`[HOUSE_ITEM_REMOVE] player=${p?.name ?? p?.id ?? 'unknown'} pos=(${p?.x},${p?.y},${p?.z}) item_instance_id=${instanceId}`);
+                const result = await this.gameWorld.houseService?.removeHouseItemToInventory?.({
+                    client,
+                    item_instance_id: data?.item_instance_id ?? data?.itemInstanceId ?? data?.id
+                });
+                if (!result) {
+                    client.send('house_item_remove_result', { success: false, reason: 'house_system_unavailable' });
+                    return;
+                }
+                logger.info(`[HOUSE_ITEM_REMOVE_RESULT] success=${Boolean(result?.success)} reason=${result?.reason ?? ''}`);
+                client.send('house_item_remove_result', result);
+            } catch (e) {
+                logger.error(`[HOUSE_ITEM_REMOVE_ERROR] ${e?.message ?? e}`);
+                client.send('house_item_remove_result', { success: false, reason: 'internal_error' });
+            }
+        });
         
         // Outfit change handler
         this.handlers.set('change_outfit', handleChangeOutfit);
@@ -501,7 +597,16 @@ export class MessageRouter {
         const handler = this.handlers.get(message.type);
         
         if (handler) {
-            handler(client, message.data);
+            try {
+                const res = handler(client, message.data);
+                if (res && typeof res.then === 'function') {
+                    res.catch((err) => {
+                        logger.error(`Handler error for type ${message.type}:`, err);
+                    });
+                }
+            } catch (err) {
+                logger.error(`Handler throw for type ${message.type}:`, err);
+            }
         } else {
 			logger.warn(`No handler for message type: ${message.type}`);
         }
