@@ -3,8 +3,20 @@ import { Database } from './config/database.js';
 import { Logger } from './utils/Logger.js';
 import { startHttpServer } from './httpServer.js';
 import { startGameServer } from './websocketServer.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const logger = new Logger('INIT');
+
+// Em workspace multi-root, o processo pode iniciar com cwd "errado".
+// Garantimos que paths relativos (ex: ./client/assets) resolvam no projeto.
+try {
+	const __filename = fileURLToPath(import.meta.url);
+	const __dirname = path.dirname(__filename);
+	process.chdir(path.resolve(__dirname, '..'));
+} catch {
+	// ignore
+}
 
 async function main() {
 	logger.info('Starting ChaosWar servers...');

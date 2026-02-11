@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { Chunk } from './ChunkManager.js';
 import { Logger } from '../../utils/Logger.js';
 
@@ -11,7 +12,10 @@ const logger = new Logger('MapLoader');
  */
 export class MapLoader {
     constructor() {
-        this.mapPath = path.join(process.cwd(), '..', 'client/assets');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const projectRoot = path.resolve(__dirname, '..', '..', '..');
+        this.mapPath = path.resolve(projectRoot, 'client', 'assets');
         this.mapCache = new Map(); // Cache de mapas completos
     }
     

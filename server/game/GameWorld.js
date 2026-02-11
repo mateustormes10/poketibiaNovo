@@ -19,6 +19,7 @@ import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { Logger } from '../utils/Logger.js';
 import { HouseRepository } from '../persistence/HouseRepository.js';
 import { HouseService } from '../services/HouseService.js';
+import { GuildService } from '../services/GuildService.js';
 
 const logger = new Logger('GameWorld');
 
@@ -46,6 +47,9 @@ export class GameWorld {
         // Houses (Modelo A)
         this.houseRepository = new HouseRepository(database);
         this.houseService = new HouseService(this, this.houseRepository);
+
+        // Guilds
+        this.guildService = new GuildService(this);
 
         // Quests (persistência em tabelas dedicadas)
         this.questRepository = new QuestRepository(database);
@@ -206,6 +210,13 @@ export class GameWorld {
             await this.houseService.init();
         } catch (e) {
             logger.error('[HOUSE] Falha ao inicializar sistema de houses:', e?.message || e);
+        }
+
+        // Guilds: garante schema (best-effort)
+        try {
+            await this.guildService.init();
+        } catch (e) {
+            logger.error('[GUILD] Falha ao inicializar sistema de guild:', e?.message || e);
         }
 
         await this.zoneManager.init();

@@ -7,6 +7,16 @@ export class PlayerRepository {
 		this.db = database;
 	}
 
+    async setRankId(id, rankId) {
+        const sql = 'UPDATE players SET rank_id = ? WHERE id = ?';
+        return await this.db.update(sql, [rankId ?? 0, id]);
+    }
+
+    async setGuildNick(id, guildnick) {
+        const sql = 'UPDATE players SET guildnick = ? WHERE id = ?';
+        return await this.db.update(sql, [guildnick ?? '', id]);
+    }
+
 	async updateTownId(id, townId) {
 		logger.debug(`updateTownId called: id=${id}, townId=${townId}`);
 		const sql = 'UPDATE players SET town_id = ? WHERE id = ?';

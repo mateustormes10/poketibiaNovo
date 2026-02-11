@@ -513,6 +513,142 @@ export class MessageRouter {
                 client.send('house_item_remove_result', { success: false, reason: 'internal_error' });
             }
         });
+
+
+        // Guilds (estilo Tibia) - server-authoritative
+        const sendToDbPlayerId = (dbPlayerId, type, data) => {
+            const id = Number(dbPlayerId);
+            if (!id || !this.wsServer) return;
+            for (const c of this.wsServer.clients.values()) {
+                const pid = c?.player?.dbId;
+                if (Number(pid) === id) {
+                    c.send(type, data);
+                }
+            }
+        };
+
+        const refreshGuildForPlayer = async (dbPlayerId) => {
+            const id = Number(dbPlayerId);
+            if (!id) return;
+            // Envia um painel atualizado caso o player esteja em guild.
+            try {
+                const pg = await this.gameWorld.guildService.guildRepository.getPlayerGuild(id);
+                if (!pg) {
+                    sendToDbPlayerId(id, 'guild_update', { success: true, my_guild: null });
+                    return;
+                }
+                const panel = await this.gameWorld.guildService.getGuildPanel(pg.guild_id);
+                sendToDbPlayerId(id, 'guild_update', {
+                    success: true,
+                    my_guild: {
+                        guild_id: Number(pg.guild_id),
+                        guild_name: String(pg.guild_name ?? ''),
+                        ownerid: Number(pg.ownerid),
+                        motd: String(pg.motd ?? ''),
+                        my_rank: {
+                            rank_id: Number(pg.rank_id),
+                            rank_name: String(pg.rank_name ?? ''),
+                            rank_level: Number(pg.rank_level)
+                        },
+                        panel
+                    }
+                });
+            } catch (e) {
+                logger.warn(`[GUILD] refreshGuildForPlayer error: ${e?.message ?? e}`);
+            }
+        };
+
+        const registerGuildHandler = (type, fn) => {
+            this.handlers.set(type, fn);
+            this.handlers.set(String(type).toLowerCase(), fn);
+        };
+
+        registerGuildHandler('OPEN_GUILD_MENU', async (client) => {
+            const result = await this.gameWorld.guildService?.openMenu?.({ client });
+            client.send('guild_menu', result ?? { success: false, reason: 'guild_system_unavailable' });
+        });
+
+        registerGuildHandler('CREATE_GUILD', async (client, data) => {
+            const result = await this.gameWorld.guildService?.createGuild?.({
+                client,
+                name: data?.name,
+                motd: data?.motd
+            });
+
+            if (!result) {
+                client.send('guild_create_result', { success: false, reason: 'guild_system_unavailable' });
+                return;
+            }
+            client.send('guild_create_result', result);
+            // Após criar, atualiza menu completo.
+            if (result?.success) {
+                client.send('guild_menu', result.menu);
+            }
+        });
+
+        registerGuildHandler('APPLY_GUILD', async (client, data) => {
+            const result = await this.gameWorld.guildService?.applyToGuild?.({
+                client,
+                guildId: data?.guild_id ?? data?.guildId ?? data?.id
+            });
+            client.send('guild_apply_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+        });
+
+        registerGuildHandler('GET_GUILD_INVITES', async (client) => {
+            const result = await this.gameWorld.guildService?.listInvites?.({ client });
+            client.send('guild_invites', result ?? { success: false, reason: 'guild_system_unavailable' });
+        });
+
+        registerGuildHandler('APPROVE_GUILD_INVITE', async (client, data) => {
+            const result = await this.gameWorld.guildService?.approveInvite?.({
+                client,
+                playerId: data?.player_id ?? data?.playerId
+            });
+            client.send('guild_approve_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                // Atualiza líder e player aprovado.
+                const leaderDbId = client?.player?.dbId;
+                if (leaderDbId) await refreshGuildForPlayer(leaderDbId);
+                await refreshGuildForPlayer(result.player_id);
+
+                // Atualiza lista de invites do líder.
+                const inv = await this.gameWorld.guildService.listInvites({ client });
+                client.send('guild_invites', inv);
+            }
+        });
+
+        registerGuildHandler('REJECT_GUILD_INVITE', async (client, data) => {
+            const result = await this.gameWorld.guildService?.rejectInvite?.({
+                client,
+                playerId: data?.player_id ?? data?.playerId
+            });
+            client.send('guild_reject_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                const inv = await this.gameWorld.guildService.listInvites({ client });
+                client.send('guild_invites', inv);
+            }
+        });
+
+        registerGuildHandler('UPDATE_GUILD_MOTD', async (client, data) => {
+            const result = await this.gameWorld.guildService?.updateMotd?.({
+                client,
+                motd: data?.motd
+            });
+            client.send('guild_motd_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                // Atualiza todos os membros online (best-effort)
+                try {
+                    const panel = await this.gameWorld.guildService.getGuildPanel(result.guild_id);
+                    const members = panel?.members || [];
+                    for (const m of members) {
+                        await refreshGuildForPlayer(m.player_id);
+                    }
+                } catch {}
+            }
+        });
         
         // Outfit change handler
         this.handlers.set('change_outfit', handleChangeOutfit);
