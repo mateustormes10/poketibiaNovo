@@ -1,0 +1,44 @@
+{
+  "system.name": "系统",
+
+  "moderation.blocked_language": "消息已屏蔽：包含不当用语。",
+
+  "inventory.not_authenticated": "玩家未认证。",
+  "inventory.load_error": "加载背包失败。",
+  "inventory.use_error": "使用物品时出错。",
+  "inventory.drop_not_implemented": "丢弃功能未实现。",
+  "inventory.item_name_missing": "未指定物品名称。",
+
+  "player.attr_invalid": "属性无效：{attr}",
+  "player.add_point_success": "{attr} +1 点，剩余可分配点数 -1",
+
+  "gm.only_gm_change_floor": "只有 GM/管理员可以手动切换楼层。",
+  "gm.floor_changed": "楼层已切换到 z={z}",
+
+  "gm.no_permission": "你没有权限使用 GM 指令。",
+  "gm.command_invalid": "指令无效。",
+  "gm.command_unknown": "未知指令：/{command}",
+  "gm.execute_error": "执行指令时出错：{error}",
+
+  "chat.no_permission_commands": "你没有权限使用指令。",
+  "chat.suicide": "你自杀了。",
+  "chat.healed_full": "你已被治疗至满血。",
+  "chat.took_damage": "你受到了 {damage} 点伤害。",
+  "chat.unknown_command": "未知指令：/{command}",
+
+  "chat.add.syntax": "语法错误。用法：/add goldcoin(数量) player(id)",
+  "chat.add.receive_gold": "你获得了 {amount} 金币！新余额：{balance}",
+  "chat.add.gm_feedback": "已向玩家 ID {playerId} 添加 {amount} 金币。新余额：{balance}",
+  "chat.add.error": "添加金币时出错。",
+
+  "stats.hit_points": "生命值",
+  "stats.velocity": "速度",
+  "stats.damage": "伤害",
+  "stats.defense": "防御",
+  "stats.crit_chance": "暴击率",
+  "stats.crit_damage": "暴击伤害",
+  "stats.dodge": "闪避",
+  "stats.coundown": "冷却",
+  "stats.scan_efficiency": "扫描效率",
+  "stats.lucky": "幸运"
+}

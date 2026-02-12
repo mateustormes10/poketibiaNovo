@@ -1,7 +1,7 @@
 <?php
 // Configuração simples de conexão com MySQL
 $host = 'localhost';
-$db   = 'poketibia';
+$db   = 'chaoswar';
 $user = 'root';
 $pass = '';
 $charset = 'utf8mb4';

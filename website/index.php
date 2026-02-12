@@ -3,21 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chaotic - Home</title>
+    <title data-i18n="title.home">Chaotic - Home</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
     <div class="main-layout">
         <?php include 'sidebar.html'; ?>
         <main class="main-content">
+            <section class="home-hero">
+                <div class="home-hero__inner">
+                    <p class="home-hero__kicker" data-i18n="home.kicker">MMORPG • Mundo persistente • Progressão e desafios</p>
+                    <h1 class="home-hero__title">Chaotic</h1>
+                    <p class="home-hero__subtitle" data-i18n="home.subtitle">Entre no mundo de Chaotic e acompanhe as últimas notícias do servidor. Crie sua conta, faça login e prepare-se para a próxima aventura.</p>
+                    <div class="hero-actions">
+                        <a class="primary-cta" href="register.php" data-i18n="home.createAccount">Criar conta</a>
+                        <a class="secondary-cta" href="login.php" data-i18n="home.signIn">Entrar</a>
+                    </div>
+                </div>
+            </section>
+
             <section class="news-section">
-                <h2 class="news-title">Notícias</h2>
+                <h2 class="news-title" data-i18n="home.news">Notícias</h2>
                 <table class="news-table" id="news-table">
                     <thead>
                         <tr>
-                            <th>Data</th>
-                            <th>Título</th>
-                            <th>Conteúdo</th>
+                            <th data-i18n="home.news.date">Data</th>
+                            <th data-i18n="home.news.title">Título</th>
+                            <th data-i18n="home.news.content">Conteúdo</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -28,31 +40,8 @@
         </main>
     </div>
     <footer>
-        <p>&copy; 2025 Chaotic. Todos os direitos reservados.</p>
+        <p>&copy; 2025 Chaotic. <span data-i18n="footer.rights">Todos os direitos reservados.</span></p>
     </footer>
     <script src="js/news.js"></script>
-    <script>
-    // Responsividade do menu lateral (sidebar)
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-    function openSidebar() {
-        sidebar.classList.add('open');
-        document.body.classList.add('sidebar-open');
-        sidebarBackdrop.style.display = 'block';
-    }
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        document.body.classList.remove('sidebar-open');
-        sidebarBackdrop.style.display = 'none';
-    }
-    sidebarToggle.addEventListener('click', openSidebar);
-    sidebarBackdrop.addEventListener('click', closeSidebar);
-    window.addEventListener('resize', function() {
-        if(window.innerWidth > 900) {
-            closeSidebar();
-        }
-    });
-    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criar Conta - Chaotic</title>
+    <title data-i18n="title.register">Criar Conta - Chaotic</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -11,16 +11,16 @@
         <?php include 'sidebar.html'; ?>
         <main class="main-content">
             <section class="account-section">
-                <h2 class="account-title">Criar Conta</h2>
+                <h2 class="account-title" data-i18n="register.header">Criar Conta</h2>
                 <div class="account-box">
                     <form id="register-form">
-                        <label for="username">Usuário</label>
+                        <label for="username" data-i18n="register.username">Usuário</label>
                         <input type="text" id="username" name="username" required>
-                        <label for="password">Senha</label>
+                        <label for="password" data-i18n="register.password">Senha</label>
                         <input type="password" id="password" name="password" required>
-                        <label for="email">E-mail</label>
+                        <label for="email" data-i18n="register.email">E-mail</label>
                         <input type="email" id="email" name="email" required>
-                        <button type="submit" class="account-btn" style="margin-top:1rem;">Registrar</button>
+                        <button type="submit" class="account-btn" style="margin-top:1rem;" data-i18n="register.submit">Registrar</button>
                         <div id="register-error" class="error-message"></div>
                     </form>
                 </div>
@@ -28,7 +28,7 @@
         </main>
     </div>
     <footer>
-        <p>&copy; 2025 Chaotic. Todos os direitos reservados.</p>
+        <p>&copy; 2025 Chaotic. <span data-i18n="footer.rights">Todos os direitos reservados.</span></p>
     </footer>
     <script src="js/register.js"></script>
 </body>

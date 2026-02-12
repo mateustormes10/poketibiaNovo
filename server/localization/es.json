@@ -1,0 +1,44 @@
+{
+  "system.name": "Sistema",
+
+  "moderation.blocked_language": "Mensaje bloqueado: lenguaje inapropiado.",
+
+  "inventory.not_authenticated": "Jugador no autenticado.",
+  "inventory.load_error": "Error al cargar el inventario.",
+  "inventory.use_error": "Error al usar el objeto.",
+  "inventory.drop_not_implemented": "Soltar no implementado.",
+  "inventory.item_name_missing": "Nombre del objeto no especificado.",
+
+  "player.attr_invalid": "Atributo inválido: {attr}",
+  "player.add_point_success": "+1 punto en {attr}, -1 punto disponible",
+
+  "gm.only_gm_change_floor": "Solo GM/ADM puede cambiar el piso manualmente.",
+  "gm.floor_changed": "Piso cambiado a z={z}",
+
+  "gm.no_permission": "No tienes permiso para usar comandos GM.",
+  "gm.command_invalid": "Comando inválido.",
+  "gm.command_unknown": "Comando desconocido: /{command}",
+  "gm.execute_error": "Error al ejecutar el comando: {error}",
+
+  "chat.no_permission_commands": "No tienes permiso para usar comandos.",
+  "chat.suicide": "Te has suicidado.",
+  "chat.healed_full": "Has sido curado al máximo de HP.",
+  "chat.took_damage": "Recibiste {damage} de daño.",
+  "chat.unknown_command": "Comando desconocido: /{command}",
+
+  "chat.add.syntax": "Sintaxis inválida. Usa: /add goldcoin(cantidad) player(id)",
+  "chat.add.receive_gold": "¡Has recibido {amount} monedas de oro! Nuevo saldo: {balance}",
+  "chat.add.gm_feedback": "{amount} monedas de oro añadidas al jugador ID {playerId}. Nuevo saldo: {balance}",
+  "chat.add.error": "Error al añadir monedas de oro.",
+
+  "stats.hit_points": "Puntos de Vida",
+  "stats.velocity": "Velocidad",
+  "stats.damage": "Daño",
+  "stats.defense": "Defensa",
+  "stats.crit_chance": "Prob. Crítico",
+  "stats.crit_damage": "Daño Crítico",
+  "stats.dodge": "Esquiva",
+  "stats.coundown": "Enfriamiento",
+  "stats.scan_efficiency": "Eficiencia de Escaneo",
+  "stats.lucky": "Suerte"
+}

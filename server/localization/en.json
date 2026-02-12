@@ -1,0 +1,44 @@
+{
+  "system.name": "System",
+
+  "moderation.blocked_language": "Message blocked: inappropriate language.",
+
+  "inventory.not_authenticated": "Player not authenticated.",
+  "inventory.load_error": "Failed to load inventory.",
+  "inventory.use_error": "Error using item.",
+  "inventory.drop_not_implemented": "Drop not implemented.",
+  "inventory.item_name_missing": "Item name not specified.",
+
+  "player.attr_invalid": "Invalid attribute: {attr}",
+  "player.add_point_success": "+1 point in {attr}, -1 point available",
+
+  "gm.only_gm_change_floor": "Only GM/ADM can change the floor manually.",
+  "gm.floor_changed": "Floor changed to z={z}",
+
+  "gm.no_permission": "You do not have permission to use GM commands.",
+  "gm.command_invalid": "Invalid command.",
+  "gm.command_unknown": "Unknown command: /{command}",
+  "gm.execute_error": "Error executing command: {error}",
+
+  "chat.no_permission_commands": "You do not have permission to use commands.",
+  "chat.suicide": "You committed suicide.",
+  "chat.healed_full": "You have been healed to full HP.",
+  "chat.took_damage": "You took {damage} damage.",
+  "chat.unknown_command": "Unknown command: /{command}",
+
+  "chat.add.syntax": "Invalid syntax. Use: /add goldcoin(amount) player(id)",
+  "chat.add.receive_gold": "You received {amount} gold coins! New balance: {balance}",
+  "chat.add.gm_feedback": "{amount} gold coins added to player ID {playerId}. New balance: {balance}",
+  "chat.add.error": "Error adding gold coins.",
+
+  "stats.hit_points": "Hit Points",
+  "stats.velocity": "Velocity",
+  "stats.damage": "Damage",
+  "stats.defense": "Defense",
+  "stats.crit_chance": "Critical Chance",
+  "stats.crit_damage": "Critical Damage",
+  "stats.dodge": "Dodge",
+  "stats.coundown": "Cooldown",
+  "stats.scan_efficiency": "Scan Efficiency",
+  "stats.lucky": "Lucky"
+}

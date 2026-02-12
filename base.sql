@@ -84,6 +84,108 @@ CREATE TABLE players (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+
+-- ======================
+-- SUPPORT (Tickets)
+-- ======================
+CREATE TABLE IF NOT EXISTS support (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    account_id INT NOT NULL,
+    category VARCHAR(40) NOT NULL,
+    title VARCHAR(80) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_support_account (account_id),
+    INDEX idx_support_status (status),
+    CONSTRAINT fk_support_account FOREIGN KEY (account_id)
+        REFERENCES accounts(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- ======================
+-- FORUM
+-- ======================
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(80) NOT NULL,
+    description VARCHAR(255) NULL,
+    position INT NOT NULL DEFAULT 0,
+    is_locked TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_categories_name (name),
+    KEY idx_categories_position (position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS topics (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_id INT NOT NULL,
+    author_account_id INT NOT NULL,
+    title VARCHAR(140) NOT NULL,
+    is_locked TINYINT(1) NOT NULL DEFAULT 0,
+    views INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_topics_category FOREIGN KEY (category_id)
+        REFERENCES categories(id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_topics_author FOREIGN KEY (author_account_id)
+        REFERENCES accounts(id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    KEY idx_topics_category_created (category_id, created_at),
+    KEY idx_topics_author (author_account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    topic_id INT NOT NULL,
+    author_account_id INT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_posts_topic FOREIGN KEY (topic_id)
+        REFERENCES topics(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_posts_author FOREIGN KEY (author_account_id)
+        REFERENCES accounts(id)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    KEY idx_posts_topic_created (topic_id, created_at),
+    KEY idx_posts_author (author_account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS reactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    account_id INT NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reactions_post FOREIGN KEY (post_id)
+        REFERENCES posts(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    CONSTRAINT fk_reactions_account FOREIGN KEY (account_id)
+        REFERENCES accounts(id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    UNIQUE KEY uq_reactions_unique (post_id, account_id, type),
+    KEY idx_reactions_post (post_id),
+    KEY idx_reactions_account (account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT INTO categories (name, description, position, is_locked)
+SELECT 'World Boards', 'Discussões por mundo, trades e assuntos gerais.', 1, 0
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'World Boards');
+
+INSERT INTO categories (name, description, position, is_locked)
+SELECT 'Suporte & Bugs', 'Reporte bugs e peça ajuda para a staff.', 2, 0
+WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Suporte & Bugs');
+
 ALTER TABLE players
 MODIFY COLUMN lookaddons VARCHAR(50) NOT NULL DEFAULT 'default';
 ALTER TABLE players 

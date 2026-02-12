@@ -1,38 +1,124 @@
-<button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menu lateral">&#9776;</button>
+<button class="sidebar-toggle" id="sidebarToggle" type="button" data-i18n-aria="aria.openSidebar">&#9776;</button>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">Chaotic</div>
-    <nav class="sidebar-menu">
-        <button class="sidebar-btn" onclick="window.location.href='login.php'">Login</button>
-        <button class="sidebar-btn" onclick="window.location.href='register.php'">Criar Conta</button>
-        <button class="sidebar-btn download-btn">Download</button>
-        <button class="sidebar-section" onclick="window.location.href='info.php'">Informações do Game</button>
-        <button class="sidebar-section" onclick="window.location.href='library.php'">Library</button>
-        <button class="sidebar-section" onclick="window.location.href='community.php'">Community</button>
-        <button class="sidebar-section" onclick="window.location.href='forum.php'">Forum</button>
-        <button class="sidebar-section" onclick="window.location.href='support.php'">Support</button>
+    <a class="sidebar-logo" href="index.php" data-i18n-aria="aria.goHome">Chaotic</a>
+
+    <nav class="sidebar-menu" data-i18n-aria="aria.navigation">
+        <button class="sidebar-btn" id="nav-login" type="button" data-href="login.php" data-i18n="nav.login">Login</button>
+        <button class="sidebar-btn" id="nav-panel" type="button" data-href="player.php" style="display:none;" data-i18n="nav.panel">Painel</button>
+        <button class="sidebar-btn" id="nav-logout" type="button" style="display:none;" data-i18n="nav.logout">Logout</button>
+        <button class="sidebar-btn download-btn" type="button" data-i18n="nav.download">Download</button>
+
+        <button class="sidebar-section" type="button" data-href="info.php" data-i18n="nav.gameInfo">Informações do Game</button>
+        <button class="sidebar-section" type="button" data-href="library.php" data-i18n="nav.library">Library</button>
+        <button class="sidebar-section" type="button" data-href="community.php" data-i18n="nav.community">Community</button>
+        <button class="sidebar-section" type="button" data-href="forum.php" data-i18n="nav.forum">Forum</button>
+        <button class="sidebar-section" type="button" data-href="support.php" data-i18n="nav.support">Support</button>
+        <button class="sidebar-section" type="button" data-href="ranking.php" data-i18n="nav.ranking">Ranking</button>
+
+        <div class="sidebar-lang">
+            <label for="langSelect" data-i18n="nav.language">Language</label>
+            <select id="langSelect">
+                <option value="en">🇺🇸 English</option>
+                <option value="es">🇪🇸 Español</option>
+                <option value="pt">🇧🇷 Português</option>
+                <option value="zh">🇨🇳 中文</option>
+                <option value="it">🇮🇹 Italiano</option>
+            </select>
+        </div>
     </nav>
 </aside>
+
+<script src="js/i18n.js"></script>
 <script>
-// Responsividade do menu lateral (sidebar)
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
-const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-function openSidebar() {
-    sidebar.classList.add('open');
-    document.body.classList.add('sidebar-open');
-    sidebarBackdrop.style.display = 'block';
-}
-function closeSidebar() {
-    sidebar.classList.remove('open');
-    document.body.classList.remove('sidebar-open');
-    sidebarBackdrop.style.display = 'none';
-}
-sidebarToggle.addEventListener('click', openSidebar);
-sidebarBackdrop.addEventListener('click', closeSidebar);
-window.addEventListener('resize', function() {
-    if(window.innerWidth > 900) {
-        closeSidebar();
+(function () {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+    if (!sidebar || !sidebarToggle || !sidebarBackdrop) return;
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        document.body.classList.add('sidebar-open');
     }
-});
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        document.body.classList.remove('sidebar-open');
+    }
+
+    sidebarToggle.addEventListener('click', openSidebar);
+    sidebarBackdrop.addEventListener('click', closeSidebar);
+
+    window.addEventListener('resize', function () {
+        if (window.innerWidth > 900) {
+            closeSidebar();
+        }
+    });
+
+    sidebar.addEventListener('click', function (event) {
+        const logoutBtn = event.target.closest('#nav-logout');
+        if (logoutBtn) {
+            // limpa cookies
+            document.cookie = 'account_id=; path=/; max-age=0; samesite=lax';
+            document.cookie = 'username=; path=/; max-age=0; samesite=lax';
+            // limpa localStorage
+            localStorage.removeItem('account_id');
+            localStorage.removeItem('username');
+            localStorage.removeItem('email');
+            window.location.href = 'login.php';
+            return;
+        }
+
+        const target = event.target.closest('[data-href]');
+        if (!target) return;
+        const href = target.getAttribute('data-href');
+        if (!href) return;
+        window.location.href = href;
+    });
+
+    const current = (window.location.pathname.split('/').pop() || 'index.php').toLowerCase();
+    const items = sidebar.querySelectorAll('[data-href]');
+    for (const item of items) {
+        const href = (item.getAttribute('data-href') || '').toLowerCase();
+        if (href === current) {
+            item.classList.add('active');
+        }
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+    }
+
+    const loggedAccountId = getCookie('account_id') || localStorage.getItem('account_id');
+    const navLogin = document.getElementById('nav-login');
+    const navRegister = document.getElementById('nav-register');
+    const navPanel = document.getElementById('nav-panel');
+    const navLogout = document.getElementById('nav-logout');
+
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect && window.I18N && typeof window.I18N.setLang === 'function') {
+        langSelect.addEventListener('change', function () {
+            window.I18N.setLang(langSelect.value);
+            window.location.reload();
+        });
+    }
+
+    if (loggedAccountId) {
+        if (navLogin) navLogin.style.display = 'none';
+        if (navRegister) navRegister.style.display = 'none';
+        if (navPanel) navPanel.style.display = '';
+        if (navLogout) navLogout.style.display = '';
+    } else {
+        if (navLogin) navLogin.style.display = '';
+        if (navRegister) navRegister.style.display = '';
+        if (navPanel) navPanel.style.display = 'none';
+        if (navLogout) navLogout.style.display = 'none';
+    }
+})();
 </script>

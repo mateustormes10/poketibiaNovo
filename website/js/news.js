@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const t = (key, vars) => (window.I18N && typeof window.I18N.t === 'function' ? window.I18N.t(key, vars) : key);
+
     fetch('news.php')
         .then(res => res.json())
         .then(data => {
@@ -11,6 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         })
         .catch(() => {
-            document.querySelector('#news-table tbody').innerHTML = '<tr><td colspan="3" style="color:#c9a14a;font-weight:bold;text-shadow:1px 1px 4px #0a1833,0 0 4px #fff;">Erro ao carregar notícias.</td></tr>';
+            document.querySelector('#news-table tbody').innerHTML = `<tr><td colspan="3" style="color:#c9a14a;font-weight:bold;text-shadow:1px 1px 4px #0a1833,0 0 4px #fff;">${t('home.news.loadError')}</td></tr>`;
         });
 });
