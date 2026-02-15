@@ -41,4 +41,15 @@
   "stats.coundown": "冷却",
   "stats.scan_efficiency": "扫描效率",
   "stats.lucky": "幸运"
+
+  ,"movement.house_in_auction": "房屋正在拍卖：禁止进入。"
+  ,"movement.house_no_permission": "你没有权限进入这所房屋。"
+  ,"movement.house_unowned_blocked": "无人拥有的房屋：禁止进入。"
+  ,"movement.blocked_by_house": "移动被房屋限制。"
+  ,"movement.stamina_exhausted": "你太累了！请等待体力恢复后再移动。"
+  ,"movement.blocked_by_collision": "移动被碰撞阻挡！"
+  ,"movement.blocked_player_on_tile": "移动被阻挡：该格子上有其他玩家！"
+  ,"movement.blocked_npc_on_tile": "移动被阻挡：该格子上有 NPC！"
+  ,"movement.blocked_monster_on_tile": "移动被阻挡：该格子上有怪物！"
+  ,"movement.blocked_wild_pokemon_on_tile": "移动被阻挡：该格子上有野生宝可梦！"
 }

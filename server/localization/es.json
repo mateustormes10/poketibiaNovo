@@ -41,4 +41,15 @@
   "stats.coundown": "Enfriamiento",
   "stats.scan_efficiency": "Eficiencia de Escaneo",
   "stats.lucky": "Suerte"
+
+  ,"movement.house_in_auction": "Casa en subasta: entrada bloqueada."
+  ,"movement.house_no_permission": "No tienes permiso para entrar en esta casa."
+  ,"movement.house_unowned_blocked": "Casa sin dueño: entrada bloqueada."
+  ,"movement.blocked_by_house": "Movimiento bloqueado por la casa."
+  ,"movement.stamina_exhausted": "¡Estás agotado! Espera a que la resistencia se recargue para caminar."
+  ,"movement.blocked_by_collision": "¡Movimiento bloqueado por colisión!"
+  ,"movement.blocked_player_on_tile": "Movimiento bloqueado: ¡otro jugador está en esta casilla!"
+  ,"movement.blocked_npc_on_tile": "Movimiento bloqueado: ¡un NPC está en esta casilla!"
+  ,"movement.blocked_monster_on_tile": "Movimiento bloqueado: ¡un monstruo está en esta casilla!"
+  ,"movement.blocked_wild_pokemon_on_tile": "Movimiento bloqueado: ¡un Pokémon salvaje está en esta casilla!"
 }

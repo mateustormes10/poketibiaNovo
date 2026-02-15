@@ -41,4 +41,15 @@
   "stats.coundown": "Cooldown",
   "stats.scan_efficiency": "Scan Efficiency",
   "stats.lucky": "Lucky"
+
+  ,"movement.house_in_auction": "House in auction: entry blocked."
+  ,"movement.house_no_permission": "You do not have permission to enter this house."
+  ,"movement.house_unowned_blocked": "Unowned house: entry blocked."
+  ,"movement.blocked_by_house": "Movement blocked by house."
+  ,"movement.stamina_exhausted": "You are exhausted! Wait for stamina to recharge to walk."
+  ,"movement.blocked_by_collision": "Movement blocked by collision!"
+  ,"movement.blocked_player_on_tile": "Movement blocked: another player is on this tile!"
+  ,"movement.blocked_npc_on_tile": "Movement blocked: an NPC is on this tile!"
+  ,"movement.blocked_monster_on_tile": "Movement blocked: a monster is on this tile!"
+  ,"movement.blocked_wild_pokemon_on_tile": "Movement blocked: a wild Pokémon is on this tile!"
 }

@@ -41,4 +41,15 @@
   "stats.coundown": "Recupero",
   "stats.scan_efficiency": "Efficienza Scansione",
   "stats.lucky": "Fortuna"
+
+  ,"movement.house_in_auction": "Casa in asta: ingresso bloccato."
+  ,"movement.house_no_permission": "Non hai il permesso di entrare in questa casa."
+  ,"movement.house_unowned_blocked": "Casa senza proprietario: ingresso bloccato."
+  ,"movement.blocked_by_house": "Movimento bloccato dalla casa."
+  ,"movement.stamina_exhausted": "Sei esausto! Aspetta che la stamina si ricarichi per camminare."
+  ,"movement.blocked_by_collision": "Movimento bloccato dalla collisione!"
+  ,"movement.blocked_player_on_tile": "Movimento bloccato: un altro giocatore è su questa casella!"
+  ,"movement.blocked_npc_on_tile": "Movimento bloccato: un NPC è su questa casella!"
+  ,"movement.blocked_monster_on_tile": "Movimento bloccato: un mostro è su questa casella!"
+  ,"movement.blocked_wild_pokemon_on_tile": "Movimento bloccato: un Pokémon selvatico è su questa casella!"
 }

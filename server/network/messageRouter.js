@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Logger } from '../utils/Logger.js';
+import { I18n } from '../localization/i18n.js';
 
 const logger = new Logger('MessageRouter');
 
@@ -294,7 +295,7 @@ export class MessageRouter {
                                     return;
                                 }
                                 if (player.vocation !== 4) {
-                                    client.send('system_message', { message: 'Apenas GM/ADM pode trocar o andar manualmente.', color: 'red' });
+                                    client.send('system_message', { message: I18n.t(client?.lang, 'gm.only_gm_change_floor'), color: 'red' });
                                     return;
                                 }
                                 let newZ = player.z;
@@ -305,7 +306,7 @@ export class MessageRouter {
                                 // Lógica de mapa removida do servidor
                                 const gameState = this.gameWorld.getGameState(player);
                                 client.send('gameState', gameState);
-                                client.send('system_message', { message: `Andar alterado para z=${player.z}`, color: 'yellow' });
+                                client.send('system_message', { message: I18n.t(client?.lang, 'gm.floor_changed', { z: player.z }), color: 'yellow' });
 								logger.debug(`[GM_CHANGE_Z] Player ${player.name} mudou para z=${player.z}`);
                             });
                     // Handler para consulta de vocation do player
@@ -316,6 +317,25 @@ export class MessageRouter {
                     }
                     client.send('player_vocation', { vocation });
                 });
+
+                // Language / Locale: permite o client (Unity) trocar idioma em runtime.
+                // Aceita payload: { lang: 'pt' } | { language: 'pt' } | { locale: 'pt-BR' } | 'pt'
+                // Cada conexão tem seu próprio client.lang, então cada player recebe mensagens no seu idioma.
+                const setClientLanguage = (client, data) => {
+                    const requested =
+                        (data && typeof data === 'object')
+                            ? (data.lang ?? data.language ?? data.locale)
+                            : data;
+                    const normalized = I18n.normalizeLang(requested);
+                    client.lang = normalized;
+                    if (client.player) client.player.lang = normalized;
+                };
+
+                // Aliases para facilitar integração com clients diferentes
+                this.handlers.set('set_language', setClientLanguage);
+                this.handlers.set('set_lang', setClientLanguage);
+                this.handlers.set('change_language', setClientLanguage);
+                this.handlers.set('language_change', setClientLanguage);
                     
               
               
@@ -379,7 +399,7 @@ export class MessageRouter {
             ];
             const attr = data?.atributo;
             if (!validAttrs.includes(attr)) {
-                client.send('system_message', { message: `Atributo inválido: ${attr}` });
+                client.send('system_message', { message: I18n.t(client?.lang, 'player.attr_invalid', { attr }) });
                 return;
             }
             // Atualiza o campo conditions (JSON)
@@ -409,7 +429,7 @@ export class MessageRouter {
             // Envia novo estado do jogo para o client
             const gameState = this.gameWorld.getGameState(player);
             client.send('gameState', gameState);
-            client.send('system_message', { message: `+1 ponto em ${attr}, -1 ponto disponível` });
+            client.send('system_message', { message: I18n.t(client?.lang, 'player.add_point_success', { attr }) });
         });
         
         // Wild Pokémon handlers

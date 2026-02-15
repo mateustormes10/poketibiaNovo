@@ -9,6 +9,7 @@ export class WsClient {
         this.gameWorld = gameWorld;
         this.player = null;
         this.authenticated = false;
+        this.lang = 'en';
     }
     
     send(type, data) {

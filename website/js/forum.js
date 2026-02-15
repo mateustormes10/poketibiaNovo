@@ -163,21 +163,21 @@
     const isLogged = !!getAccountId();
 
     const rows = data.topics
-      .map((t) => {
+      .map((topic) => {
         return `
           <tr>
             <td>
               <div style="display:flex; flex-direction:column; gap:6px;">
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                  <button class="forum-link" data-topic="${t.id}">${escapeHtml(t.title)}</button>
-                  ${Number(t.is_locked) === 1 ? `<span class="forum-pill">${t('forum.locked')}</span>` : ''}
+                  <button class="forum-link" data-topic="${topic.id}">${escapeHtml(topic.title)}</button>
+                  ${Number(topic.is_locked) === 1 ? `<span class="forum-pill">${t('forum.locked')}</span>` : ''}
                 </div>
-                <div class="forum-muted">${t('common.by', { name: escapeHtml(t.author_username) })} • ${formatDate(t.created_at)}</div>
+                <div class="forum-muted">${t('common.by', { name: escapeHtml(topic.author_username) })} • ${formatDate(topic.created_at)}</div>
               </div>
             </td>
-            <td style="white-space:nowrap; text-align:right;">${Number(t.replies || 0)}</td>
-            <td style="white-space:nowrap; text-align:right;">${Number(t.views || 0)}</td>
-            <td style="white-space:nowrap; text-align:right;">${formatDate(t.last_post_at || t.created_at)}</td>
+            <td style="white-space:nowrap; text-align:right;">${Number(topic.replies || 0)}</td>
+            <td style="white-space:nowrap; text-align:right;">${Number(topic.views || 0)}</td>
+            <td style="white-space:nowrap; text-align:right;">${formatDate(topic.last_post_at || topic.created_at)}</td>
           </tr>
         `;
       })

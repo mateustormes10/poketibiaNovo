@@ -5,6 +5,7 @@ import { ServerEvents } from '../../shared/protocol/actions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { GMCommandHandler } from './gmCommandHandler.js';
 import { Logger } from '../utils/Logger.js';
+import { I18n } from '../localization/i18n.js';
 
 const logger = new Logger('ChatHandler');
 
@@ -60,8 +61,8 @@ export class ChatHandler {
         if (this.badwords.some(bad => msgLower.includes(bad))) {
             client.send('chatMessage', {
                 playerId: 0,
-                playerName: 'Sistema',
-                message: 'Mensagem bloqueada: linguagem inadequada.',
+                playerName: I18n.t(client?.lang, 'system.name'),
+                message: I18n.t(client?.lang, 'moderation.blocked_language'),
                 type: 'system',
                 timestamp: Date.now()
             });
@@ -93,8 +94,8 @@ export class ChatHandler {
         // Verifica se o player é GM
         if (client.player.vocation !== GameConstants.GM_VOCATION) {
             client.send('chatMessage', {
-                playerName: 'System',
-                message: 'You do not have permission to use commands.',
+                playerName: I18n.t(client?.lang, 'system.name'),
+                message: I18n.t(client?.lang, 'chat.no_permission_commands'),
                 type: 'system',
                 timestamp: Date.now()
             });
@@ -109,8 +110,8 @@ export class ChatHandler {
 				logger.debug(`GM ${client.player.name} used /die command`);
                 client.player.takeDamage(client.player.hp);
                 client.send('chatMessage', {
-                    playerName: 'System',
-                    message: 'You committed suicide.',
+                    playerName: I18n.t(client?.lang, 'system.name'),
+                    message: I18n.t(client?.lang, 'chat.suicide'),
                     type: 'system',
                     timestamp: Date.now()
                 });
@@ -121,8 +122,8 @@ export class ChatHandler {
                 client.player.hp = client.player.maxHp;
 				logger.debug(`GM ${client.player.name} healed to full HP`);
                 client.send('chatMessage', {
-                    playerName: 'System',
-                    message: 'You have been healed to full HP.',
+                    playerName: I18n.t(client?.lang, 'system.name'),
+                    message: I18n.t(client?.lang, 'chat.healed_full'),
                     type: 'system',
                     timestamp: Date.now()
                 });
@@ -134,8 +135,8 @@ export class ChatHandler {
                 client.player.takeDamage(damage);
 				logger.debug(`GM ${client.player.name} took ${damage} damage`);
                 client.send('chatMessage', {
-                    playerName: 'System',
-                    message: `You took ${damage} damage.`,
+                    playerName: I18n.t(client?.lang, 'system.name'),
+                    message: I18n.t(client?.lang, 'chat.took_damage', { damage }),
                     type: 'system',
                     timestamp: Date.now()
                 });
@@ -148,8 +149,8 @@ export class ChatHandler {
             
             default:
                 client.send('chatMessage', {
-                    playerName: 'System',
-                    message: `Unknown command: /${command}`,
+                    playerName: I18n.t(client?.lang, 'system.name'),
+                    message: I18n.t(client?.lang, 'chat.unknown_command', { command }),
                     type: 'system',
                     timestamp: Date.now()
                 });
@@ -164,8 +165,8 @@ export class ChatHandler {
         
         if (!goldcoinMatch || !playerMatch) {
             client.send('chatMessage', {
-                playerName: 'System',
-                message: 'Sintaxe incorreta. Use: /add goldcoin(quantidade) player(id)',
+                playerName: I18n.t(client?.lang, 'system.name'),
+                message: I18n.t(client?.lang, 'chat.add.syntax'),
                 type: 'system',
                 timestamp: Date.now()
             });
@@ -190,8 +191,8 @@ export class ChatHandler {
                 });
                 
                 targetClient.send('chatMessage', {
-                    playerName: 'System',
-                    message: `Você recebeu ${amount} gold coins! Novo saldo: ${newBalance}`,
+                    playerName: I18n.t(targetClient?.lang, 'system.name'),
+                    message: I18n.t(targetClient?.lang, 'chat.add.receive_gold', { amount, balance: newBalance }),
                     type: 'system',
                     timestamp: Date.now()
                 });
@@ -199,8 +200,8 @@ export class ChatHandler {
             
             // Feedback para o GM
             client.send('chatMessage', {
-                playerName: 'System',
-                message: `${amount} gold coins adicionados ao player ID ${targetPlayerId}. Novo saldo: ${newBalance}`,
+                playerName: I18n.t(client?.lang, 'system.name'),
+                message: I18n.t(client?.lang, 'chat.add.gm_feedback', { amount, playerId: targetPlayerId, balance: newBalance }),
                 type: 'system',
                 timestamp: Date.now()
             });
@@ -210,8 +211,8 @@ export class ChatHandler {
         } catch (error) {
 			logger.error('Error adding gold:', error);
             client.send('chatMessage', {
-                playerName: 'System',
-                message: 'Erro ao adicionar gold coins.',
+                playerName: I18n.t(client?.lang, 'system.name'),
+                message: I18n.t(client?.lang, 'chat.add.error'),
                 type: 'system',
                 timestamp: Date.now()
             });

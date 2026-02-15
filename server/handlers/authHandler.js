@@ -3,6 +3,7 @@ import { WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtoc
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
 import { Logger } from '../utils/Logger.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { I18n } from '../localization/i18n.js';
 
 const logger = new Logger('AuthHandler');
 
@@ -16,6 +17,10 @@ export class AuthHandler {
     async handleLogin(client, data) {
         const { username, password, playerId } = data;
         try {
+            // Define idioma do cliente (EN default). Aceita lang/language/locale.
+            const requestedLang = data?.lang ?? data?.language ?? data?.locale;
+            client.lang = I18n.normalizeLang(requestedLang);
+
             // Usa o playerId enviado pelo cliente ou padrão 1
             const playerIdToUse = playerId || 1;
             const accountId = 1;
@@ -82,6 +87,9 @@ export class AuthHandler {
             
             client.setPlayer(player);
             client.authenticate();
+
+            // Mantém no player também (útil para logs/handlers que só têm acesso ao player)
+            player.lang = client.lang;
             
             // Define referência ao wsServer no player para sistema de morte
             if (this.wsServer) {

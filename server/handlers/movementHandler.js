@@ -2,6 +2,7 @@ import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { MovementSystem } from '../game/systems/MovementSystem.js';
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { Logger } from '../utils/Logger.js';
+import { I18n } from '../localization/i18n.js';
 
 const logger = new Logger('Movement');
 
@@ -41,13 +42,14 @@ export class MovementHandler {
                     return void res.then((r) => {
                         if (!r?.allowed) {
                             const reason = r?.reason || 'blocked';
-                            const msg = reason === 'house_in_auction'
-                                ? 'Casa em leilão: entrada bloqueada.'
+                            const msgKey = reason === 'house_in_auction'
+                                ? 'movement.house_in_auction'
                                 : reason === 'not_allowed'
-                                    ? 'Você não tem permissão para entrar nesta casa.'
+                                    ? 'movement.house_no_permission'
                                     : reason === 'house_unowned'
-                                        ? 'Casa sem dono: entrada bloqueada.'
-                                        : 'Movimento bloqueado pela casa.';
+                                        ? 'movement.house_unowned_blocked'
+                                        : 'movement.blocked_by_house';
+                            const msg = I18n.t(client?.lang, msgKey);
                             client.send('system_message', { message: msg, color: 'yellow' });
                             // Corrige client-side prediction: informa a posição autoritativa atual.
                             client.send('move_reject', { x: player.x, y: player.y, z: player.z });
@@ -60,7 +62,7 @@ export class MovementHandler {
                     });
                 }
                 if (res && res.allowed === false) {
-                    client.send('system_message', { message: 'Movimento bloqueado pela casa.', color: 'yellow' });
+                    client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_by_house'), color: 'yellow' });
                     client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                     return;
                 }
@@ -84,7 +86,7 @@ export class MovementHandler {
                     staminaAtual = parseFloat(player.conditions.stamina) || 100;
                 }
                 if (staminaAtual <= 0) {
-                    client.send('system_message', { message: 'Você está exausto! Espere a stamina recarregar para andar.', color: 'yellow' });
+                    client.send('system_message', { message: I18n.t(client?.lang, 'movement.stamina_exhausted'), color: 'yellow' });
                     return;
                 }
         // Checa colisão de mapa antes de atualizar posição
@@ -101,7 +103,7 @@ export class MovementHandler {
                 typeof this.gameWorld.mapManager.isWalkable === 'function' &&
                 !this.gameWorld.mapManager.isWalkable(city, data.z, data.x, data.y)
             ) {
-                client.send('system_message', { message: 'Movimento bloqueado por colisão!', color: 'red' });
+                client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_by_collision'), color: 'red' });
                 return;
             }
 
@@ -109,14 +111,14 @@ export class MovementHandler {
             // Players
             for (const [id, otherPlayer] of this.gameWorld.players) {
                 if (otherPlayer.id !== player.id && otherPlayer.x === data.x && otherPlayer.y === data.y && otherPlayer.z === data.z) {
-                    client.send('system_message', { message: 'Movimento bloqueado: outro jogador está neste tile!', color: 'red' });
+                    client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_player_on_tile'), color: 'red' });
                     return;
                 }
             }
             // NPCs
             for (const [id, npc] of this.gameWorld.npcs) {
                 if (npc.x === data.x && npc.y === data.y && npc.z === data.z) {
-                    client.send('system_message', { message: 'Movimento bloqueado: um NPC está neste tile!', color: 'red' });
+                    client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_npc_on_tile'), color: 'red' });
                     return;
                 }
             }
@@ -124,7 +126,7 @@ export class MovementHandler {
             if (this.gameWorld.monsters) {
                 for (const [id, monster] of this.gameWorld.monsters) {
                     if (monster.x === data.x && monster.y === data.y && monster.z === data.z) {
-                        client.send('system_message', { message: 'Movimento bloqueado: um monstro está neste tile!', color: 'red' });
+                        client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_monster_on_tile'), color: 'red' });
                         return;
                     }
                 }
@@ -133,7 +135,7 @@ export class MovementHandler {
             if (this.gameWorld.wildPokemonManager && this.gameWorld.wildPokemonManager.wildPokemons) {
                 for (const [id, wild] of this.gameWorld.wildPokemonManager.wildPokemons) {
                     if (wild.x === data.x && wild.y === data.y && wild.z === data.z && wild.hp > 0) {
-                        client.send('system_message', { message: 'Movimento bloqueado: um Pokémon selvagem está neste tile!', color: 'red' });
+                        client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_wild_pokemon_on_tile'), color: 'red' });
                         return;
                     }
                 }

@@ -8,6 +8,7 @@
 
 import { Logger } from '../utils/Logger.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
+import { I18n } from '../localization/i18n.js';
 const logger = new Logger('GMCommandHandler');
 
 export class GMCommandHandler {
@@ -78,7 +79,7 @@ export class GMCommandHandler {
             // Valida permissão
             if (!this.isGM(player)) {
                 client.send('system_message', {
-                    message: '❌ Você não tem permissão para usar comandos GM.',
+                    message: I18n.t(client?.lang, 'gm.no_permission'),
                     color: 'red'
                 });
                 logger.warn(`[GMCommandHandler] Player ${player.name} (id=${player.id}) tentou usar comando GM sem permissão`);
@@ -90,7 +91,7 @@ export class GMCommandHandler {
             logger.info(`[GMCommandHandler] Parse result: ${JSON.stringify(parsed)}`);
             if (!parsed) {
                 client.send('system_message', {
-                    message: '❌ Comando inválido.',
+                    message: I18n.t(client?.lang, 'gm.command_invalid'),
                     color: 'red'
                 });
                 logger.warn('[GMCommandHandler] Comando inválido!');
@@ -132,7 +133,7 @@ export class GMCommandHandler {
                         break;
                     default:
                         client.send('system_message', {
-                            message: `❌ Comando desconhecido: /${command}`,
+                            message: I18n.t(client?.lang, 'gm.command_unknown', { command }),
                             color: 'red'
                         });
                         logger.warn(`[GMCommandHandler] Comando desconhecido: /${command}`);
@@ -140,7 +141,7 @@ export class GMCommandHandler {
             } catch (error) {
                 logger.error(`[GMCommandHandler] Erro ao executar comando /${command}:`, error);
                 client.send('system_message', {
-                    message: `❌ Erro ao executar comando: ${error.message}`,
+                    message: I18n.t(client?.lang, 'gm.execute_error', { error: error?.message || String(error) }),
                     color: 'red'
                 });
             }
