@@ -5,6 +5,7 @@ import { Npc } from './entities/Npc.js';
 import { DeltaManager } from './systems/DeltaManager.js';
 import { VisionSystem } from './systems/VisionSystem.js';
 import { WildPokemonManager } from './systems/WildPokemonManager.js';
+import { AutoAttackSystem } from './systems/AutoAttackSystem.js';
 import { QuestManager } from './systems/QuestManager.js';
 import { PlayerActivePokemonRepository } from '../persistence/PlayerActivePokemonRepository.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
@@ -58,6 +59,7 @@ export class GameWorld {
 
         // Sistemas
         this.wildPokemonManager = new WildPokemonManager(this);
+        this.autoAttackSystem = new AutoAttackSystem(this);
         this.questManager = new QuestManager(this);
         
         // Sistemas de otimização
@@ -403,6 +405,10 @@ export class GameWorld {
         this.monsters.forEach(monster => {
             monster.update(deltaTime);
         });
+
+        // Server-authoritative projectiles
+        this.autoAttackSystem.update(deltaTime);
+
         // Atualiza Pokémon selvagens
         this.wildPokemonManager.update(currentTime);
         

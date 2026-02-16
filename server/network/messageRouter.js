@@ -90,6 +90,15 @@ export class MessageRouter {
                 }
             });
 
+        // AutoAttack: client requests, server chooses target + simulates projectile
+        this.handlers.set('request_auto_attack', (client, data) => {
+            try {
+                this.gameWorld?.autoAttackSystem?.requestAutoAttack(client, data);
+            } catch (e) {
+                logger.warn('[request_auto_attack] error:', e?.message || e);
+            }
+        });
+
         // Handler para uso de skill (animação multiplayer)
         this.handlers.set('use_skill', async (client, data) => {
             // data: { playerId, skillName, tile }
