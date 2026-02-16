@@ -22,6 +22,8 @@ import { getMaxStamina } from '../utils/PlayerStats.js';
 import { HouseRepository } from '../persistence/HouseRepository.js';
 import { HouseService } from '../services/HouseService.js';
 import { GuildService } from '../services/GuildService.js';
+import { DetectionRepository } from '../persistence/DetectionRepository.js';
+import { DetectionService } from '../services/DetectionService.js';
 
 const logger = new Logger('GameWorld');
 
@@ -45,6 +47,10 @@ export class GameWorld {
         this.npcRepository = new NpcRepository(database);
         this.balanceRepository = new BalanceRepository(database);
         this.inventoryRepository = new InventoryRepository(database);
+
+        // Detecção / Anti-bot (persistência + heurísticas)
+        this.detectionRepository = new DetectionRepository(database);
+        this.detectionService = new DetectionService(this);
 
         // Houses (Modelo A)
         this.houseRepository = new HouseRepository(database);
@@ -195,6 +201,13 @@ export class GameWorld {
     async init() {
         logger.info('Initializing game world...');
 
+        // Detection: ensure tables early (best-effort)
+        try {
+            await this.detectionRepository.ensureTables();
+        } catch (e) {
+            logger.error('[DETECTION] Falha ao inicializar tabela detection_events:', e?.message || e);
+        }
+
         // Quests: garante tabelas e popula definições
         try {
             await this.questRepository.ensureTables();
@@ -316,6 +329,12 @@ export class GameWorld {
                 }
             }
             this.players.delete(playerId);
+
+            // Cleanup detection state
+            try {
+                this.detectionService?.cleanupPlayer?.(playerId);
+            } catch {}
+
             logger.info(`Player removed: ${player.name} (${playerId})`);
         }
     }

@@ -951,6 +951,15 @@ export class MessageRouter {
     
     route(client, message) {
 		logger.debug(`Routing message type: ${message.type}`);
+
+        // Detection: soft rate limit (drops excess spam) to reduce bot/external floods.
+        try {
+            if (this.gameWorld?.detectionService?.shouldDropMessage?.(client, message?.type)) {
+                return;
+            }
+        } catch {
+            // ignore
+        }
         
         const handler = this.handlers.get(message.type);
         
@@ -967,6 +976,13 @@ export class MessageRouter {
             }
         } else {
 			logger.warn(`No handler for message type: ${message.type}`);
+
+            // Detection: unknown message type (possible external tooling/bot)
+            try {
+                this.gameWorld?.detectionService?.onUnknownMessage?.(client, message?.type);
+            } catch {
+                // ignore
+            }
         }
     }
 }

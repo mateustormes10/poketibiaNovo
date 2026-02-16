@@ -71,7 +71,10 @@ export class WsServer {
     
     handleConnection(ws, req) {
         const clientId = this.generateClientId();
-        const client = new WsClient(clientId, ws, this.gameWorld);
+        const ip = req?.socket?.remoteAddress || req?.headers?.['x-forwarded-for'] || null;
+        const userAgent = req?.headers?.['user-agent'] || null;
+        const origin = req?.headers?.origin || null;
+        const client = new WsClient(clientId, ws, this.gameWorld, { ip, userAgent, origin });
         
         this.clients.set(clientId, client);
         logger.info(`Client connected: ${clientId} (Total: ${this.clients.size})`);
@@ -108,6 +111,12 @@ export class WsServer {
     
     async handleDisconnect(client) {
         logger.info(`Client disconnected: ${client.id}`);
+
+        // Cleanup detection state
+        try {
+            this.gameWorld?.detectionService?.cleanupClient?.(client.id);
+        } catch {}
+
         // Salva player antes de remover do mundo
         if (client.player) {
             // Se o player está transformado em Pokémon, busca o outfit original do banco

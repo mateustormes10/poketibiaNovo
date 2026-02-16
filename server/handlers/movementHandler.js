@@ -26,6 +26,21 @@ export class MovementHandler {
         }
         if (!player) return;
 
+        // Detection: repetitive movement patterns (anti-bot)
+        try {
+            const now = Date.now();
+            if (client && client._moveRateLimitedUntilMs && now < client._moveRateLimitedUntilMs) {
+                return;
+            }
+
+            const shouldDrop = this.gameWorld?.detectionService?.onPlayerMove?.(client, data, player);
+            if (shouldDrop) {
+                return;
+            }
+        } catch {
+            // ignore
+        }
+
         // Houses (Modelo A): valida entrada/saída/área (server-authoritative)
         try {
             const cityForHouse = data.mapaAtual || player.city || player.mapaAtual || (player.name && player.name.split('_')[0]) || 'CidadeInicial';

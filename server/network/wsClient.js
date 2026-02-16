@@ -3,13 +3,18 @@ import { Logger } from '../utils/Logger.js';
 const logger = new Logger('WsClient');
 
 export class WsClient {
-    constructor(id, ws, gameWorld) {
+    constructor(id, ws, gameWorld, meta = {}) {
         this.id = id;
         this.ws = ws;
         this.gameWorld = gameWorld;
         this.player = null;
         this.authenticated = false;
         this.lang = 'en';
+
+        // Connection metadata for detection/abuse analysis
+        this.ip = meta.ip || null;
+        this.userAgent = meta.userAgent || null;
+        this.origin = meta.origin || null;
     }
     
     send(type, data) {

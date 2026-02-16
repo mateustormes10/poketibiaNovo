@@ -7,6 +7,7 @@
     <nav class="sidebar-menu" data-i18n-aria="aria.navigation">
         <button class="sidebar-btn" id="nav-login" type="button" data-href="login.php" data-i18n="nav.login">Login</button>
         <button class="sidebar-btn" id="nav-panel" type="button" data-href="player.php" style="display:none;" data-i18n="nav.panel">Painel</button>
+        <button class="sidebar-btn" id="nav-detections" type="button" data-href="admin_detections.php" style="display:none;">Detections</button>
         <button class="sidebar-btn" id="nav-logout" type="button" style="display:none;" data-i18n="nav.logout">Logout</button>
         <button class="sidebar-btn download-btn" type="button" data-i18n="nav.download">Download</button>
 
@@ -99,6 +100,7 @@
     const navLogin = document.getElementById('nav-login');
     const navRegister = document.getElementById('nav-register');
     const navPanel = document.getElementById('nav-panel');
+    const navDetections = document.getElementById('nav-detections');
     const navLogout = document.getElementById('nav-logout');
 
     const langSelect = document.getElementById('langSelect');
@@ -114,11 +116,25 @@
         if (navRegister) navRegister.style.display = 'none';
         if (navPanel) navPanel.style.display = '';
         if (navLogout) navLogout.style.display = '';
+
+        // GM-only: show detections link if max group_id >= 2
+        if (navDetections) {
+            navDetections.style.display = 'none';
+            fetch('backend/me.php', { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(data => {
+                    const groupId = data && typeof data.group_id === 'number' ? data.group_id :
+                        (data && typeof data.max_group_id === 'number' ? data.max_group_id : 0);
+                    if (groupId >= 2) navDetections.style.display = '';
+                })
+                .catch(() => { /* ignore */ });
+        }
     } else {
         if (navLogin) navLogin.style.display = '';
         if (navRegister) navRegister.style.display = '';
         if (navPanel) navPanel.style.display = 'none';
         if (navLogout) navLogout.style.display = 'none';
+        if (navDetections) navDetections.style.display = 'none';
     }
 })();
 </script>
