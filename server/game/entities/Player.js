@@ -1,5 +1,6 @@
 import { Entity } from './Entity.js';
 import { GameConstants } from '../../../shared/constants/GameConstants.js';
+import { getMaxStamina, getStaminaRegenPerRestTick } from '../../utils/PlayerStats.js';
 
 export class Player extends Entity {
     constructor(data) {
@@ -75,11 +76,12 @@ export class Player extends Entity {
         // Regeneração de stamina se parado
         if (!this._lastMoveTime) this._lastMoveTime = Date.now();
         if (!this.conditions) this.conditions = {};
-        let staminaAtual = 100;
+        const maxStamina = getMaxStamina(this);
+        let staminaAtual = maxStamina;
         if (typeof this.conditions.stamina === 'number') {
             staminaAtual = this.conditions.stamina;
         } else if (typeof this.conditions.stamina === 'string') {
-            staminaAtual = parseFloat(this.conditions.stamina) || 100;
+            staminaAtual = parseFloat(this.conditions.stamina) || maxStamina;
         }
         // Se ficou 2s sem andar, regenera 2 pontos
         if (!this._lastPos) this._lastPos = {x: this.x, y: this.y, z: this.z};
@@ -89,8 +91,9 @@ export class Player extends Entity {
         } else {
             // Parado
             const now = Date.now();
-            if (now - this._lastMoveTime >= 2000 && staminaAtual < 100) {
-                staminaAtual = Math.min(100, staminaAtual + 4);
+            if (now - this._lastMoveTime >= 2000 && staminaAtual < maxStamina) {
+                const regen = getStaminaRegenPerRestTick(this);
+                staminaAtual = Math.min(maxStamina, staminaAtual + regen);
                 this.conditions.stamina = staminaAtual;
                 this._lastMoveTime = now; // só regenera a cada 2s parado
             }

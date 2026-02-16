@@ -1,5 +1,5 @@
 import { ClientEvents, ServerEvents } from '../../shared/protocol/actions.js';
-import { registerDefeatedMonster, scanDefeatedMonsters } from '../handlers/scanHandler.js';
+import { registerDefeatedMonster, scanDefeatedMonsters, scanNearbyCorpse } from '../handlers/scanHandler.js';
 import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 import { SkillDatabase } from '../../shared/SkillDatabase.js';
 import { InventoryClientEvents } from '../../shared/protocol/InventoryProtocol.js';
@@ -19,6 +19,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Logger } from '../utils/Logger.js';
 import { I18n } from '../localization/i18n.js';
+import { adjustCooldownSeconds, computeOutgoingSkillDamage, getLuckyDoubleCoinChance } from '../utils/PlayerStats.js';
 
 const logger = new Logger('MessageRouter');
 
@@ -53,7 +54,12 @@ export class MessageRouter {
             // ScannerType pode vir do client futuramente (ex: BASIC, ADVANCED)
             const scannerType = (data && data.scannerType) || 'BASIC';
             logger.debug(`[SCAN] request playerId=${playerId} scannerType=${scannerType}`);
-            const result = await scanDefeatedMonsters(playerId, this.gameWorld.inventoryRepository, scannerType);
+            // Novo comportamento: tenta escanear 1 cadáver próximo (10% chance) e esconde o corpo.
+            // Se não houver monsterId/adjacente, cai no legado (lista de derrotados) para compatibilidade.
+            let result = await scanNearbyCorpse(client.player, this.gameWorld, this.gameWorld.inventoryRepository, data);
+            if (result && result.reason === 'nothing_to_scan') {
+                result = await scanDefeatedMonsters(playerId, this.gameWorld.inventoryRepository, scannerType);
+            }
             client.send(ServerEvents.SCAN_RESULT, result);
         });
 
@@ -85,7 +91,7 @@ export class MessageRouter {
             });
 
         // Handler para uso de skill (animação multiplayer)
-        this.handlers.set('use_skill', (client, data) => {
+        this.handlers.set('use_skill', async (client, data) => {
             // data: { playerId, skillName, tile }
             if (!data || !data.skillName || !data.tile) {
 				logger.debug('[use_skill] Dados inválidos recebidos:', data);
@@ -94,21 +100,52 @@ export class MessageRouter {
             // Sempre usa o playerId autenticado do socket
             const playerId = client.player?.id || client.playerId;
             if (!playerId) return;
+            const player = client.player;
+            if (!player) return;
+
             // Busca targetArea no SkillDatabase
             let targetArea = '';
-            let damage = 0;
+            let basePower = 0;
+            let baseCooldownSeconds = 0;
             try {
                 if (SkillDatabase[data.skillName]) {
                     if (SkillDatabase[data.skillName].targetArea) {
                         targetArea = SkillDatabase[data.skillName].targetArea;
                     }
                     if (typeof SkillDatabase[data.skillName].power === 'number') {
-                        damage = SkillDatabase[data.skillName].power;
+                        basePower = SkillDatabase[data.skillName].power;
+                    }
+                    if (typeof SkillDatabase[data.skillName].cowndown === 'number') {
+                        baseCooldownSeconds = SkillDatabase[data.skillName].cowndown;
+                    } else if (typeof SkillDatabase[data.skillName].cooldown === 'number') {
+                        baseCooldownSeconds = SkillDatabase[data.skillName].cooldown;
                     }
                 }
             } catch (e) {
 				logger.warn('[use_skill] Erro ao buscar targetArea/power:', e);
             }
+
+            // Cooldown server-authoritative (com redução por atributo do player)
+            try {
+                if (!player._skillNextAvailableAt) player._skillNextAvailableAt = {};
+                const now = Date.now();
+                const nextAt = player._skillNextAvailableAt[data.skillName] || 0;
+                if (now < nextAt) {
+                    const remainingMs = nextAt - now;
+                    const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 100) / 10);
+                    client.send('system_message', { message: `Skill em cooldown (${remainingSeconds}s)`, color: 'yellow' });
+                    return;
+                }
+                const adjustedCd = adjustCooldownSeconds(player, baseCooldownSeconds);
+                if (adjustedCd > 0) {
+                    player._skillNextAvailableAt[data.skillName] = now + Math.floor(adjustedCd * 1000);
+                }
+            } catch {}
+
+            // Dano com atributos (damage + crit)
+            const dmgRoll = computeOutgoingSkillDamage(player, basePower);
+            const damage = dmgRoll.damage;
+
             // --- Controle de dano e XP por atacante (corrigido: só envia XP para quem finaliza) ---
             if (!this.monsterAttackers) this.monsterAttackers = new Map();
             let affectedMonsters = [];
@@ -128,7 +165,7 @@ export class MessageRouter {
                         }
                     }
                 }
-                wildPokemons.forEach(monster => {
+                for (const monster of wildPokemons) {
                     if (areaTiles.some(tile => tile.x === monster.x && tile.y === monster.y && tile.z === monster.z)) {
                         if (typeof monster.hp === 'number') {
                             if (!this.monsterAttackers.has(monster.id)) {
@@ -169,13 +206,40 @@ export class MessageRouter {
                                     xp = Math.floor((danoPlayer / totalDano) * monsterXp);
                                 }
                                 // Adiciona XP diretamente ao player
-                                const player = client.player;
+
                                 if (player && typeof player.gainExpAndCheckLevelUp === 'function') {
                                     player.gainExpAndCheckLevelUp(xp);
 							logger.debug(`[use_skill] XP adicionada ao player: playerId=${playerId} xp=${xp} monsterId=${monster.id}`);
                                 } else {
 							logger.warn(`[use_skill] player.gainExpAndCheckLevelUp não encontrado para playerId=${playerId}`);
                                 }
+
+                                // Gold drop (server-side) + Lucky para dobrar
+                                try {
+                                    const dbId = player?.dbId;
+                                    const expVal = Number(monsterXp) || 0;
+                                    const lvlVal = Number(monster.level) || 1;
+                                    const baseGold = Math.max(1, Math.floor(((expVal > 0 ? expVal : (lvlVal * 10)) / 5)));
+                                    const luckyChance = getLuckyDoubleCoinChance(player);
+                                    const doubled = Math.random() < luckyChance;
+                                    const goldGain = doubled ? baseGold * 2 : baseGold;
+
+                                    if (dbId && this.gameWorld?.balanceRepository?.addGold) {
+                                        const newBalance = await this.gameWorld.balanceRepository.addGold(dbId, goldGain);
+                                        player.goldCoin = newBalance;
+                                    }
+
+                                    // Envia gamestate atualizado para refletir gold/exp/hp imediatamente
+                                    if (typeof this.gameWorld.getGameState === 'function') {
+                                        const gs = this.gameWorld.getGameState(player);
+                                        client.send('gameState', gs);
+                                    }
+
+                                    logger.debug(`[use_skill] Gold ganho: playerId=${playerId} gold=${goldGain} doubled=${doubled}`);
+                                } catch (e) {
+                                    logger.warn('[use_skill] Falha ao adicionar gold:', e?.message || e);
+                                }
+
                                 // Limpa registro de atacantes
                                 this.monsterAttackers.delete(monster.id);
                             }
@@ -185,7 +249,7 @@ export class MessageRouter {
                             this.gameWorld.wildPokemonManager.broadcastUpdate(monster);
                         }
                     }
-                });
+                }
             } catch (e) {
 				logger.warn('[use_skill] Erro ao aplicar dano nos wildPokemons:', e);
             }

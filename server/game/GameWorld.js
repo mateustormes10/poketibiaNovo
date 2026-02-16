@@ -17,6 +17,7 @@ import { PlayerQuestRepository } from '../persistence/PlayerQuestRepository.js';
 import { QuestDefinitions } from './quests/QuestDefinitions.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { Logger } from '../utils/Logger.js';
+import { getMaxStamina } from '../utils/PlayerStats.js';
 import { HouseRepository } from '../persistence/HouseRepository.js';
 import { HouseService } from '../services/HouseService.js';
 import { GuildService } from '../services/GuildService.js';
@@ -161,7 +162,7 @@ export class GameWorld {
             // Restaura HP, stamina e fome
             player.hp = player.maxHp;
             if (!player.conditions) player.conditions = {};
-            player.conditions.stamina = 100;
+                player.conditions.stamina = getMaxStamina(player);
             player.conditions.fome = 100;
             player.isDead = false;
             

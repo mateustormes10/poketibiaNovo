@@ -3,6 +3,7 @@ import { MovementSystem } from '../game/systems/MovementSystem.js';
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { Logger } from '../utils/Logger.js';
 import { I18n } from '../localization/i18n.js';
+import { getMaxStamina } from '../utils/PlayerStats.js';
 
 const logger = new Logger('Movement');
 
@@ -79,11 +80,12 @@ export class MovementHandler {
     _handleMoveAfterHouseValidation(client, data, player) {
 
                 // Trava: impede movimento se stamina <= 0
-                let staminaAtual = 100;
+                const maxStamina = getMaxStamina(player);
+                let staminaAtual = maxStamina;
                 if (player.conditions && typeof player.conditions.stamina === 'number') {
                     staminaAtual = player.conditions.stamina;
                 } else if (player.conditions && typeof player.conditions.stamina === 'string') {
-                    staminaAtual = parseFloat(player.conditions.stamina) || 100;
+                    staminaAtual = parseFloat(player.conditions.stamina) || maxStamina;
                 }
                 if (staminaAtual <= 0) {
                     client.send('system_message', { message: I18n.t(client?.lang, 'movement.stamina_exhausted'), color: 'yellow' });
@@ -154,11 +156,12 @@ export class MovementHandler {
 
                 // Subtrai 2 pontos de stamina a cada passo
                 if (!player.conditions) player.conditions = {};
-                let staminaAtual = 100;
+                const maxStamina = getMaxStamina(player);
+                let staminaAtual = maxStamina;
                 if (typeof player.conditions.stamina === 'number') {
                     staminaAtual = player.conditions.stamina;
                 } else if (typeof player.conditions.stamina === 'string') {
-                    staminaAtual = parseFloat(player.conditions.stamina) || 100;
+                    staminaAtual = parseFloat(player.conditions.stamina) || maxStamina;
                 }
                 staminaAtual = Math.max(0, staminaAtual - 0.5);
                 player.conditions.stamina = staminaAtual;

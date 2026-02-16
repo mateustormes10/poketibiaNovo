@@ -7,6 +7,7 @@
 
 import { WildPokemonState, WildPokemonConfig } from '../../../shared/protocol/WildPokemonProtocol.js';
 import { Logger } from '../../utils/Logger.js';
+import { computeIncomingMonsterDamage } from '../../utils/PlayerStats.js';
 
 import { SkillDatabase } from '../../../shared/SkillDatabase.js';
 
@@ -248,8 +249,35 @@ export class WildPokemon {
             if (skill.type === 'damage') {
                 const baseDamage = skill.power + Math.floor(this.level * 0.5);
                 if (targetPlayer && typeof targetPlayer.takeDamage === 'function') {
-                    targetPlayer.takeDamage(baseDamage);
-                    result = { skillName, damage: baseDamage, targetId: targetPlayer.id };
+                    const { damage: finalDamage, dodged, reduction, dodgeChancePct } = computeIncomingMonsterDamage(targetPlayer, baseDamage);
+                    if (finalDamage > 0) {
+                        targetPlayer.takeDamage(finalDamage);
+                    }
+                    result = {
+                        skillName,
+                        damage: finalDamage,
+                        targetId: targetPlayer.id,
+                        dodged: !!dodged,
+                        reduction
+                    };
+
+                    // Envia gamestate para o alvo imediatamente (HP/conditions), para refletir o dano/dodge sem depender de movimento.
+                    try {
+                        const client = targetPlayer?.clientState;
+                        if (client && typeof client.send === 'function' && this.gameWorld && typeof this.gameWorld.getGameState === 'function') {
+                            const gs = this.gameWorld.getGameState(targetPlayer);
+                            client.send('gameState', gs);
+                        }
+                    } catch {}
+
+                    // Log leve para debug
+                    try {
+                        if (dodged) {
+                            logger.debug(`[WILD] ${this.name} (${this.id}) skill=${skillName} alvo=${targetPlayer.name} DODGE chance=${dodgeChancePct}%`);
+                        } else if (reduction > 0) {
+                            logger.debug(`[WILD] ${this.name} (${this.id}) skill=${skillName} alvo=${targetPlayer.name} dmgBase=${baseDamage} dmgFinal=${finalDamage} reduction=${Math.round(reduction * 100)}%`);
+                        }
+                    } catch {}
                 }
             }
             // TODO: status, área, buffs, etc.

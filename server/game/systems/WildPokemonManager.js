@@ -151,6 +151,8 @@ export class WildPokemonManager {
                 wildPokemon.z = wildPokemon.spawnZ;
                 wildPokemon.isDead = false;
                 wildPokemon.deadSince = null;
+                wildPokemon.isHidden = false;
+                wildPokemon.corpseScanned = false;
                 this.broadcastUpdate(wildPokemon);
                 logger.info(`[WILD] Respawn automático de ${wildPokemon.name} (id=${wildPokemon.id})`);
                 continue;
@@ -175,6 +177,7 @@ export class WildPokemonManager {
         const nearby = [];
         
         for (const wildPokemon of this.wildPokemons.values()) {
+            if (wildPokemon && wildPokemon.isHidden) continue;
             if ((wildPokemon.town_id ?? 1) !== (player.town_id ?? 1)) continue;
             if (wildPokemon.z !== player.z) continue;
             
