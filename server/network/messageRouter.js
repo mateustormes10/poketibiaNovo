@@ -453,6 +453,34 @@ export class MessageRouter {
         // NPC handlers
         this.handlers.set('npc_interact', npcHandler.handleInteract.bind(npcHandler));
         this.handlers.set('npc_buy', npcHandler.handleBuy.bind(npcHandler));
+
+        // Interação: comer na árvore (recupera fome)
+        this.handlers.set('eat_tree', async (client, data) => {
+            const playerId = client.player?.id || client.playerId;
+            if (!playerId) return;
+            const player = this.gameWorld.players.get(playerId);
+            if (!player) return;
+
+            if (!player.conditions) player.conditions = {};
+            if (typeof player.conditions === 'string') {
+                try { player.conditions = JSON.parse(player.conditions); } catch { player.conditions = {}; }
+            }
+
+            const currentFome = typeof player.conditions.fome === 'number'
+                ? player.conditions.fome
+                : (parseFloat(player.conditions.fome) || 0);
+
+            // Mantém o comportamento fixo do jogo: sempre +5.
+            const nextFome = Math.max(0, Math.min(100, currentFome + 5));
+            player.conditions.fome = nextFome;
+
+            if (this.gameWorld.playerRepository && typeof this.gameWorld.playerRepository.updateConditions === 'function') {
+                await this.gameWorld.playerRepository.updateConditions(playerId, player.conditions);
+            }
+
+            const gameState = this.gameWorld.getGameState(player);
+            client.send('gameState', gameState);
+        });
         
         // Inventory handlers
         this.handlers.set(InventoryClientEvents.REQUEST_INVENTORY, inventoryHandler.handleInventoryRequest.bind(inventoryHandler));
