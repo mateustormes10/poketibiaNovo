@@ -232,6 +232,16 @@ export class GuildService {
         return { ok: true, playerGuild: pg };
     }
 
+    async _assertCanManageMembers(playerId, guildId) {
+        const pg = await this._getPlayerGuild(playerId);
+        if (!pg) return { ok: false, reason: 'not_in_guild' };
+        if (clampInt(pg.guild_id) !== clampInt(guildId)) return { ok: false, reason: 'not_same_guild' };
+
+        // Apenas Leader(3) e Vice-Leader(2)
+        if (clampInt(pg.rank_level) < 2) return { ok: false, reason: 'no_permission' };
+        return { ok: true, playerGuild: pg };
+    }
+
     async listInvites({ client }) {
         const dbPlayer = await this._getDbPlayer(client);
         if (!dbPlayer) return { success: false, reason: 'not_authenticated' };
@@ -312,5 +322,126 @@ export class GuildService {
         await this.guildRepository.update(pg.guild_id, newMotd);
         logger.info(`Guild ${pg.guild_id} MOTD updated by leader ${dbPlayer.id}`);
         return { success: true, guild_id: clampInt(pg.guild_id), motd: newMotd };
+    }
+
+    async promoteMember({ client, playerId }) {
+        const dbPlayer = await this._getDbPlayer(client);
+        if (!dbPlayer) return { success: false, reason: 'not_authenticated' };
+
+        const targetPlayerId = clampInt(playerId);
+        if (!targetPlayerId) return { success: false, reason: 'invalid_player_id' };
+
+        const leaderGuild = await this._getPlayerGuild(dbPlayer.id);
+        if (!leaderGuild) return { success: false, reason: 'not_in_guild' };
+
+        const perm = await this._assertCanManageMembers(dbPlayer.id, leaderGuild.guild_id);
+        if (!perm.ok) return { success: false, reason: perm.reason };
+
+        const targetGuild = await this._getPlayerGuild(targetPlayerId);
+        if (!targetGuild) return { success: false, reason: 'target_not_in_guild' };
+        if (clampInt(targetGuild.guild_id) !== clampInt(leaderGuild.guild_id))
+            return { success: false, reason: 'not_same_guild' };
+
+        // Regras:
+        // - Só pode existir 1 Leader (owner). Ninguém promove para Leader.
+        // - Promote alterna entre Member(1) <-> Vice-Leader(2)
+        //   (se tentar "subir" um Vice-Leader, ele volta para Member)
+        if (clampInt(targetGuild.rank_level) >= 3 || clampInt(targetGuild.ownerid) === clampInt(targetPlayerId))
+            return { success: false, reason: 'cannot_promote_leader' };
+
+        if (clampInt(targetGuild.rank_level) <= 1)
+        {
+            const vice = await this.guildRepository.findRankByGuildAndLevel(leaderGuild.guild_id, 2);
+            if (!vice) return { success: false, reason: 'vice_rank_missing' };
+
+            await this.gameWorld.playerRepository.setRankId(targetPlayerId, vice.id);
+            logger.info(`Player ${dbPlayer.id} promoted player ${targetPlayerId} to Vice-Leader in guild ${leaderGuild.guild_id}`);
+
+            return {
+                success: true,
+                guild_id: clampInt(leaderGuild.guild_id),
+                player_id: targetPlayerId,
+                new_rank_level: 2
+            };
+        }
+
+        if (clampInt(targetGuild.rank_level) === 2)
+        {
+            const member = await this.guildRepository.findRankByGuildAndLevel(leaderGuild.guild_id, 1);
+            if (!member) return { success: false, reason: 'member_rank_missing' };
+
+            await this.gameWorld.playerRepository.setRankId(targetPlayerId, member.id);
+            logger.info(`Player ${dbPlayer.id} demoted player ${targetPlayerId} to Member in guild ${leaderGuild.guild_id}`);
+
+            return {
+                success: true,
+                guild_id: clampInt(leaderGuild.guild_id),
+                player_id: targetPlayerId,
+                new_rank_level: 1
+            };
+        }
+
+        return { success: false, reason: 'invalid_target_rank' };
+    }
+
+    async expulseMember({ client, playerId }) {
+        const dbPlayer = await this._getDbPlayer(client);
+        if (!dbPlayer) return { success: false, reason: 'not_authenticated' };
+
+        const targetPlayerId = clampInt(playerId);
+        if (!targetPlayerId) return { success: false, reason: 'invalid_player_id' };
+
+        const leaderGuild = await this._getPlayerGuild(dbPlayer.id);
+        if (!leaderGuild) return { success: false, reason: 'not_in_guild' };
+
+        const perm = await this._assertCanManageMembers(dbPlayer.id, leaderGuild.guild_id);
+        if (!perm.ok) return { success: false, reason: perm.reason };
+
+        const targetGuild = await this._getPlayerGuild(targetPlayerId);
+        if (!targetGuild) return { success: false, reason: 'target_not_in_guild' };
+        if (clampInt(targetGuild.guild_id) !== clampInt(leaderGuild.guild_id))
+            return { success: false, reason: 'not_same_guild' };
+
+        // Ninguém pode expulsar o Leader (nem ele mesmo, nem vice-leaders)
+        if (clampInt(targetGuild.rank_level) >= 3 || clampInt(leaderGuild.ownerid) === clampInt(targetPlayerId))
+            return { success: false, reason: 'cannot_expulse_leader' };
+
+        await this.guildRepository.removeMemberFromGuild(targetPlayerId, leaderGuild.guild_id);
+        logger.info(`Leader ${dbPlayer.id} expelled player ${targetPlayerId} from guild ${leaderGuild.guild_id}`);
+
+        return {
+            success: true,
+            guild_id: clampInt(leaderGuild.guild_id),
+            player_id: targetPlayerId,
+            new_rank_level: 0
+        };
+    }
+
+    async deleteGuild({ client }) {
+        const dbPlayer = await this._getDbPlayer(client);
+        if (!dbPlayer) return { success: false, reason: 'not_authenticated' };
+
+        const leaderGuild = await this._getPlayerGuild(dbPlayer.id);
+        if (!leaderGuild) return { success: false, reason: 'not_in_guild' };
+
+        const perm = await this._assertLeaderOfGuild(dbPlayer.id, leaderGuild.guild_id);
+        if (!perm.ok) return { success: false, reason: perm.reason };
+
+        const guildId = clampInt(leaderGuild.guild_id);
+        if (!guildId) return { success: false, reason: 'invalid_guild_id' };
+
+        // Captura membros antes de limpar para poder notificar todos.
+        const panel = await this.getGuildPanel(guildId);
+        const memberIds = (panel?.members || []).map(m => clampInt(m.player_id)).filter(Boolean);
+
+        // Ordem importante (FK): players -> invites/ranks -> guild
+        await this.guildRepository.clearGuildMembers(guildId);
+        await this.guildRepository.deleteInvitesByGuildId(guildId);
+        await this.guildRepository.deleteRanksByGuildId(guildId);
+        await this.guildRepository.delete(guildId);
+
+        logger.info(`Guild ${guildId} deleted by leader ${dbPlayer.id}`);
+
+        return { success: true, guild_id: guildId, member_ids: memberIds };
     }
 }

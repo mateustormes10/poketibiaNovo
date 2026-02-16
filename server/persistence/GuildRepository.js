@@ -196,4 +196,34 @@ export class GuildRepository {
         const sql = 'DELETE FROM guild_invites WHERE player_id = ? AND guild_id = ?';
         return await this.db.delete(sql, [playerId, guildId]);
     }
+
+    async deleteInvitesByGuildId(guildId) {
+        const sql = 'DELETE FROM guild_invites WHERE guild_id = ?';
+        return await this.db.delete(sql, [guildId]);
+    }
+
+    async deleteRanksByGuildId(guildId) {
+        const sql = 'DELETE FROM guild_ranks WHERE guild_id = ?';
+        return await this.db.delete(sql, [guildId]);
+    }
+
+    async clearGuildMembers(guildId) {
+        // Remove todos os membros: rank_id = 0
+        const sql = `
+            UPDATE players
+            SET rank_id = 0
+            WHERE deleted = 0 AND rank_id IN (SELECT id FROM guild_ranks WHERE guild_id = ?)
+        `;
+        return await this.db.update(sql, [guildId]);
+    }
+
+    async removeMemberFromGuild(playerId, guildId) {
+        const sql = `
+            UPDATE players
+            SET rank_id = 0
+            WHERE id = ? AND deleted = 0 AND rank_id IN (SELECT id FROM guild_ranks WHERE guild_id = ?)
+            LIMIT 1
+        `;
+        return await this.db.update(sql, [playerId, guildId]);
+    }
 }

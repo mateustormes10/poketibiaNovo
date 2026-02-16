@@ -669,6 +669,53 @@ export class MessageRouter {
                 } catch {}
             }
         });
+
+        registerGuildHandler('GET_GUILD_PANEL', async (client) => {
+            // Não cria um type novo: apenas dispara o guild_update atualizado via helper.
+            const leaderDbId = client?.player?.dbId;
+            if (leaderDbId) await refreshGuildForPlayer(leaderDbId);
+        });
+
+        registerGuildHandler('PROMOTE_GUILD_MEMBER', async (client, data) => {
+            const result = await this.gameWorld.guildService?.promoteMember?.({
+                client,
+                playerId: data?.player_id ?? data?.playerId
+            });
+            client.send('guild_member_promote_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                const leaderDbId = client?.player?.dbId;
+                if (leaderDbId) await refreshGuildForPlayer(leaderDbId);
+                if (result.player_id) await refreshGuildForPlayer(result.player_id);
+            }
+        });
+
+        registerGuildHandler('EXPULSE_GUILD_MEMBER', async (client, data) => {
+            const result = await this.gameWorld.guildService?.expulseMember?.({
+                client,
+                playerId: data?.player_id ?? data?.playerId
+            });
+            client.send('guild_member_expulse_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                const leaderDbId = client?.player?.dbId;
+                if (leaderDbId) await refreshGuildForPlayer(leaderDbId);
+                if (result.player_id) await refreshGuildForPlayer(result.player_id);
+            }
+        });
+
+        registerGuildHandler('DELETE_GUILD', async (client) => {
+            const result = await this.gameWorld.guildService?.deleteGuild?.({ client });
+            client.send('guild_delete_result', result ?? { success: false, reason: 'guild_system_unavailable' });
+
+            if (result?.success) {
+                // Atualiza todos os membros que estavam na guild (inclui o líder).
+                const ids = Array.isArray(result.member_ids) ? result.member_ids : [];
+                for (const pid of ids) {
+                    await refreshGuildForPlayer(pid);
+                }
+            }
+        });
         
         // Outfit change handler
         this.handlers.set('change_outfit', handleChangeOutfit);
@@ -679,6 +726,88 @@ export class MessageRouter {
 
         // Handler para atualização de mapa
         this.handlers.set('requestMapUpdate', this.handleMapUpdate.bind(this));
+
+        // =====================
+        // Guilds
+        // =====================
+        const guildSvc = this.gameWorld.guildService;
+        if (guildSvc)
+        {
+            const openMenu = async (client) => {
+                const res = await guildSvc.openMenu({ client });
+                client.send('guild_menu', res);
+            };
+
+            this.handlers.set('OPEN_GUILD_MENU', async (client) => {
+                await openMenu(client);
+            });
+
+            this.handlers.set('CREATE_GUILD', async (client, data) => {
+                const res = await guildSvc.createGuild({
+                    client,
+                    name: data?.name,
+                    motd: data?.motd
+                });
+                client.send('guild_create_result', res);
+                if (res?.success)
+                    await openMenu(client);
+            });
+
+            this.handlers.set('APPLY_GUILD', async (client, data) => {
+                const res = await guildSvc.applyToGuild({ client, guildId: data?.guild_id });
+                client.send('guild_apply_result', res);
+            });
+
+            this.handlers.set('APPROVE_GUILD_INVITE', async (client, data) => {
+                const res = await guildSvc.approveInvite({ client, playerId: data?.player_id });
+                client.send('guild_approve_result', res);
+                // Atualiza a lista de invites do leader
+                const inv = await guildSvc.listInvites({ client });
+                client.send('guild_invites', inv);
+            });
+
+            this.handlers.set('REJECT_GUILD_INVITE', async (client, data) => {
+                const res = await guildSvc.rejectInvite({ client, playerId: data?.player_id });
+                client.send('guild_reject_result', res);
+                const inv = await guildSvc.listInvites({ client });
+                client.send('guild_invites', inv);
+            });
+
+            this.handlers.set('UPDATE_GUILD_MOTD', async (client, data) => {
+                const res = await guildSvc.updateMotd({ client, motd: data?.motd });
+                client.send('guild_motd_result', res);
+                if (res?.success)
+                    await openMenu(client);
+            });
+
+            this.handlers.set('GET_GUILD_PANEL', async (client) => {
+                const res = await guildSvc.openMenu({ client });
+                client.send('guild_update', { success: res?.success ?? false, reason: res?.reason, my_guild: res?.my_guild ?? null });
+                // Também sincroniza invites (apenas leader recebe dados úteis)
+                client.send('guild_invites', { success: res?.success ?? false, reason: res?.reason, guild_id: res?.my_guild?.guild_id ?? 0, invites: res?.invites ?? [] });
+            });
+
+            this.handlers.set('PROMOTE_GUILD_MEMBER', async (client, data) => {
+                const res = await guildSvc.promoteMember({ client, playerId: data?.player_id });
+                client.send('guild_member_promote_result', res);
+                if (res?.success)
+                    await openMenu(client);
+            });
+
+            this.handlers.set('EXPULSE_GUILD_MEMBER', async (client, data) => {
+                const res = await guildSvc.expulseMember({ client, playerId: data?.player_id });
+                client.send('guild_member_expulse_result', res);
+                if (res?.success)
+                    await openMenu(client);
+            });
+
+            this.handlers.set('DELETE_GUILD', async (client) => {
+                const res = await guildSvc.deleteGuild({ client });
+                client.send('guild_delete_result', res);
+                if (res?.success)
+                    await openMenu(client);
+            });
+        }
 
         const turnHandler = new TurnHandler(this.gameWorld);
         this.handlers.set(ClientEvents.TURN, turnHandler.handleTurn.bind(turnHandler));
