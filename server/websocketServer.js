@@ -27,6 +27,11 @@ export async function startGameServer({ database, config } = {}) {
 
     gameWorld.setWsServer(wsServer);
 
+    // Autosave best-effort (reduz perda em crash/desligamento)
+    try {
+        gameWorld.startAutosave({ intervalMs: 30000 });
+    } catch {}
+
     const gameLoop = new GameLoop(gameWorld, cfg.tickRate);
     gameLoop.start();
 
@@ -39,7 +44,9 @@ export async function startGameServer({ database, config } = {}) {
         gameLoop,
         stop: async () => {
             gameLoop.stop();
-            wsServer.stop();
+            try { gameWorld.stopAutosave?.(); } catch {}
+            try { await gameWorld.flushAllPlayers?.({ reason: 'shutdown' }); } catch {}
+            await wsServer.stop({ timeoutMs: 1500 });
             if (ownDatabase) {
                 await db.disconnect();
             }
@@ -48,7 +55,10 @@ export async function startGameServer({ database, config } = {}) {
 }
 
 // Permite rodar diretamente: `node websocketServer.js`
-const isMain = import.meta.url === pathToFileURL(process.argv[1]).href;
+const entryFile = process.argv?.[1];
+const isMain = typeof entryFile === 'string' && entryFile.length > 0
+    ? (import.meta.url === pathToFileURL(entryFile).href)
+    : false;
 if (isMain) {
     startGameServer({ config: defaultConfig })
         .then((server) => {

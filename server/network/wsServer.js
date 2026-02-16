@@ -192,10 +192,13 @@ export class WsServer {
 		return `client_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     }
     
-    stop() {
+    async stop({ timeoutMs = 1500 } = {}) {
+        const safeTimeoutMs = Math.max(0, Number(timeoutMs) || 0);
+
         this.clients.forEach(client => {
             try {
-                client.ws.close();
+                // Tenta fechar graciosamente primeiro
+                client.ws.close(1001, 'server shutdown');
             } catch {
                 try { client.ws.terminate(); } catch {}
             }
@@ -207,9 +210,33 @@ export class WsServer {
 		}
         
         if (this.wss) {
-            this.wss.close();
+            const closePromise = new Promise((resolve) => {
+                try {
+                    this.wss.close(() => resolve('closed'));
+                } catch {
+                    resolve('close-error');
+                }
+            });
+
+            if (safeTimeoutMs > 0) {
+                const winner = await Promise.race([
+                    closePromise,
+                    new Promise((resolve) => setTimeout(() => resolve('timeout'), safeTimeoutMs))
+                ]);
+
+                if (winner === 'timeout') {
+                    // Força encerramento das conexões remanescentes para não travar Ctrl+C
+                    try {
+                        for (const client of this.clients.values()) {
+                            try { client.ws.terminate(); } catch {}
+                        }
+                    } catch {}
+                }
+            } else {
+                await closePromise;
+            }
         }
-        
+
         logger.info('WebSocket server stopped');
     }
 }

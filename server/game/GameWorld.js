@@ -74,6 +74,73 @@ export class GameWorld {
         
         this.tick = 0;
         this.wsServer = null; // Será definido após criação do WsServer
+
+        // Autosave (best-effort)
+        this._autosaveInterval = null;
+        this._autosaveInProgress = false;
+    }
+
+    startAutosave({ intervalMs = 30000 } = {}) {
+        if (this._autosaveInterval) return;
+        const safeInterval = Math.max(5000, Number(intervalMs) || 30000);
+        this._autosaveInterval = setInterval(() => {
+            if (this._autosaveInProgress) return;
+            this._autosaveInProgress = true;
+            this.flushAllPlayers({ reason: 'autosave' })
+                .catch(() => {})
+                .finally(() => {
+                    this._autosaveInProgress = false;
+                });
+        }, safeInterval);
+
+        // Não mantém o processo vivo só por causa do autosave
+        try {
+            this._autosaveInterval.unref?.();
+        } catch {}
+
+        logger.info(`[AUTOSAVE] Started (interval=${safeInterval}ms)`);
+    }
+
+    stopAutosave() {
+        if (this._autosaveInterval) {
+            clearInterval(this._autosaveInterval);
+            this._autosaveInterval = null;
+            logger.info('[AUTOSAVE] Stopped');
+        }
+    }
+
+    /**
+     * Tenta salvar todos os players online (best-effort).
+     * Útil em shutdown/crash handlers.
+     */
+    async flushAllPlayers({ reason = 'flush' } = {}) {
+        const players = Array.from(this.players.values());
+        if (players.length === 0) {
+            // Em autosave periódico, evita spam de log quando não há ninguém online.
+            if (reason !== 'autosave') {
+                logger.info(`[AUTOSAVE] flushAllPlayers (reason=${reason}, players=0)`);
+            }
+            return { saved: 0, failed: 0 };
+        }
+
+        logger.warn(`[AUTOSAVE] flushAllPlayers start (reason=${reason}, players=${players.length})`);
+
+        let saved = 0;
+        let failed = 0;
+
+        for (const player of players) {
+            if (!player || !player.dbId) continue;
+            try {
+                await this.savePlayer(player);
+                saved++;
+            } catch (e) {
+                failed++;
+                logger.error(`[AUTOSAVE] Failed saving player ${player?.name || player?.id} (dbId=${player?.dbId}) on ${reason}:`, e?.message || e);
+            }
+        }
+
+        logger.warn(`[AUTOSAVE] flushAllPlayers done (reason=${reason}, saved=${saved}, failed=${failed})`);
+        return { saved, failed };
     }
     
     setWsServer(wsServer) {

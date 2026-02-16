@@ -30,17 +30,39 @@ async function main() {
 	const game = await startGameServer({ database, config });
 	logger.info(`WebSocket/Game started on port ${config.port}`);
 
+	let shuttingDown = false;
+	const withTimeout = async (promise, ms, label) => {
+		const safeMs = Math.max(0, Number(ms) || 0);
+		if (safeMs === 0) return promise;
+		return await Promise.race([
+			promise,
+			new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout after ${safeMs}ms`)), safeMs))
+		]);
+	};
+
 	const shutdown = async (reason) => {
-		logger.warn(`Shutting down (${reason})...`);
+		if (shuttingDown) {
+			logger.warn(`Shutdown already in progress (${reason}). Forcing exit...`);
+			process.exit(130);
+			return;
+		}
+		shuttingDown = true;
+		logger.warn(`Shutting down (${reason})... (Ctrl+C again to force)`);
 		try {
-			await Promise.allSettled([
-				http?.stop?.(),
-				game?.stop?.()
-			]);
+			await withTimeout(
+				Promise.allSettled([
+					http?.stop?.(),
+					game?.stop?.()
+				]),
+				3000,
+				'shutdown'
+			);
+		} catch (e) {
+			logger.error('Shutdown did not finish gracefully:', e?.message || e);
 		} finally {
 			await database.disconnect().catch(() => {});
+			process.exit(0);
 		}
-		process.exit(0);
 	};
 
 	process.on('SIGINT', () => shutdown('SIGINT'));
