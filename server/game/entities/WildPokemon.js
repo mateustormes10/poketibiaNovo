@@ -18,6 +18,11 @@ export class WildPokemon {
 		logger.debug('[WILD] Criando WildPokemon:', { id: data?.id, name: data?.name, x: data?.x, y: data?.y, z: data?.z, hp: data?.hp });
         this.id = data.id;
         this.name = data.name;
+		// Índice do auto-attack (usado pelo client para escolher visual/ataque)
+        {
+            const aa = Number(data.autoattack);
+            this.autoattack = Number.isFinite(aa) ? aa : null;
+        }
         this.level = data.level || 5;
         this.hp = data.hp;
         this.maxHp = data.maxHp || data.hp;
@@ -446,6 +451,7 @@ export class WildPokemon {
         return {
             id: this.id,
             name: this.name,
+            autoattack: this.autoattack,
             level: this.level,
             hp: this.hp,
             maxHp: this.maxHp,

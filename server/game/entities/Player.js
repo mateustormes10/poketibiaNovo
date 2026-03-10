@@ -191,6 +191,7 @@ export class Player extends Entity {
             goldCoin: this.goldCoin || 0,
             pokemons: this.pokemons || [],
             pokemonName: this.pokemonName || null,
+            autoattack: (this.autoattack ?? null),
             // Corrige: envia skills como array de strings (JSON serializados)
             skills: this.skills ? this.skills.map(skill => typeof skill === 'string' ? skill : JSON.stringify(skill)) : [],
             town_id: this.town_id || 1,

@@ -181,6 +181,9 @@ export class AutoAttackSystem {
         const attacker = client?.player;
         if (!attacker) return;
 
+        // Regra: só pode atacar quando estiver transformado em monstro.
+        if (!attacker.pokemonName) return;
+
         // Validate attacker state.
         if (attacker.isDead || attacker.hp <= 0) return;
 

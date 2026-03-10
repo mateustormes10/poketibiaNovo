@@ -1,9 +1,11 @@
 import { ServerEvents } from '../../shared/protocol/actions.js';
 import { WildPokemonServerEvents } from '../../shared/protocol/WildPokemonProtocol.js';
 import { PlayerRepository } from '../persistence/PlayerRepository.js';
+import { InventoryRepository } from '../persistence/InventoryRepository.js';
 import { Logger } from '../utils/Logger.js';
 import { GameConstants } from '../../shared/constants/GameConstants.js';
 import { I18n } from '../localization/i18n.js';
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 
 const logger = new Logger('AuthHandler');
 
@@ -12,6 +14,7 @@ export class AuthHandler {
         this.gameWorld = gameWorld;
         this.wsServer = wsServer;
         this.playerRepository = new PlayerRepository(gameWorld.database);
+        this.inventoryRepository = new InventoryRepository(gameWorld.database);
     }
     
     async handleLogin(client, data) {
@@ -104,6 +107,30 @@ export class AuthHandler {
             
             // Define o goldCoin no player
             player.goldCoin = balance;
+
+            // Sorteio diário de transformação (server date). 1x por dia por player.
+            try {
+                const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+                const last = (player.conditions && player.conditions.last_transformation_roll)
+                    ? String(player.conditions.last_transformation_roll)
+                    : null;
+
+                if (last !== today) {
+                    const names = Object.keys(PokemonEntities || {});
+                    if (names.length > 0) {
+                        const picked = names[Math.floor(Math.random() * names.length)];
+                        const itemName = `SCAN:${picked}:LVL1:BASIC`;
+
+                        await this.inventoryRepository.addItem(player.dbId, 'scanner_monster', itemName, 1);
+
+                        player.conditions = player.conditions || {};
+                        player.conditions.last_transformation_roll = today;
+                        await this.playerRepository.updateConditions(player.dbId, player.conditions);
+                    }
+                }
+            } catch (err) {
+                logger.error('[AuthHandler] Erro no sorteio diário de transformação:', err);
+            }
             
 			logger.debug('Player object before serialize - sprite:', player.sprite, 'direction:', player.direction);
             

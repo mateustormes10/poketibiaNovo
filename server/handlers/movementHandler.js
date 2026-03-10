@@ -94,18 +94,8 @@ export class MovementHandler {
 
     _handleMoveAfterHouseValidation(client, data, player) {
 
-                // Trava: impede movimento se stamina <= 0
-                const maxStamina = getMaxStamina(player);
-                let staminaAtual = maxStamina;
-                if (player.conditions && typeof player.conditions.stamina === 'number') {
-                    staminaAtual = player.conditions.stamina;
-                } else if (player.conditions && typeof player.conditions.stamina === 'string') {
-                    staminaAtual = parseFloat(player.conditions.stamina) || maxStamina;
-                }
-                if (staminaAtual <= 0) {
-                    client.send('system_message', { message: I18n.t(client?.lang, 'movement.stamina_exhausted'), color: 'yellow' });
-                    return;
-                }
+                // Regra atual: stamina NÃO pode impedir o player de andar.
+                // Ela apenas concede bônus de velocidade no client.
         // Checa colisão de mapa antes de atualizar posição
         const { direction } = data;
         let city = data.mapaAtual || player.city || player.mapaAtual || (player.name && player.name.split('_')[0]) || 'CidadeInicial';
@@ -114,6 +104,15 @@ export class MovementHandler {
             typeof data.y === 'number' &&
             typeof data.z === 'number'
         ) {
+            // Segurança: impede teleporte/pulo de tiles (client não pode avançar > 1 tile por pacote)
+            const dx = Math.abs(data.x - player.x);
+            const dy = Math.abs(data.y - player.y);
+            const dz = Math.abs(data.z - player.z);
+            if (dx > 1 || dy > 1 || dz > 1) {
+                client.send('move_reject', { x: player.x, y: player.y, z: player.z });
+                return;
+            }
+
             // 1. Checa colisão de mapa
             if (
                 this.gameWorld.mapManager &&
@@ -121,6 +120,7 @@ export class MovementHandler {
                 !this.gameWorld.mapManager.isWalkable(city, data.z, data.x, data.y)
             ) {
                 client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_by_collision'), color: 'red' });
+                client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                 return;
             }
 
@@ -129,6 +129,7 @@ export class MovementHandler {
             for (const [id, otherPlayer] of this.gameWorld.players) {
                 if (otherPlayer.id !== player.id && otherPlayer.x === data.x && otherPlayer.y === data.y && otherPlayer.z === data.z) {
                     client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_player_on_tile'), color: 'red' });
+                    client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                     return;
                 }
             }
@@ -136,6 +137,7 @@ export class MovementHandler {
             for (const [id, npc] of this.gameWorld.npcs) {
                 if (npc.x === data.x && npc.y === data.y && npc.z === data.z) {
                     client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_npc_on_tile'), color: 'red' });
+                    client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                     return;
                 }
             }
@@ -144,6 +146,7 @@ export class MovementHandler {
                 for (const [id, monster] of this.gameWorld.monsters) {
                     if (monster.x === data.x && monster.y === data.y && monster.z === data.z) {
                         client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_monster_on_tile'), color: 'red' });
+                        client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                         return;
                     }
                 }
@@ -153,6 +156,7 @@ export class MovementHandler {
                 for (const [id, wild] of this.gameWorld.wildPokemonManager.wildPokemons) {
                     if (wild.x === data.x && wild.y === data.y && wild.z === data.z && wild.hp > 0) {
                         client.send('system_message', { message: I18n.t(client?.lang, 'movement.blocked_wild_pokemon_on_tile'), color: 'red' });
+                        client.send('move_reject', { x: player.x, y: player.y, z: player.z });
                         return;
                     }
                 }
@@ -183,6 +187,11 @@ export class MovementHandler {
                 // Opcional: log para debug
                 // console.log(`[STAMINA] Player ${player.name} perdeu 2 stamina ao andar. Novo valor: ${staminaAtual}`);
             }
+        }
+        else {
+            // Pacote inválido: sem coordenadas numéricas.
+            client.send('move_reject', { x: player.x, y: player.y, z: player.z });
+            return;
         }
         if (direction) {
             player.direction = direction;

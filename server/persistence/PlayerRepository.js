@@ -6,6 +6,12 @@ export class PlayerRepository {
 	constructor(database) {
 		this.db = database;
 	}
+    
+    async updateConditions(playerId, conditions) {
+        const json = JSON.stringify(conditions || {});
+        const sql = 'UPDATE players SET conditions = ? WHERE id = ?';
+        return await this.db.update(sql, [json, playerId]);
+    }
 
     async setRankId(id, rankId) {
         const sql = 'UPDATE players SET rank_id = ? WHERE id = ?';

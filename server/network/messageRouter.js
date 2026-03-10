@@ -112,6 +112,11 @@ export class MessageRouter {
             const player = client.player;
             if (!player) return;
 
+            // Regra: só pode atacar/usar skill quando estiver transformado em monstro.
+            if (!player.pokemonName) {
+                return;
+            }
+
             // Busca targetArea no SkillDatabase
             let targetArea = '';
             let basePower = 0;
@@ -297,6 +302,7 @@ export class MessageRouter {
 			logger.debug('[request_transform_pokemon] player encontrado:', player.name);
             if (!data.pokemonName) {
                 player.pokemonName = null;
+				player.autoattack = null;
                 if (data.lastSprite) {
                     player.sprite = data.lastSprite;
 					logger.debug('[request_transform_pokemon] Sprite anterior restaurada:', data.lastSprite);
@@ -325,6 +331,12 @@ export class MessageRouter {
 					logger.warn('[request_transform_pokemon] Definição do Pokémon não encontrada:', data.pokemonName);
                     return;
                 }
+				// Propaga o autoattack do monstro para o player transformado
+				// (o Unity usa isso para setar CanvasUiPlayer.selectedAutoAttackIndex)
+				{
+					const aa = Number(pokeData.autoattack);
+					player.autoattack = Number.isFinite(aa) ? aa : null;
+				}
                 let direction = player.direction || 'down';
                 let spriteArr = pokeData[`sprite_${direction}`] || pokeData['sprite_down'];
                 // Corrige: envia sprite como string, não array

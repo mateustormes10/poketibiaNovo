@@ -35,7 +35,8 @@ export class WildPokemonManager {
             'Skeleton Wizard',
             'Skeleton Bandid',
             'Skeleton Necromancer',
-            'Skeleton'
+            'Skeleton',
+            'Wizard Red'
         ];
         let fixedId = 1;
         for (const name of initialPokemonNames) {
