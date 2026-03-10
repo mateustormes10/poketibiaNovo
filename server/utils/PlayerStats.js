@@ -59,8 +59,23 @@ export function getCritDamagePct(player) {
 
 export function computeOutgoingSkillDamage(player, basePower) {
     const base = Math.max(0, Number(basePower) || 0);
-    const mult = getDamageMultiplier(player);
-    let damage = Math.floor(base * mult);
+    // Skills/auto-attacks sem poder base não devem causar dano.
+    if (base <= 0) {
+        return {
+            damage: 0,
+            isCrit: false,
+            critMultiplier: 1,
+            critChancePct: Math.round(getCritChance(player) * 1000) / 10,
+            critDamagePct: getCritDamagePct(player)
+        };
+    }
+
+    // Nova fórmula (server-only): finalDamage = baseDamage + damageFromStats + damageFromLevel
+    const dmgStat = getStat(player, ['damage', 'dano'], 0);
+    const damageFromStats = Math.floor(clampNumber(dmgStat, 0, 999));
+    const level = clampNumber(Number(player?.level) || 1, 1, 999);
+    const damageFromLevel = Math.floor(level);
+    let damage = Math.floor(base + damageFromStats + damageFromLevel);
 
     const critChance = getCritChance(player);
     const critDamagePct = getCritDamagePct(player);

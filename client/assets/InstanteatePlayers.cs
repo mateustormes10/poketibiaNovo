@@ -86,20 +86,6 @@ public class InstanteatePlayers : MonoBehaviour
     }
     public void InstantiateFromList(PlayerData[] players)
     {
-                    // Converte campos sprite_* dos pokemons para array de int
-            foreach (var player in players)
-            {
-                if (player.pokemons != null)
-                {
-                    foreach (var poke in player.pokemons)
-                    {
-                        poke.sprite_up = ParseSpriteArray(poke.sprite_up);
-                        poke.sprite_down = ParseSpriteArray(poke.sprite_down);
-                        poke.sprite_left = ParseSpriteArray(poke.sprite_left);
-                        poke.sprite_right = ParseSpriteArray(poke.sprite_right);
-                    }
-                }
-            }
         this.players = players; // Atualiza a lista pública
         Debug.Log($"[InstanteatePlayers] Método chamado. players == null? {players == null}");
         if (players == null || players.Length == 0)
@@ -316,42 +302,6 @@ public class InstanteatePlayers : MonoBehaviour
         {
             Destroy(kvp.Value);
         }
-    }
-
-    // Utilitário para converter campos sprite_* de string para array de int
-    private int[] ParseSpriteArray(object spriteField)
-    {
-        if (spriteField is string s)
-        {
-            s = s.Trim('[', ']', ' ');
-            if (string.IsNullOrEmpty(s)) return new int[0];
-            var parts = s.Split(',');
-            int[] arr = new int[parts.Length];
-            for (int i = 0; i < parts.Length; i++)
-            {
-                int val;
-                if (int.TryParse(parts[i].Trim(), out val))
-                    arr[i] = val;
-                else
-                    arr[i] = 0;
-            }
-            return arr;
-        }
-        if (spriteField is System.Collections.IEnumerable enumerable && !(spriteField is string))
-        {
-            var list = new System.Collections.Generic.List<int>();
-            foreach (var item in enumerable)
-            {
-                if (item is int)
-                    list.Add((int)item);
-                else if (item is long)
-                    list.Add((int)(long)item);
-                else if (item != null && int.TryParse(item.ToString(), out int val))
-                    list.Add(val);
-            }
-            return list.ToArray();
-        }
-        return new int[0];
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()

@@ -159,7 +159,7 @@ export class GameWorld {
                 const entity = Object.values(PokemonEntities).find(e => e.id == p.monster_id || e.id == p.pokemon_id);
                 return {
                     id: p.id,
-                    monster_id: p.monster_id,
+                    monster_id: (p.monster_id ?? p.pokemon_id),
                     name: entity ? entity.name : null,
                     nickname: p.nickname,
                     level: entity ? entity.level : null,

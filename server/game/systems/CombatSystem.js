@@ -1,3 +1,5 @@
+import { getStat } from '../../utils/PlayerStats.js';
+
 export class CombatSystem {
     constructor(gameWorld) {
         this.gameWorld = gameWorld;
@@ -40,9 +42,11 @@ export class CombatSystem {
     
     calculateDamage(attacker, target) {
         const baseDamage = attacker.attack || 10;
+        const damageFromStats = getStat(attacker, ['damage', 'dano'], 0);
+        const damageFromLevel = Number(attacker?.level) || 1;
         const defense = target.defense || 0;
-        
-        const damage = Math.max(1, baseDamage - defense);
+
+        const damage = Math.max(1, (baseDamage + damageFromStats + damageFromLevel) - defense);
         const variance = Math.random() * 0.2 - 0.1; // ±10%
         
         return Math.floor(damage * (1 + variance));

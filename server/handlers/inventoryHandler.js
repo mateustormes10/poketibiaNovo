@@ -96,6 +96,16 @@ export class InventoryHandler {
 
                 // Envia inventário atualizado
                 await this.sendInventoryUpdate(client, playerId);
+
+                // Se o item afetou pokémons ativos, envia gamestate atualizado imediatamente
+                if (result.effect === 'active_monster_added' && typeof this.gameWorld?.getGameState === 'function' && client.player) {
+                    try {
+                        const gs = this.gameWorld.getGameState(client.player);
+                        client.send('gameState', gs);
+                    } catch (e) {
+                        logger.warn('[Inventory] Falha ao enviar gameState após uso de item:', e?.message || e);
+                    }
+                }
 				logger.debug(`Player ${playerId} usou item: ${item_name}`);
             } else {
                 // Envia erro

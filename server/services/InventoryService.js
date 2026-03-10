@@ -71,6 +71,36 @@ export class InventoryService {
         this.pokemonRepository = pokemonRepository;
     }
 
+    _parseScanItemName(itemName) {
+        if (typeof itemName !== 'string') return null;
+        if (!itemName.startsWith('SCAN:')) return null;
+        const parts = itemName.split(':');
+        if (parts.length < 3) return null;
+
+        const monsterName = parts[1];
+        const lvlRaw = parts[2];
+        const scannerType = parts[3] || null;
+
+        const m = /^LVL(\d+)$/i.exec(lvlRaw || '');
+        const level = m ? Number(m[1]) : null;
+
+        if (!monsterName) return null;
+        return { monsterName, level, scannerType };
+    }
+
+    _findPlayerInGameWorld(gameWorld, playerId) {
+        if (!gameWorld?.players) return null;
+        let player = gameWorld.players.get(playerId);
+        if (player) return player;
+        for (const p of gameWorld.players.values()) {
+            if (!p) continue;
+            if (p.dbId == playerId || p.id == playerId || p.id == String(playerId) || p.dbId == String(playerId)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
     /**
      * Obtém o inventário completo de um player
      * @param {number} playerId - ID do player
@@ -103,12 +133,132 @@ export class InventoryService {
     async useItem(playerId, itemName, context = {}) {
         // Verifica se o player possui o item
         const items = await this.inventoryRepository.getInventory(playerId);
-        const hasItem = items.some(i => i.item_name === itemName);
+        const invRow = items.find(i => i.item_name === itemName);
+        const hasItem = Boolean(invRow);
         if (!hasItem) {
             return {
                 success: false,
                 error: 'ITEM_NOT_FOUND',
                 message: 'Você não possui este item.'
+            };
+        }
+
+        // Scanner: ativa monstro no player_active_monsters (slot 1..6)
+        if (String(invRow.item_type || '').toLowerCase() === 'scanner_monster' || String(itemName || '').startsWith('SCAN:')) {
+            const parsed = this._parseScanItemName(itemName);
+            if (!parsed) {
+                return {
+                    success: false,
+                    error: 'INVALID_ITEM',
+                    message: 'SCAN inválido.'
+                };
+            }
+
+            const { PokemonEntities } = await import('../game/entities/PokemonEntities.js');
+            const entity = PokemonEntities?.[parsed.monsterName]
+                || Object.values(PokemonEntities || {}).find(e => e?.name === parsed.monsterName)
+                || null;
+
+            const monsterId = Number(entity?.id);
+            if (!entity || !Number.isFinite(monsterId)) {
+                return {
+                    success: false,
+                    error: 'INVALID_ITEM',
+                    message: `Monstro do SCAN não encontrado: ${parsed.monsterName}`
+                };
+            }
+
+            const gameWorld = global.gameWorld || (globalThis && globalThis.gameWorld);
+            const activeRepo = gameWorld?.playerActivePokemonRepository;
+            if (!activeRepo) {
+                return {
+                    success: false,
+                    error: 'CANNOT_USE_ITEM',
+                    message: 'Sistema de pokémons ativos indisponível.'
+                };
+            }
+
+            const activeRows = await activeRepo.findByPlayerId(playerId);
+            const activeCount = Array.isArray(activeRows) ? activeRows.length : 0;
+            if (activeCount >= 6) {
+                return {
+                    success: false,
+                    error: 'CANNOT_USE_ITEM',
+                    message: 'Você já tem 6 monstros ativos.'
+                };
+            }
+
+            const hasDuplicate = (activeRows || []).some(r => {
+                const rowId = r?.monster_id ?? r?.pokemon_id;
+                return Number(rowId) === monsterId;
+            });
+            if (hasDuplicate) {
+                return {
+                    success: false,
+                    error: 'CANNOT_USE_ITEM',
+                    message: 'Você já possui este monstro ativo.'
+                };
+            }
+
+            const usedSlots = new Set((activeRows || []).map(r => Number(r?.slot)).filter(n => Number.isFinite(n)));
+            let freeSlot = null;
+            for (let s = 1; s <= 6; s++) {
+                if (!usedSlots.has(s)) {
+                    freeSlot = s;
+                    break;
+                }
+            }
+            if (!freeSlot) {
+                return {
+                    success: false,
+                    error: 'CANNOT_USE_ITEM',
+                    message: 'Sem slot livre (1..6) para ativar o monstro.'
+                };
+            }
+
+            // 1) insere no slot 2) consome item (se falhar, tenta rollback do slot)
+            let insertedRow = null;
+            try {
+                insertedRow = await activeRepo.insertToSlotNoReplace(playerId, monsterId, freeSlot, null);
+                const removed = await this.inventoryRepository.removeItem(playerId, itemName, 1);
+                if (!removed) {
+                    // rollback best-effort
+                    try { await activeRepo.removeFromSlot(playerId, freeSlot); } catch (_) {}
+                    return {
+                        success: false,
+                        error: 'CANNOT_USE_ITEM',
+                        message: 'Falha ao consumir o SCAN do inventário.'
+                    };
+                }
+            } catch (e) {
+                return {
+                    success: false,
+                    error: 'CANNOT_USE_ITEM',
+                    message: 'Erro ao ativar monstro pelo SCAN.'
+                };
+            }
+
+            // Atualiza player.pokemons em memória para aparecer no gamestate
+            try {
+                const playerObj = this._findPlayerInGameWorld(gameWorld, playerId);
+                if (playerObj && typeof gameWorld?.loadPlayerPokemons === 'function') {
+                    await gameWorld.loadPlayerPokemons(playerObj, playerId);
+                }
+            } catch (_) {
+                // best-effort
+            }
+
+            return {
+                success: true,
+                message: `Monstro ativado no slot ${freeSlot}.`,
+                effect: 'active_monster_added',
+                value: freeSlot,
+                active_monster: {
+                    monster_id: monsterId,
+                    slot: freeSlot,
+                    name: entity.name
+                },
+                inserted: insertedRow
             };
         }
 
