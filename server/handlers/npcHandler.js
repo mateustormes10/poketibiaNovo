@@ -8,6 +8,9 @@ export class NpcHandler {
         this.balanceRepository = balanceRepository;
         this.npcRepository = npcRepository;
         this.inventoryRepository = inventoryRepository;
+
+        // Economia: multiplicador de venda (50% do preço base)
+        this.sellMultiplier = 0.5;
     }
 
     /**
@@ -157,6 +160,100 @@ export class NpcHandler {
             logger.info(`[NpcHandler] ${player.name} comprou ${itemName} por ${price} gold (novo balance: ${newBalance})`);
         } catch (err) {
             logger.error(`[NpcHandler] Erro em handleBuy: ${err && err.stack ? err.stack : err}`);
+        }
+    }
+
+    /**
+     * Handler de venda de item para o NPC.
+     * Payload esperado: { npcId, itemName, quantity }
+     */
+    async handleSell(client, data) {
+        try {
+            if (!client.player) return;
+            const player = client.player;
+
+            const npcId = Number(data?.npcId);
+            const itemName = data?.itemName;
+            const quantity = Math.max(1, Number(data?.quantity || 1));
+
+            if (!npcId || !itemName) {
+                client.send('system_message', { message: 'Dados inválidos para venda.' });
+                return;
+            }
+
+            const npc = this.gameWorld.npcs.get(npcId);
+            if (!npc) {
+                client.send('system_message', { message: 'NPC não encontrado.' });
+                return;
+            }
+
+            // Verifica se o player possui o item e quantidade
+            const invItem = await this.inventoryRepository.getItem(player.dbId, itemName);
+            if (!invItem || Number(invItem.quantity || 0) < quantity) {
+                client.send('system_message', { message: 'Você não possui este item (ou quantidade insuficiente).' });
+                return;
+            }
+
+            // Preço base: tenta NPC atual; fallback: preço global (qualquer NPC)
+            let shopRow = null;
+            try {
+                shopRow = await this.npcRepository.getShopItemByName(npcId, itemName);
+            } catch {}
+            if (!shopRow) {
+                try {
+                    shopRow = await this.npcRepository.getAnyShopItemByName(itemName);
+                } catch {}
+            }
+
+            const basePrice = Math.max(0, Number(shopRow?.price || 0));
+
+            // Regra: todo item do inventário pode ser vendido.
+            // Se não houver preço conhecido no npc_shop_items, vende por 1 gold unitário.
+            const unitSell = (!Number.isFinite(basePrice) || basePrice <= 0)
+                ? 1
+                : Math.max(1, Math.floor(basePrice * this.sellMultiplier));
+            const totalGold = unitSell * quantity;
+
+            // Remove do inventário e adiciona gold
+            const removed = await this.inventoryRepository.removeItem(player.dbId, itemName, quantity);
+            if (!removed) {
+                client.send('system_message', { message: 'Falha ao remover item do inventário.' });
+                return;
+            }
+
+            const newBalance = await this.balanceRepository.addGold(player.dbId, totalGold);
+
+            // Atualiza o campo goldCoin do player em memória (GameWorld)
+            if (this.gameWorld.players) {
+                let playerObj = this.gameWorld.players.get(player.dbId) || this.gameWorld.players.get(player.id);
+                if (!playerObj) {
+                    for (const p of this.gameWorld.players.values()) {
+                        if (p.dbId == player.dbId || p.id == player.id || p.id == String(player.dbId) || p.dbId == String(player.id)) {
+                            playerObj = p;
+                            break;
+                        }
+                    }
+                }
+                if (playerObj) playerObj.goldCoin = newBalance;
+            }
+
+            client.send('sell_success', {
+                itemName,
+                quantity,
+                unitSell,
+                goldGained: totalGold,
+                newBalance
+            });
+
+            // Atualiza HUD (reuso de evento existente)
+            client.send('balance_update', { balance: newBalance });
+
+            logger.info(`[NpcHandler] ${player.name} vendeu ${quantity}x ${itemName} por ${totalGold} gold (unit=${unitSell}) newBalance=${newBalance}`);
+        } catch (err) {
+            logger.error(`[NpcHandler] Erro em handleSell: ${err && err.stack ? err.stack : err}`);
+            try {
+                client.send('system_message', { message: 'Erro ao vender item.' });
+            } catch {}
         }
     }
 

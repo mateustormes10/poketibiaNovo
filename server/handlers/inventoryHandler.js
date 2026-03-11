@@ -12,6 +12,7 @@ import {
 } from '../../shared/protocol/InventoryProtocol.js';
 import { InventoryDTO } from '../../shared/dto/InventoryDTO.js';
 import { Logger } from '../utils/Logger.js';
+import { PokemonEntities } from '../game/entities/PokemonEntities.js';
 
 const logger = new Logger('InventoryHandler');
 
@@ -19,6 +20,94 @@ export class InventoryHandler {
     constructor(gameWorld, inventoryService) {
         this.gameWorld = gameWorld;
         this.inventoryService = inventoryService;
+    }
+
+    /**
+     * Retorna um monstro ativo do slot (1..6) de volta para o inventário.
+     * Remove de player_active_monsters e adiciona um item SCAN no player_inventory.
+     * Payload esperado: { slot }
+     */
+    async handleReturnActiveMonsterToInventory(client, data) {
+        const playerId = client.player?.dbId || client.player?.id;
+        if (!playerId) {
+            this.sendInventoryError(client, InventoryErrorCode.PERMISSION_DENIED, 'Player não autenticado');
+            return;
+        }
+
+        const slot = Number(data?.slot);
+        if (!Number.isFinite(slot) || slot < 1 || slot > 6) {
+            client.send('system_message', { message: 'Slot inválido.' });
+            return;
+        }
+
+        const activeRepo = this.gameWorld?.playerActivePokemonRepository;
+        const inventoryRepo = this.gameWorld?.inventoryRepository;
+        if (!activeRepo || !inventoryRepo) {
+            client.send('system_message', { message: 'Sistema indisponível.' });
+            return;
+        }
+
+        const row = await activeRepo.findByPlayerIdAndSlot(playerId, slot);
+        if (!row) {
+            client.send('system_message', { message: 'Não há monstro nesse slot.' });
+            return;
+        }
+
+        const monsterId = Number(row?.monster_id ?? row?.pokemon_id);
+        const entity = Object.values(PokemonEntities || {}).find(e => Number(e?.id) === monsterId) || null;
+        const monsterName = entity?.name || row?.nickname || 'UNKNOWN';
+
+        const itemName = `SCAN:${monsterName}:LVL1:BASIC`;
+
+        // Remove do slot e adiciona no inventário (com rollback best-effort)
+        try {
+            await activeRepo.removeFromSlot(playerId, slot);
+            await inventoryRepo.addItem(playerId, 'scanner_monster', itemName, 1);
+        } catch (e) {
+            // rollback best-effort: tenta recolocar no slot
+            try {
+                if (Number.isFinite(monsterId))
+                    await activeRepo.insertToSlotNoReplace(playerId, monsterId, slot, row?.nickname ?? null);
+            } catch (_) {}
+            client.send('system_message', { message: 'Falha ao retornar monstro ao inventário.' });
+            return;
+        }
+
+        // Atualiza pokémons do player em memória para refletir no gameState
+        try {
+            const gw = this.gameWorld;
+            const playersMap = gw?.players;
+            let playerObj = client.player;
+            if (playersMap && playerObj && !playersMap.has(playerObj.id) && !playersMap.has(playerObj.dbId)) {
+                playerObj = null;
+            }
+            if (!playerObj && playersMap) {
+                for (const p of playersMap.values()) {
+                    if (p?.dbId == playerId || p?.id == playerId || p?.id == String(playerId) || p?.dbId == String(playerId)) {
+                        playerObj = p;
+                        break;
+                    }
+                }
+            }
+            if (playerObj && typeof gw?.loadPlayerPokemons === 'function') {
+                await gw.loadPlayerPokemons(playerObj, playerId);
+            }
+        } catch (e) {
+            logger.warn('[Inventory] Falha ao atualizar pokémons em memória após retorno:', e?.message || e);
+        }
+
+        // Envia inventário atualizado e gameState atualizado
+        await this.sendInventoryUpdate(client, playerId);
+        try {
+            if (typeof this.gameWorld?.getGameState === 'function' && client.player) {
+                const gs = this.gameWorld.getGameState(client.player);
+                client.send('gameState', gs);
+            }
+        } catch (e) {
+            logger.warn('[Inventory] Falha ao enviar gameState após retorno:', e?.message || e);
+        }
+
+        client.send('system_message', { message: `Monstro retornou ao inventário (slot ${slot}).` });
     }
 
     /**

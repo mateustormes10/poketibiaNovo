@@ -49,4 +49,26 @@ export class NpcRepository {
 
         return result;
     }
+
+    /**
+     * Busca o preço (buy/base) de um item para um NPC específico.
+     * Retorna null se não existir.
+     */
+    async getShopItemByName(npcId, itemName) {
+        return await this.db.queryOne(
+            'SELECT * FROM npc_shop_items WHERE npc_id = ? AND item_name = ? LIMIT 1',
+            [npcId, itemName]
+        );
+    }
+
+    /**
+     * Busca um preço base global (máximo) para um item em qualquer NPC.
+     * Útil para vender itens mesmo se o NPC atual não vender o item.
+     */
+    async getAnyShopItemByName(itemName) {
+        return await this.db.queryOne(
+            'SELECT item_name, item_type, MAX(price) AS price FROM npc_shop_items WHERE item_name = ? GROUP BY item_name, item_type',
+            [itemName]
+        );
+    }
 }

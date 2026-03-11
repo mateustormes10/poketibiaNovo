@@ -457,6 +457,7 @@ export class MessageRouter {
         
         
         this.handlers.set(ClientEvents.PORTAL, portalHandler.handlePortal.bind(portalHandler));
+                this.handlers.set('npc_sell', npcHandler.handleSell.bind(npcHandler));
         this.handlers.set(ClientEvents.LOGIN, authHandler.handleLogin.bind(authHandler));
         this.handlers.set(ClientEvents.MOVE, movementHandler.handleMove.bind(movementHandler));
         this.handlers.set(ClientEvents.ATTACK, combatHandler.handleAttack.bind(combatHandler));
@@ -498,6 +499,9 @@ export class MessageRouter {
         this.handlers.set(InventoryClientEvents.REQUEST_INVENTORY, inventoryHandler.handleInventoryRequest.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.USE_ITEM, inventoryHandler.handleUseItem.bind(inventoryHandler));
         this.handlers.set(InventoryClientEvents.DROP_ITEM, inventoryHandler.handleDropItem.bind(inventoryHandler));
+
+        // Active monster -> return to inventory (slot 1..6)
+        this.handlers.set('active_monster_return_inventory', inventoryHandler.handleReturnActiveMonsterToInventory.bind(inventoryHandler));
         // Handler para adicionar ponto em atributo do player
         this.handlers.set('add_points_player', async (client, data) => {
             // data: { atributo: 'hit_points' }
